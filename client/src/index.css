@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark mode only */
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 8%;
+    --card-foreground: 213 31% 91%;
+    --primary: 262 83% 60%; /* Purple (#7C3AED) */
+    --primary-foreground: 213 31% 91%;
+    --border: 217 33% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .container {
+    @apply mx-auto px-8;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      @apply max-w-sm;
+    }
+  }
+  @media (min-width: 768px) {
+    .container {
+      @apply max-w-md;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container {
+      @apply max-w-lg;
+    }
+  }
+  @media (min-width: 1280px) {
+    .container {
+      @apply max-w-xl;
+    }
+  }
+  @media (min-width: 1400px) {
+    .container {
+      @apply max-w-2xl;
+    }
+  }
+
+  .text-glow {
+    @apply relative;
+    text-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+  }
+
+  .card-hover {
+    @apply transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg;
+  }
+
+  .gradient-border {
+    @apply relative rounded-md;
+    background: linear-gradient(to right, hsl(var(--card)), hsl(var(--card)));
+    background-clip: padding-box;
+    border: 1px solid transparent;
+  }
+
+  .cosmic-button {
+    @apply px-6 py-2 rounded-full bg-primary text-primary-foreground font-medium 
+           transition-all duration-300 hover:shadow-[0_0_10px_rgba(124,58,237,0.5)]
+           hover:scale-105 active:scale-95;
+  }
+
+  .star {
+    @apply absolute rounded-full bg-white;
+    box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.4);
+  }
+
+  .meteor {
+    @apply absolute bg-gradient-to-r from-white via-white to-transparent rounded-full;
+    box-shadow: 0 0 10px 5px rgba(255, 255, 255, 0.3);
+  }
+
+  .neon-glow {
+    animation: neonPulse 2s infinite alternate ease-in-out;
+    text-shadow: 0 0 1px #7C3AED, 0 0 4px #7C3AED;
+  }
+}
+
+@layer utilities {
+  #root {
+    @apply max-w-full mx-auto p-0 text-center;
+  }
+}
+
+@keyframes neonPulse {
+  0% {
+    text-shadow: 0 0 1px #7C3AED, 0 0 4px #7C3AED;
+  }
+  25% {
+    text-shadow: 0 0 1.5px #7C3AED, 0 0 5px #7C3AED;
+  }
+  50% {
+    text-shadow: 0 0 2px #7C3AED, 0 0 6px #7C3AED;
+  }
+  75% {
+    text-shadow: 0 0 1.5px #7C3AED, 0 0 5px #7C3AED;
+  }
+  100% {
+    text-shadow: 0 0 1px #7C3AED, 0 0 4px #7C3AED;
+  }
+} 

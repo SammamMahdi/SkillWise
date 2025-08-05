@@ -1,0 +1,31 @@
+{
+  "name": "skillwise",
+  "version": "1.0.0",
+  "description": "A comprehensive learning platform with multiple modules",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "start": "cd server && npm start"
+  },
+  "keywords": [
+    "learning",
+    "education",
+    "skills",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "SkillWise Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+} 
