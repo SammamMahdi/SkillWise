@@ -1,5 +1,6 @@
 // Google OAuth Service for frontend
 // This service handles Google OAuth authentication using the Google Identity Services library
+// Updated for FedCM compatibility
 
 class GoogleAuthService {
   constructor() {
@@ -41,6 +42,8 @@ class GoogleAuthService {
             resolve(response);
           }
         },
+        auto_select: false,
+        cancel_on_tap_outside: true,
       });
       this.isInitialized = true;
     } catch (error) {
@@ -48,57 +51,34 @@ class GoogleAuthService {
     }
   }
 
-  // Sign in with Google
-  async signIn() {
+  // Render Google Sign-In button (FedCM compatible)
+  renderButton(element, options = {}) {
     if (!this.isInitialized) {
-      await this.initialize();
+      throw new Error('Google Auth not initialized. Call initialize() first.');
     }
 
-    return new Promise((resolve, reject) => {
-      try {
-        // Create a temporary button to trigger Google Sign-In
-        const button = document.createElement('div');
-        button.id = 'google-signin-button';
-        button.style.display = 'none';
-        document.body.appendChild(button);
+    if (!element) {
+      throw new Error('Element is required for rendering Google Sign-In button');
+    }
 
-        // Render the Google Sign-In button
-        window.google.accounts.id.renderButton(button, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'rectangular',
-          logo_alignment: 'left',
-        });
+    try {
+      const defaultOptions = {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: '100%',
+      };
 
-        // Simulate a click on the button
-        const googleButton = button.querySelector('div[role="button"]');
-        if (googleButton) {
-          googleButton.click();
-        } else {
-          // Fallback: try to trigger the sign-in directly
-          window.google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed()) {
-              reject(new Error('Google Sign-In not available'));
-            } else if (notification.isSkippedMoment()) {
-              reject(new Error('Google Sign-In skipped'));
-            } else if (notification.isDismissedMoment()) {
-              reject(new Error('Google Sign-In dismissed'));
-            }
-          });
-        }
-
-        // Clean up the temporary button after a short delay
-        setTimeout(() => {
-          if (document.body.contains(button)) {
-            document.body.removeChild(button);
-          }
-        }, 1000);
-      } catch (error) {
-        reject(error);
-      }
-    });
+      const buttonOptions = { ...defaultOptions, ...options };
+      
+      window.google.accounts.id.renderButton(element, buttonOptions);
+    } catch (error) {
+      console.error('Failed to render Google Sign-In button:', error);
+      throw error;
+    }
   }
 
   // Get user info from Google ID token
@@ -125,11 +105,27 @@ class GoogleAuthService {
     if (window.google && window.google.accounts.id) {
       window.google.accounts.id.disableAutoSelect();
     }
+    // Clear stored tokens
+    localStorage.removeItem('googleIdToken');
   }
 
   // Check if user is signed in
   isSignedIn() {
     return !!localStorage.getItem('googleIdToken');
+  }
+
+  // Revoke access (optional)
+  async revokeAccess() {
+    try {
+      const token = localStorage.getItem('googleIdToken');
+      if (token && window.google) {
+        await window.google.accounts.id.revoke(token, () => {
+          console.log('Google access revoked');
+        });
+      }
+    } catch (error) {
+      console.error('Failed to revoke Google access:', error);
+    }
   }
 }
 
