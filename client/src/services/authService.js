@@ -41,10 +41,11 @@ api.interceptors.response.use(
             refreshToken,
           });
           
-          const { token } = response.data;
-          localStorage.setItem('token', token);
+          const { data } = response.data;
+          localStorage.setItem('token', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
           
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
           return api(originalRequest);
         }
       } catch (refreshError) {
@@ -68,10 +69,29 @@ export const authService = {
 
   // Login user
   async login(credentials) {
+    // Clear any existing tokens before login
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    
     const response = await api.post('/auth/login', credentials);
     const { data } = response.data;
     
     console.log('Login response:', response.data);
+    
+    // Check if account is blocked
+    if (response.data.isAccountBlocked) {
+      // Store tokens but mark user as blocked
+      localStorage.setItem('token', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      
+      return { 
+        user: { 
+          ...data.user, 
+          isAccountBlocked: true,
+          blockedReason: response.data.blockedReason || response.data.message 
+        } 
+      };
+    }
     
     // Store tokens
     localStorage.setItem('token', data.accessToken);
@@ -84,6 +104,10 @@ export const authService = {
   async googleAuth(idToken, role = null) {
     console.log('Sending Google auth request with token length:', idToken.length, 'role:', role);
     try {
+      // Clear any existing tokens before login
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      
       const response = await api.post('/auth/google', { idToken, role });
       console.log('Google auth response:', response.data);
       

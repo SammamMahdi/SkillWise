@@ -5,6 +5,10 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import AuthPage from './components/auth/AuthPage'
 import ProfileSettings from './components/profile/ProfileSettings'
+import AdminDashboard from './components/admin/AdminDashboard'
+import ParentDashboard from './components/parent/ParentDashboard'
+import BlockedAccount from './components/auth/BlockedAccount'
+import NotificationCenter from './components/notifications/NotificationCenter'
 
 // Create a client
 const queryClient = new QueryClient()
@@ -18,6 +22,16 @@ const Dashboard = () => {
     window.location.href = '/';
   };
 
+  // Check if user is blocked
+  if (user?.isAccountBlocked) {
+    return <BlockedAccount user={user} />;
+  }
+
+  // Check if user requires parental approval but hasn't been approved yet
+  if (user?.requiresParentalApproval && !user?.parentConfirmed) {
+    return <BlockedAccount user={user} />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8">
@@ -29,12 +43,29 @@ const Dashboard = () => {
               <p className="text-foreground/80 mt-2">Your comprehensive learning platform</p>
             </div>
             <div className="flex items-center space-x-4">
+              <NotificationCenter />
               <a
                 href="/profile"
                 className="cosmic-button"
               >
                 Profile Settings
               </a>
+              {user?.role === 'Admin' && (
+                <a
+                  href="/admin"
+                  className="cosmic-button"
+                >
+                  Admin Dashboard
+                </a>
+              )}
+              {user?.role === 'Parent' && (
+                <a
+                  href="/parent"
+                  className="cosmic-button"
+                >
+                  Parent Dashboard
+                </a>
+              )}
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-background border border-border text-foreground rounded-lg hover:bg-card transition-colors"
@@ -154,6 +185,8 @@ function App() {
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<ProfileSettings />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/parent" element={<ParentDashboard />} />
             </Routes>
             <Toaster 
               position="top-right" 

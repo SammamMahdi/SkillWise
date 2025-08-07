@@ -19,10 +19,15 @@ const userSchema = new mongoose.Schema({
   
   // Parent-child features
   age: Number,
+  dateOfBirth: Date,
   requiresParentalApproval: { type: Boolean, default: false },
   parent: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   parentConfirmed: { type: Boolean, default: false },
   childAccounts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  pendingParentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  pendingChildRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  isAccountBlocked: { type: Boolean, default: false },
+  blockedReason: String,
   
   // Profile management
   profilePhoto: String,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Check, X, Shield, Mail, User, Lock } from 'lucide-react';
+import { Eye, EyeOff, Check, X, Shield, Mail, User, Lock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { validatePasswordStrength, getPasswordRequirements, getPasswordStrengthColor, getPasswordStrengthWidth, getPasswordStrengthBgColor, generateSecurePassword } from '../../utils/passwordUtils';
 import GoogleRoleSelectionModal from './GoogleRoleSelectionModal';
@@ -28,10 +28,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
     watch,
     formState: { errors },
     setValue,
+    setError,
   } = useForm();
 
   const watchedPassword = watch('password', '');
   const watchedConfirmPassword = watch('confirmPassword', '');
+  const watchedDateOfBirth = watch('dateOfBirth', '');
+  const watchedRole = watch('role', '');
+  const watchedParentEmail = watch('parentEmail', '');
 
   // Update password strength when password changes
   React.useEffect(() => {
@@ -39,6 +43,25 @@ const SignupForm = ({ onSwitchToLogin }) => {
     setPasswordStrength(strength);
     setPasswordRequirements(getPasswordRequirements(watchedPassword));
   }, [watchedPassword]);
+
+  // Calculate age when date of birth changes
+  React.useEffect(() => {
+    if (watchedDateOfBirth) {
+      const birthDate = new Date(watchedDateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+      setValue('age', calculatedAge);
+      
+      // Only set requiresParentalApproval for students under 13
+      if (calculatedAge < 13 && watchedRole === 'Student') {
+        setValue('requiresParentalApproval', true);
+      } else {
+        setValue('requiresParentalApproval', false);
+      }
+    }
+  }, [watchedDateOfBirth, watchedRole, setValue]);
 
   const onSubmit = async (data) => {
     clearError();
@@ -53,13 +76,31 @@ const SignupForm = ({ onSwitchToLogin }) => {
       return;
     }
 
+    // Calculate age from date of birth
+    const birthDate = new Date(data.dateOfBirth);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+
+    // Only require parental approval for students under 13
+    const requiresParentalApproval = (calculatedAge < 13 && data.role === 'Student') ? true : false;
+
+    // Validate parent email for students under 13
+    if (requiresParentalApproval && !data.parentEmail) {
+      setError('Parent email address is required for students under 13');
+      return;
+    }
+
     const result = await registerUser({
       name: data.name,
       email: data.email,
       password: data.password,
       role: data.role,
-      age: data.age ? parseInt(data.age) : undefined,
-      requiresParentalApproval: data.requiresParentalApproval || false,
+      dateOfBirth: data.dateOfBirth,
+      age: calculatedAge,
+      requiresParentalApproval: requiresParentalApproval,
+      parentEmail: data.parentEmail, // Include parent email in registration
     });
 
     if (result.success) {
@@ -268,24 +309,49 @@ const SignupForm = ({ onSwitchToLogin }) => {
             )}
           </div>
 
-          {/* Age Field (for Students) */}
+          {/* Date of Birth Field */}
           <div>
-            <label htmlFor="age" className="block text-sm font-medium text-foreground mb-2">
-              Age (optional)
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-foreground mb-2">
+              Date of Birth
             </label>
             <input
-              {...register('age', {
-                min: { value: 5, message: 'Age must be at least 5' },
-                max: { value: 120, message: 'Age must be less than 120' },
+              {...register('dateOfBirth', {
+                required: 'Date of birth is required',
+                validate: (value) => {
+                  if (!value) return 'Date of birth is required';
+                  const birthDate = new Date(value);
+                  const today = new Date();
+                  const age = today.getFullYear() - birthDate.getFullYear();
+                  const monthDiff = today.getMonth() - birthDate.getMonth();
+                  const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+                  
+                  if (actualAge < 5) return 'You must be at least 5 years old';
+                  if (actualAge > 120) return 'Please enter a valid date of birth';
+                  return true;
+                }
               })}
+              type="date"
+              id="dateOfBirth"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+            />
+            {errors.dateOfBirth && (
+              <p className="mt-1 text-sm text-red-400">{errors.dateOfBirth.message}</p>
+            )}
+          </div>
+
+          {/* Age Field (calculated from DOB) */}
+          <div>
+            <label htmlFor="age" className="block text-sm font-medium text-foreground mb-2">
+              Age (calculated from date of birth)
+            </label>
+            <input
+              {...register('age')}
               type="number"
               id="age"
-              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
-              placeholder="Enter your age"
+              disabled
+              className="w-full px-4 py-3 bg-background/50 border border-border rounded-lg text-foreground/60 cursor-not-allowed"
+              placeholder="Will be calculated automatically"
             />
-            {errors.age && (
-              <p className="mt-1 text-sm text-red-400">{errors.age.message}</p>
-            )}
           </div>
 
           {/* Password Field */}
@@ -397,18 +463,99 @@ const SignupForm = ({ onSwitchToLogin }) => {
             )}
           </div>
 
-          {/* Parental Approval Checkbox */}
-          <div className="flex items-center">
-            <input
-              {...register('requiresParentalApproval')}
-              type="checkbox"
-              id="requiresParentalApproval"
-              className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
-            />
-            <label htmlFor="requiresParentalApproval" className="ml-2 text-sm text-foreground/80">
-              I require parental approval for my account
-            </label>
-          </div>
+          {/* Parental Approval Section */}
+          {watchedDateOfBirth && watchedRole === 'Student' && (() => {
+            const birthDate = new Date(watchedDateOfBirth);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+            const isUnder13 = calculatedAge < 13;
+            
+            return (
+              <div className={`p-4 rounded-lg border ${isUnder13 ? 'bg-yellow-50/10 border-yellow-200/20' : 'bg-green-50/10 border-green-200/20'}`}>
+                <div className="flex items-start space-x-3">
+                  <div className={`p-2 rounded-lg ${isUnder13 ? 'bg-yellow-100' : 'bg-green-100'}`}>
+                    {isUnder13 ? (
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                    ) : (
+                      <Check className="w-5 h-5 text-green-600" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`text-sm font-medium ${isUnder13 ? 'text-yellow-800' : 'text-green-800'}`}>
+                      {isUnder13 ? 'Parental Approval Required' : 'Age Verification Complete'}
+                    </h3>
+                    <p className="text-sm text-foreground/80 mt-1">
+                      {isUnder13 
+                        ? `You are ${calculatedAge} years old. Students under 13 require parental approval to access the platform. Please provide your parent's email address below.`
+                        : `You are ${calculatedAge} years old. No parental approval required for students.`
+                      }
+                    </p>
+                    {isUnder13 && (
+                      <div className="mt-3">
+                        <div className="flex items-center">
+                          <input
+                            {...register('requiresParentalApproval')}
+                            type="checkbox"
+                            id="requiresParentalApproval"
+                            checked={true}
+                            disabled={true}
+                            className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
+                          />
+                          <label htmlFor="requiresParentalApproval" className="ml-2 text-sm text-foreground/80">
+                            Parental approval required (mandatory for students under 13)
+                          </label>
+                        </div>
+                        <p className="text-xs text-foreground/60 mt-2">
+                          After registration, we'll automatically send a request to your parent for approval.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Parent Email Field (for students under 13) */}
+          {watchedDateOfBirth && watchedRole === 'Student' && (() => {
+            const birthDate = new Date(watchedDateOfBirth);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+            const isUnder13 = calculatedAge < 13;
+            
+            if (!isUnder13) return null;
+            
+            return (
+              <div className="mt-4">
+                <label htmlFor="parentEmail" className="block text-sm font-medium text-foreground mb-2">
+                  Parent's Email Address <span className="text-red-500">*</span>
+                </label>
+                <p className="text-sm text-foreground/60 mb-2">
+                  We'll send a request to your parent to approve your account.
+                </p>
+                <input
+                  {...register('parentEmail', {
+                    required: 'Parent email address is required for students under 13',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address',
+                    },
+                  })}
+                  type="email"
+                  id="parentEmail"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+                  placeholder="parent@example.com"
+                />
+                {errors.parentEmail && (
+                  <p className="mt-1 text-sm text-red-400">{errors.parentEmail.message}</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Submit Button */}
           <button

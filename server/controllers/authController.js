@@ -83,7 +83,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, password, role, age, requiresParentalApproval } = req.body;
+    const { name, email, password, role, age, dateOfBirth, requiresParentalApproval, parentEmail } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -109,19 +109,114 @@ const register = async (req, res) => {
     // Generate email verification token
     const emailVerificationToken = generateEmailToken();
 
+    // Calculate age from date of birth if provided
+    let calculatedAge = age;
+    if (dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+    }
+
+    // Check if user is under 13 and requires parental approval
+    const isUnder13 = calculatedAge && calculatedAge < 13;
+    const needsParentalApproval = isUnder13 && role === 'Student' && requiresParentalApproval;
+    
+    // For under-13 students, parental approval is mandatory
+    if (isUnder13 && role === 'Student' && !requiresParentalApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parental approval is mandatory for students under 13 years old'
+      });
+    }
+
+    // Validate parent email for students under 13
+    if (needsParentalApproval && !parentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parent email address is required for students under 13'
+      });
+    }
+
     // Create user
     const user = new User({
       name,
       email,
       password: hashedPassword,
       role,
-      age,
-      requiresParentalApproval,
+      age: calculatedAge,
+      dateOfBirth,
+      requiresParentalApproval: needsParentalApproval,
+      isAccountBlocked: needsParentalApproval,
+      blockedReason: needsParentalApproval ? 'Account requires parental approval' : undefined,
       emailVerificationToken,
       emailVerified: false
     });
 
     await user.save();
+
+    // If student under 13, automatically send parent request
+    if (needsParentalApproval && parentEmail) {
+      try {
+        console.log('Setting up parent request for child:', email, 'Parent email:', parentEmail);
+        
+        // Find or create parent account
+        let parent = await User.findOne({ email: parentEmail });
+        
+        if (!parent) {
+          console.log('Creating placeholder parent account for:', parentEmail);
+          // Create a placeholder parent account (they'll need to register)
+          parent = new User({
+            name: 'Parent of ' + name,
+            email: parentEmail,
+            role: 'Parent',
+            roleConfirmed: true,
+            emailVerified: false,
+            isAccountBlocked: false
+          });
+          await parent.save();
+          console.log('Created parent account:', parent._id);
+        } else {
+          console.log('Found existing parent account:', parent._id);
+        }
+
+        // Send parent request
+        if (parent.role === 'Parent') {
+          console.log('Adding child to parent pending requests');
+          // Add to pending requests
+          parent.pendingChildRequests.push(user._id);
+          user.pendingParentRequests.push(parent._id);
+          await parent.save();
+          await user.save();
+          console.log('Parent pending requests updated:', parent.pendingChildRequests);
+          console.log('Child pending requests updated:', user.pendingParentRequests);
+
+          // Create notification for parent
+          const Notification = require('../models/Notification');
+          const notification = new Notification({
+            recipient: parent._id,
+            sender: user._id,
+            type: 'parent_request',
+            title: 'Student Registration Request',
+            message: `${name} (${email}) has registered as a student and requires your approval to access the platform.`,
+            isActionRequired: true,
+            actionUrl: '/parent',
+            data: {
+              childId: user._id,
+              requestId: `${parent._id}-${user._id}`
+            }
+          });
+          await notification.save();
+          console.log('Notification created for parent');
+        }
+      } catch (error) {
+        console.error('Error sending parent request:', error);
+        // Don't fail registration if parent request fails
+      }
+    }
 
     // Send verification email
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${emailVerificationToken}`;
@@ -180,21 +275,39 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
+    console.log('Login attempt for email:', email);
+
     // Find user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
+    console.log('User found:', { id: user._id, role: user.role, isBlocked: user.isAccountBlocked });
+
     // Check password
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    // Check if account is blocked
+    if (user.isAccountBlocked) {
+      console.log('Account blocked for user:', email, 'Reason:', user.blockedReason);
+      return res.status(403).json({
+        success: false,
+        message: user.blockedReason || 'Account is blocked',
+        requiresParentalApproval: user.requiresParentalApproval && !user.parentConfirmed,
+        isAccountBlocked: true,
+        blockedReason: user.blockedReason
       });
     }
 
