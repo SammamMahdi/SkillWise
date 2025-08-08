@@ -10,6 +10,9 @@ import ParentDashboard from './components/parent/ParentDashboard'
 import BlockedAccount from './components/auth/BlockedAccount'
 import NotificationCenter from './components/notifications/NotificationCenter'
 import LearningDashboard from './components/dashboard/LearningDashboard'
+import CourseGrid from './components/courses/CourseGrid'
+import CreateCourseForm from './components/courses/CreateCourseForm'
+import CourseDetail from './components/courses/CourseDetail'
 
 // Create a client
 const queryClient = new QueryClient()
@@ -155,12 +158,14 @@ const Dashboard = () => {
               <a href="/learning" className="cosmic-button text-center">
                 Learning Dashboard
               </a>
-              <button className="cosmic-button">
-                View Progress
-              </button>
-              <button className="cosmic-button">
-                Explore Skills
-              </button>
+              <a href="/courses" className="cosmic-button text-center">
+                Browse Courses
+              </a>
+              {user?.role === 'Teacher' && (
+                <a href="/create-course" className="cosmic-button text-center">
+                  Create Course
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -189,6 +194,9 @@ function App() {
               <Route path="/profile" element={<ProfileSettings />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/parent" element={<ParentDashboard />} />
+              <Route path="/courses" element={<CourseGrid />} />
+              <Route path="/create-course" element={<CreateCourseForm />} />
+              <Route path="/courses/:id" element={<CourseDetail />} />
             </Routes>
             <Toaster 
               position="top-right" 

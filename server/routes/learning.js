@@ -13,6 +13,10 @@ router.use(apiLimiter);
 // Get learning dashboard data
 router.get('/dashboard', learningController.getLearningDashboard);
 
+// Course enrollment
+router.post('/courses/:courseId/enroll', learningController.enrollInCourse);
+router.delete('/courses/:courseId/enroll', learningController.unenrollFromCourse);
+
 // Get enrolled course details
 router.get('/courses/:courseId', learningController.getEnrolledCourseDetails);
 

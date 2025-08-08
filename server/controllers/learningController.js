@@ -82,6 +82,123 @@ const getLearningDashboard = async (req, res) => {
   }
 };
 
+// @desc    Enroll in a course
+// @route   POST /api/learning/courses/:courseId/enroll
+// @access  Private
+const enrollInCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.userId;
+
+    // Check if course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Check if user is already enrolled
+    const user = await User.findById(userId);
+    const isAlreadyEnrolled = user.dashboardData.enrolledCourses.some(
+      enrollment => enrollment.course.toString() === courseId
+    );
+
+    if (isAlreadyEnrolled) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already enrolled in this course'
+      });
+    }
+
+    // Add course to user's enrolled courses
+    user.dashboardData.enrolledCourses.push({
+      course: courseId,
+      currentLectureIndex: 0,
+      completedLectures: [],
+      completedQuizzes: []
+    });
+
+    await user.save();
+
+    // Populate the course data for response
+    await user.populate({
+      path: 'dashboardData.enrolledCourses.course',
+      match: { _id: courseId },
+      populate: {
+        path: 'teacher',
+        select: 'name email'
+      }
+    });
+
+    const enrollment = user.dashboardData.enrolledCourses.find(
+      enrollment => enrollment.course && enrollment.course._id.toString() === courseId
+    );
+
+    res.json({
+      success: true,
+      message: 'Successfully enrolled in course',
+      data: enrollment
+    });
+
+  } catch (error) {
+    console.error('Enroll in course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while enrolling in course'
+    });
+  }
+};
+
+// @desc    Unenroll from a course
+// @route   DELETE /api/learning/courses/:courseId/enroll
+// @access  Private
+const unenrollFromCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.userId;
+
+    // Check if course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Find user and check enrollment
+    const user = await User.findById(userId);
+    const enrollmentIndex = user.dashboardData.enrolledCourses.findIndex(
+      enrollment => enrollment.course.toString() === courseId
+    );
+
+    if (enrollmentIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not enrolled in this course'
+      });
+    }
+
+    // Remove course from enrolled courses
+    user.dashboardData.enrolledCourses.splice(enrollmentIndex, 1);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Successfully unenrolled from course'
+    });
+
+  } catch (error) {
+    console.error('Unenroll from course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while unenrolling from course'
+    });
+  }
+};
+
 // @desc    Get enrolled course details
 // @route   GET /api/learning/courses/:courseId
 // @access  Private
@@ -264,6 +381,8 @@ const getUserSkillPosts = async (req, res) => {
 
 module.exports = {
   getLearningDashboard,
+  enrollInCourse,
+  unenrollFromCourse,
   getEnrolledCourseDetails,
   updateCourseProgress,
   getUserCertificates,
