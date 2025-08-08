@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
-import bg from './evening-bg.jpg'; // keep the image here
+import bg from './evening-bg.jpg';
 
 const AuthPage = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,23 +43,23 @@ const AuthPage = () => {
   };
 
   return (
-    // Full-viewport background, covers entire screen
     <section
-      className="fixed inset-0"
+      className="relative min-h-screen overflow-y-auto"
       style={{
         backgroundImage: `url(${bg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
       }}
     >
-      {/* overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60" />
+      {/* dark overlay for readability */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60" />
 
-      {/* 2-column layout, both sides vertically centered */}
-      <div className="relative z-10 h-full w-full grid grid-cols-1 lg:grid-cols-12">
-        {/* LEFT: brand (vertically centered; left-aligned) */}
-        <div className="lg:col-span-5 xl:col-span-6 flex items-center">
-          <div className="pl-8 sm:pl-12 lg:pl-16 pr-8">
+      {/* Content area: scrollable, starts at top on mobile; centers on lg+ */}
+      <div className="relative z-10 min-h-screen w-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-center py-10 sm:py-14">
+        {/* LEFT: Branding */}
+        <div className="lg:col-span-5 xl:col-span-6 flex items-start lg:items-center">
+          <div className="px-8 sm:px-12 lg:pl-16 lg:pr-8">
             <h1 className="text-white text-5xl md:text-6xl font-extrabold tracking-wide drop-shadow-lg font-serif">
               SkillWise
             </h1>
@@ -69,9 +69,9 @@ const AuthPage = () => {
           </div>
         </div>
 
-        {/* RIGHT: form (centered; card width narrowed) */}
-        <div className="lg:col-span-7 xl:col-span-6 flex items-center justify-center p-4 sm:p-8 lg:p-16">
-          <div className="w-full" style={{ width: 'min(92vw, 38rem)' }}>
+        {/* RIGHT: Auth form */}
+        <div className="lg:col-span-7 xl:col-span-6 flex justify-center px-4 sm:px-8 lg:px-16">
+          <div className="w-full pb-8" style={{ width: 'min(92vw, 38rem)' }}>
             {renderForm()}
           </div>
         </div>
