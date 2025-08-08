@@ -11,6 +11,9 @@ import ParentDashboard from './components/parent/ParentDashboard'
 import BlockedAccount from './components/auth/BlockedAccount'
 import NotificationCenter from './components/notifications/NotificationCenter'
 import LearningDashboard from './components/dashboard/LearningDashboard'
+import CourseGrid from './components/courses/CourseGrid'
+import CreateCourseForm from './components/courses/CreateCourseForm'
+import CourseDetail from './components/courses/CourseDetail'
 
 // Create a client
 const queryClient = new QueryClient()
@@ -78,7 +81,7 @@ const Dashboard = ({ theme, setTheme }) => {
             {/* Bell */}
             <NotificationCenter />
 
-            {/* Inline actions — purple -> white on hover */}
+            {/* Inline actions */}
             <Link to="/learning" className="text-primary hover:text-white transition-colors">
               Learning Dashboard
             </Link>
@@ -122,7 +125,6 @@ const Dashboard = ({ theme, setTheme }) => {
                     Profile Settings
                   </Link>
 
-                  {/* NEW: Update Profile Visuals */}
                   <Link
                     to="/profile/visuals"
                     className="block px-4 py-3 hover:bg-background transition-colors"
@@ -180,7 +182,12 @@ const Dashboard = ({ theme, setTheme }) => {
       <div className="relative">
         <div
           className="h-48 w-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${user?.coverUrl || 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop'})` }}
+          style={{
+            backgroundImage: `url(${
+              user?.coverUrl ||
+              'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop'
+            })`,
+          }}
         />
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 flex items-end">
@@ -201,6 +208,26 @@ const Dashboard = ({ theme, setTheme }) => {
               <div className="opacity-90">Top {profile.rankPercentile}% of Learners</div>
               <div className="opacity-90">Joined {fmtDate(user?.createdAt)}</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="max-w-[1600px] mx-auto px-8 mt-6">
+        <div className="bg-card border border-border rounded-lg shadow-lg p-6 card-hover">
+          <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="/learning" className="cosmic-button text-center">
+              Learning Dashboard
+            </a>
+            <a href="/courses" className="cosmic-button text-center">
+              Browse Courses
+            </a>
+            {user?.role === 'Teacher' && (
+              <a href="/create-course" className="cosmic-button text-center">
+                Create Course
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -300,6 +327,9 @@ function App() {
               <Route path="/profile/visuals" element={<ProfileVisuals />} /> {/* NEW */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/parent" element={<ParentDashboard />} />
+              <Route path="/courses" element={<CourseGrid />} />
+              <Route path="/create-course" element={<CreateCourseForm />} />
+              <Route path="/courses/:id" element={<CourseDetail />} />
             </Routes>
             <Toaster
               position="top-right"
