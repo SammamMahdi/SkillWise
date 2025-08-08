@@ -25,13 +25,12 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
         setGoogleScriptLoaded(true);
         return;
       }
-
       try {
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
         script.async = true;
         script.defer = true;
-        
+
         await new Promise((resolve, reject) => {
           script.onload = () => {
             setGoogleScriptLoaded(true);
@@ -41,57 +40,47 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
           document.head.appendChild(script);
         });
       } catch (error) {
-        console.error('Failed to load Google script:', error);
         const debugInfo = GoogleSignInDebug.handleError(error, 'script-loading');
         setGoogleError(debugInfo);
       }
     };
-
     loadGoogleScript();
   }, []);
 
-  // Initialize Google Sign-In when script is loaded
+  // Initialize Google Sign-In (with centered button)
   useEffect(() => {
     if (!googleScriptLoaded || !googleButtonRef.current) return;
 
     try {
-      // Log debug information
       GoogleSignInDebug.logDebugInfo();
 
       const config = {
         client_id: '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com',
         callback: async (response) => {
           try {
-            console.log('Google callback received:', response);
             setIsGoogleLoading(true);
             setGoogleError(null);
-            
+
             if (response.credential) {
               // Store the ID token
               localStorage.setItem('googleIdToken', response.credential);
-              
+
               // Call our backend with the Google ID token
               const result = await googleLogin(response.credential);
-              
+
               if (result.success) {
-                console.log('Google login successful!');
-                // Redirect to dashboard or home page
                 window.location.href = '/dashboard';
               } else if (result.requiresRoleSelection) {
-                console.log('Role selection required, redirecting to profile');
-                // Redirect to profile page for role selection
                 window.location.href = '/profile';
               } else {
-                console.error('Google login failed:', result.error);
                 setGoogleError({
                   type: 'auth',
                   message: result.error || 'Google login failed',
-                  suggestion: 'Please try again or contact support.'
+                  suggestion: 'Please try again or contact support.',
                 });
               }
             }
           } catch (error) {
-            console.error('Google login error:', error);
             const debugInfo = GoogleSignInDebug.handleError(error, 'login-callback');
             setGoogleError(debugInfo);
           } finally {
@@ -102,21 +91,25 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
         cancel_on_tap_outside: true,
       };
 
-      // Validate configuration
       const configValidation = GoogleSignInDebug.validateConfig(config);
       if (!configValidation.isValid) {
-        console.error('Invalid Google Sign-In configuration:', configValidation.errors);
         setGoogleError({
           type: 'config',
           message: 'Invalid Google Sign-In configuration',
-          suggestion: 'Please check the configuration and try again.'
+          suggestion: 'Please check the configuration and try again.',
         });
         return;
       }
 
       window.google.accounts.id.initialize(config);
 
-      // Render the Google Sign-In button
+      // Pick a nice width for the rendered Google button (center-friendly)
+      const btnWidth = window.innerWidth < 640 ? 280 : 360;
+
+      // Prevent duplicate renders
+      googleButtonRef.current.innerHTML = '';
+
+      // Render the Google button
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: 'standard',
         theme: 'outline',
@@ -124,11 +117,9 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
         text: 'signin_with',
         shape: 'rectangular',
         logo_alignment: 'left',
-        width: '100%',
+        width: btnWidth, // fixed px width => centers nicely
       });
-
     } catch (error) {
-      console.error('Failed to initialize Google Sign-In:', error);
       const debugInfo = GoogleSignInDebug.handleError(error, 'initialization');
       setGoogleError(debugInfo);
     }
@@ -136,54 +127,57 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
 
   const onSubmit = async (data) => {
     clearError();
-    
+
     const result = await login({
       email: data.email,
       password: data.password,
     });
 
     if (result.success) {
-      // Login successful, redirect to dashboard or home
+      // Login successful
       console.log('Login successful!');
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="bg-card border border-border rounded-lg shadow-xl p-8 card-hover">
-        {/* Header */}
+    <div className="w-full">
+      <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl p-6 sm:p-10">
+        {/* Centered header */}
         <div className="text-center mb-8">
-          <div className="mx-auto w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-            <LogIn className="w-6 h-6 text-primary" />
+          <div
+            className="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'rgba(167,139,250,0.25)' }} // light purple tint
+          >
+            <LogIn className="w-6 h-6" style={{ color: '#a78bfa' }} />
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h2>
-          <p className="text-foreground/80">Sign in to your SkillWise account</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-white">Welcome Back</h2>
+          <p className="text-white/80">Sign in to your SkillWise account</p>
         </div>
 
-        {/* Error Messages */}
+        {/* Errors */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="mb-6 p-4 rounded-lg border border-red-400/30 bg-red-500/15">
+            <p className="text-red-200 text-sm">{error}</p>
           </div>
         )}
-
         {googleError && (
-          <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-            <p className="text-orange-400 text-sm font-medium">{googleError.message}</p>
+          <div className="mb-6 p-4 rounded-lg border border-amber-400/30 bg-amber-500/15">
+            <p className="text-amber-200 text-sm font-medium">{googleError.message}</p>
             {googleError.suggestion && (
-              <p className="text-orange-400/80 text-sm mt-1">{googleError.suggestion}</p>
+              <p className="text-amber-200/80 text-sm mt-1">{googleError.suggestion}</p>
             )}
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Email Field */}
+          {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
               Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/40" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
               <input
                 {...register('email', {
                   required: 'Email is required',
@@ -194,61 +188,57 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
                 })}
                 type="email"
                 id="email"
-                className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-violet-300/70 focus:border-transparent"
                 placeholder="Enter your email"
               />
             </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="mt-1 text-sm text-amber-200">{errors.email.message}</p>}
           </div>
 
-          {/* Password Field */}
+          {/* Password */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/40" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
               <input
                 {...register('password', {
                   required: 'Password is required',
                 })}
                 type={showPassword ? 'text' : 'password'}
                 id="password"
-                className="w-full pl-10 pr-12 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+                className="w-full pl-10 pr-12 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-violet-300/70 focus:border-transparent"
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-foreground/40 hover:text-foreground/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             {errors.password && (
-              <p className="mt-1 text-sm text-red-400">{errors.password.message}</p>
+              <p className="mt-1 text-sm text-amber-200">{errors.password.message}</p>
             )}
           </div>
 
-          {/* Forgot Password Link */}
+          {/* Remember + Forgot */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
+            <label className="flex items-center gap-2">
               <input
                 {...register('rememberMe')}
                 type="checkbox"
                 id="rememberMe"
-                className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
+                className="w-4 h-4 rounded bg-white/10 border-white/30 text-violet-300 focus:ring-violet-300/60"
               />
-              <label htmlFor="rememberMe" className="ml-2 text-sm text-foreground/80">
-                Remember me
-              </label>
-            </div>
+              <span className="text-sm text-white/85">Remember me</span>
+            </label>
             <button
               type="button"
               onClick={onShowForgotPassword}
-              className="text-sm text-primary hover:text-primary/80 font-medium"
+              className="text-sm font-medium text-yellow-300 hover:text-yellow-200 transition"
             >
               Forgot password?
             </button>
@@ -258,7 +248,15 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="cosmic-button w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-lg py-3 font-semibold transition
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       shadow-lg hover:shadow-yellow-300/20
+                       focus:outline-none focus:ring-2 focus:ring-yellow-300/70"
+            style={{
+              background:
+                'linear-gradient(135deg, rgba(167,139,250,0.95) 0%, rgba(253,224,71,0.9) 100%)',
+              color: '#0b0b12',
+            }}
           >
             {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
@@ -266,17 +264,18 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
 
         {/* Divider */}
         <div className="my-6 flex items-center">
-          <div className="flex-1 border-t border-border" />
-          <span className="px-4 text-sm text-foreground/60">or</span>
-          <div className="flex-1 border-t border-border" />
+          <div className="flex-1 border-t border-white/20" />
+          <span className="px-4 text-sm text-white/70">or</span>
+          <div className="flex-1 border-t border-white/20" />
         </div>
 
-        {/* Google OAuth Button */}
+        {/* Google OAuth Button (centered) */}
         <div className="w-full">
           {!googleScriptLoaded ? (
             <button
               disabled
-              className="w-full bg-background border border-border text-foreground/50 py-3 px-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2
+                         bg-white/10 border border-white/20 text-white/60"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -299,17 +298,19 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
               <span>Loading Google Sign-In...</span>
             </button>
           ) : (
-            <div ref={googleButtonRef} className="w-full"></div>
+            <div className="w-full flex justify-center">
+              <div ref={googleButtonRef} className="inline-block" />
+            </div>
           )}
         </div>
 
         {/* Signup Link */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-foreground/80">
-            Don't have an account?{' '}
+          <p className="text-sm text-white/85">
+            Don&apos;t have an account?{' '}
             <button
               onClick={onSwitchToSignup}
-              className="text-primary hover:text-primary/80 font-medium"
+              className="font-semibold underline decoration-yellow-300/70 hover:decoration-yellow-200 text-yellow-300 hover:text-yellow-200 transition"
             >
               Sign up
             </button>
@@ -320,4 +321,4 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
   );
 };
 
-export default LoginForm; 
+export default LoginForm;

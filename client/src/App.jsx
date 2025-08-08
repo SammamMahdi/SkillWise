@@ -217,10 +217,11 @@ const Dashboard = ({ theme, setTheme }) => {
               </p>
             </div>
             <div className="ml-auto text-right text-white">
-              <div className="text-xl sm:text-2xl font-semibold">Student Profile</div>
-              <div className="opacity-90 text-sm sm:text-base">Top {profile.rankPercentile}% of Learners</div>
-              <div className="opacity-90 text-sm sm:text-base">Joined {fmtDate(user?.createdAt)}</div>
-            </div>
+            <div className="text-xl sm:text-2xl font-semibold">{user?.role || 'Student'}</div>
+            <div className="opacity-90 text-sm sm:text-base">Top {profile.rankPercentile}% of Learners</div>
+            <div className="opacity-90 text-sm sm:text-base">Joined {fmtDate(user?.createdAt)}</div>
+          </div>
+
           </div>
         </div>
       </div>

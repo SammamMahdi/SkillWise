@@ -3,22 +3,20 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
+import bg from './evening-bg.jpg'; // keep the image here
 
 const AuthPage = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [currentForm, setCurrentForm] = useState('login'); // 'login', 'signup', 'forgot-password'
+  const [currentForm, setCurrentForm] = useState('login'); // 'login' | 'signup' | 'forgot-password'
 
-  // If user is already authenticated, redirect to dashboard
   if (isAuthenticated) {
-    // In a real app, you'd use React Router to redirect
     window.location.href = '/dashboard';
     return null;
   }
 
-  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-foreground/80">Loading...</p>
@@ -45,24 +43,41 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 neon-glow">SkillWise</h1>
-          <p className="text-foreground/80">Your learning journey starts here</p>
+    // Full-viewport background, covers entire screen
+    <section
+      className="fixed inset-0"
+      style={{
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* overlay for readability */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60" />
+
+      {/* 2-column layout, both sides vertically centered */}
+      <div className="relative z-10 h-full w-full grid grid-cols-1 lg:grid-cols-12">
+        {/* LEFT: brand (vertically centered; left-aligned) */}
+        <div className="lg:col-span-5 xl:col-span-6 flex items-center">
+          <div className="pl-8 sm:pl-12 lg:pl-16 pr-8">
+            <h1 className="text-white text-5xl md:text-6xl font-extrabold tracking-wide drop-shadow-lg font-serif">
+              SkillWise
+            </h1>
+            <p className="mt-3 text-white/85 text-lg">
+              Your learning journey starts here
+            </p>
+          </div>
         </div>
 
-        {/* Form Container */}
-        {renderForm()}
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-foreground/60">
-          <p>By continuing, you agree to our Terms of Service and Privacy Policy</p>
+        {/* RIGHT: form (centered; card width narrowed) */}
+        <div className="lg:col-span-7 xl:col-span-6 flex items-center justify-center p-4 sm:p-8 lg:p-16">
+          <div className="w-full" style={{ width: 'min(92vw, 38rem)' }}>
+            {renderForm()}
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 
-export default AuthPage; 
+export default AuthPage;
