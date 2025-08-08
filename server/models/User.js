@@ -57,7 +57,9 @@ const userSchema = new mongoose.Schema({
     completed: Boolean,
     completionDate: Date
   }],
-  
+avatarUrl: { type: String, default: '' },
+coverUrl:  { type: String, default: '' },
+
   // Dashboard data
   dashboardData: {
     enrolledCourses: [{

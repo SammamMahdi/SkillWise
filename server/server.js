@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -31,12 +32,19 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
+
 // Rate limiting
 app.use(generalLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+const path = require('path');
+
+app.use('/uploads', require('express').static(path.join(__dirname, 'uploads')));
+
+
 
 // API Routes
 app.use('/api/health', (req, res) => {
