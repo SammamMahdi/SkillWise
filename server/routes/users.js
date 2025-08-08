@@ -5,7 +5,9 @@ const { verifyToken } = require('../config/auth');
 const { apiLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
-
+const upload = require('../middleware/upload');
+const { protect } = require('../middleware/auth'); // <-- NEW
+const { updateAvatar, updateCover } = require('../controllers/userController');
 // All routes require authentication
 router.use(verifyToken);
 router.use(apiLimiter);
@@ -106,6 +108,21 @@ router.put('/concentrations', [
     .isFloat({ min: 0, max: 100 })
     .withMessage('Progress percent must be between 0 and 100')
 ], userController.updateConcentrations);
+
+
+
+
+// --- Add these routes ---
+// With protect (if you have it):
+// router.post('/me/avatar', protect, upload.single('image'), updateAvatar);
+// router.post('/me/cover',  protect, upload.single('image'), updateCover);
+
+// Without protect (controller validates token itself):
+router.post('/me/avatar', protect, upload.single('image'), updateAvatar);
+router.post('/me/cover',  protect, upload.single('image'), updateCover);
+// You can keep/export your existing routes here as well.
+
+
 
 // Delete user account
 router.delete('/account', userController.deleteAccount);

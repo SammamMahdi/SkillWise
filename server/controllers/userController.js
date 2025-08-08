@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Course = require('../models/Course');
@@ -454,6 +455,70 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+
+function getTokenFromReq(req) {
+  const h = req.headers.authorization || '';
+  if (h.startsWith('Bearer ')) return h.slice(7);
+  if (req.cookies?.token) return req.cookies.token;
+  return null;
+}
+
+async function getUserFromReq(req) {
+  // Use req.userId if protect middleware already set it
+  if (req.userId) {
+    const u = await User.findById(req.userId);
+    if (u) return u;
+  }
+
+  // Fallback to verifying token here (just in case)
+  const token = getTokenFromReq(req);
+  if (!token) {
+    const e = new Error('No token provided'); e.status = 401; throw e;
+  }
+  let decoded;
+  try { decoded = jwt.verify(token, process.env.JWT_SECRET); }
+  catch { const e = new Error('Invalid token'); e.status = 401; throw e; }
+
+  const user = await User.findById(decoded.id || decoded._id || decoded.userId);
+  if (!user) { const e = new Error('User not found'); e.status = 404; throw e; }
+  return user;
+}
+
+
+
+const updateAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const user = await getUserFromReq(req);
+    const url = `/uploads/${req.file.filename}`;
+    user.avatarUrl = url;
+    await user.save();
+    res.json({ success: true, url });
+  } catch (e) {
+    console.error('updateAvatar error:', e);
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Server error' });
+  }
+};
+
+const updateCover = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+    const user = await getUserFromReq(req);
+    const url = `/uploads/${req.file.filename}`;
+    user.coverUrl = url;
+    await user.save();
+    res.json({ success: true, url });
+  } catch (e) {
+    console.error('updateCover error:', e);
+    res.status(e.status || 500).json({ success: false, message: e.message || 'Server error' });
+  }
+};
+
+module.exports = { updateAvatar, updateCover };
+
+
+
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -464,5 +529,7 @@ module.exports = {
   getBadges,
   getSkills,
   updateConcentrations,
-  deleteAccount
+  deleteAccount,
+  updateAvatar,
+  updateCover,
 }; 
