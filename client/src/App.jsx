@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import AuthPage from './components/auth/AuthPage'
 import ProfileSettings from './components/profile/ProfileSettings'
-import ProfileVisuals from './components/profile/ProfileVisuals'   // <-- NEW
+import ProfileVisuals from './components/profile/ProfileVisuals'
 import AdminDashboard from './components/admin/AdminDashboard'
 import ParentDashboard from './components/parent/ParentDashboard'
 import BlockedAccount from './components/auth/BlockedAccount'
@@ -15,40 +15,37 @@ import CourseGrid from './components/courses/CourseGrid'
 import CreateCourseForm from './components/courses/CreateCourseForm'
 import CourseDetail from './components/courses/CourseDetail'
 
-// Create a client
 const queryClient = new QueryClient()
 
-// helpers
 const fmtDate = d =>
   d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
 
-// ===================== Dashboard =====================
 const Dashboard = ({ theme, setTheme }) => {
   const { user, logout } = useAuth()
-
   const [openUser, setOpenUser] = useState(false)
+  const [openActions, setOpenActions] = useState(false)
   const userMenuRef = useRef(null)
+  const actionsMenuRef = useRef(null)
 
   const handleLogout = async () => {
     await logout()
     window.location.href = '/'
   }
 
-  // close dropdown on outside click / escape
   useEffect(() => {
     const onClick = (e) => {
       if (openUser && userMenuRef.current && !userMenuRef.current.contains(e.target)) setOpenUser(false)
+      if (openActions && actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) setOpenActions(false)
     }
-    const onKey = (e) => { if (e.key === 'Escape') setOpenUser(false) }
+    const onKey = (e) => { if (e.key === 'Escape') { setOpenUser(false); setOpenActions(false) } }
     document.addEventListener('mousedown', onClick)
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey) }
-  }, [openUser])
+  }, [openUser, openActions])
 
   if (user?.isAccountBlocked) return <BlockedAccount user={user} />
   if (user?.requiresParentalApproval && !user?.parentConfirmed) return <BlockedAccount user={user} />
 
-  // TEMP demo profile data
   const profile = {
     spotlightSkill: { month: 'July', title: 'Java Programming' },
     rankPercentile: 2,
@@ -69,40 +66,81 @@ const Dashboard = ({ theme, setTheme }) => {
   ]
 
   const firstName = useMemo(() => (user?.name || '').split(' ')[0] || 'You', [user])
+  const isCourseCreator = user?.role === 'Teacher' || user?.role === 'Admin'
+
+  // helper: shared glow styles for topbar links/buttons
+  const glow = 'transition-colors duration-150 rounded-lg hover:bg-card/40 hover:shadow-[0_0_12px_rgba(167,139,250,0.65)] hover:ring-2 hover:ring-violet-400'
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Top bar */}
       <div className="border-b border-border bg-card/40">
-        <div className="max-w-[1600px] mx-auto px-8 py-4 flex items-center justify-between">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between">
           <div className="text-2xl font-bold neon-glow">SkillWise</div>
 
-          <div className="flex items-center gap-6">
-            {/* Bell */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <NotificationCenter />
 
-            {/* Inline actions */}
-            <Link to="/learning" className="text-primary hover:text-white transition-colors">
+            {/* Keep these visible */}
+            <Link
+              to="/courses"
+              className={`px-3 py-2 ${glow} text-violet-300 hover:text-white`}
+            >
+              Courses
+            </Link>
+            <Link
+              to="/learning"
+              className={`px-3 py-2 ${glow} text-foreground/90 hover:text-white`}
+            >
               Learning Dashboard
             </Link>
-            <Link to="/progress" className="text-primary hover:text-white transition-colors">
-              View Progress
-            </Link>
-            <Link to="/skills" className="text-primary hover:text-white transition-colors">
-              Explore Skills
-            </Link>
+
+            {/* Actions dropdown */}
+            <div className="relative" ref={actionsMenuRef}>
+              <button
+                onClick={() => { setOpenActions(a => !a); setOpenUser(false) }}
+                className={`px-3 py-2 bg-background border border-border ${glow}`}
+                aria-haspopup="menu"
+                aria-expanded={openActions}
+              >
+                More
+                <span className={`inline-block ml-2 transition-transform ${openActions ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+
+              {openActions && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-[110%] w-72 rounded-xl border border-border bg-card shadow-2xl overflow-hidden z-50"
+                >
+                  <Link to="/progress" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenActions(false)} role="menuitem">
+                    View Progress
+                  </Link>
+                  <Link to="/skills" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenActions(false)} role="menuitem">
+                    Explore Skills
+                  </Link>
+                  <Link to="/courses" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenActions(false)} role="menuitem">
+                    Browse Courses
+                  </Link>
+                  {isCourseCreator && (
+                    <Link to="/create-course" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenActions(false)} role="menuitem">
+                      Create Course
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* User dropdown */}
             <div className="relative" ref={userMenuRef}>
               <button
-                onClick={() => setOpenUser(o => !o)}
-                className="flex items-center gap-3 px-3 py-2 bg-background border border-border rounded-lg hover:bg-card transition-colors"
+                onClick={() => { setOpenUser(o => !o); setOpenActions(false) }}
+                className={`flex items-center gap-2 sm:gap-3 px-3 py-2 bg-background border border-border ${glow}`}
                 aria-haspopup="menu"
                 aria-expanded={openUser}
               >
                 <img
                   src={user?.avatarUrl || user?.photoUrl || 'https://placekitten.com/100/100'}
-                  className="w-7 h-7 rounded-full object-cover"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
                   alt=""
                 />
                 <span className="hidden sm:block">{user?.name || 'User'}</span>
@@ -114,48 +152,24 @@ const Dashboard = ({ theme, setTheme }) => {
               {openUser && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-[110%] w-64 rounded-xl border border-border bg-card shadow-xl overflow-hidden z-50"
+                  className="absolute right-0 top-[110%] w-72 rounded-xl border border-border bg-card shadow-2xl overflow-hidden z-50"
                 >
-                  <Link
-                    to="/profile"
-                    className="block px-4 py-3 hover:bg-background transition-colors"
-                    onClick={() => setOpenUser(false)}
-                    role="menuitem"
-                  >
+                  <Link to="/profile" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                     Profile Settings
                   </Link>
-
-                  <Link
-                    to="/profile/visuals"
-                    className="block px-4 py-3 hover:bg-background transition-colors"
-                    onClick={() => setOpenUser(false)}
-                    role="menuitem"
-                  >
+                  <Link to="/profile/visuals" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                     Update Profile Visuals
                   </Link>
-
                   {user?.role === 'Admin' && (
-                    <Link
-                      to="/admin"
-                      className="block px-4 py-3 hover:bg-background transition-colors"
-                      onClick={() => setOpenUser(false)}
-                      role="menuitem"
-                    >
+                    <Link to="/admin" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                       Admin Dashboard
                     </Link>
                   )}
-
                   {user?.role === 'Parent' && (
-                    <Link
-                      to="/parent"
-                      className="block px-4 py-3 hover:bg-background transition-colors"
-                      onClick={() => setOpenUser(false)}
-                      role="menuitem"
-                    >
+                    <Link to="/parent" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                       Parent Dashboard
                     </Link>
                   )}
-
                   <button
                     onClick={() => { setTheme(t => (t === 'dark' ? 'light' : 'dark')); setOpenUser(false) }}
                     className="w-full text-left px-4 py-3 hover:bg-background transition-colors"
@@ -163,7 +177,6 @@ const Dashboard = ({ theme, setTheme }) => {
                   >
                     {theme === 'dark' ? 'Switch to Light mode' : 'Switch to Dark mode'}
                   </button>
-
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-3 hover:bg-background transition-colors border-t border-border"
@@ -178,10 +191,10 @@ const Dashboard = ({ theme, setTheme }) => {
         </div>
       </div>
 
-      {/* Banner */}
+      {/* Banner (taller cover & bigger avatar) */}
       <div className="relative">
         <div
-          className="h-48 w-full bg-cover bg-center"
+          className="h-64 sm:h-72 md:h-80 lg:h-96 w-full bg-cover bg-center"
           style={{
             backgroundImage: `url(${
               user?.coverUrl ||
@@ -191,49 +204,29 @@ const Dashboard = ({ theme, setTheme }) => {
         />
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 flex items-end">
-          <div className="max-w-[1600px] mx-auto px-8 pb-4 flex items-end gap-6">
+          <div className="max-w-[1800px] w-full mx-auto px-4 sm:px-6 lg:px-10 pb-4 flex items-end gap-4 sm:gap-6">
             <img
               src={user?.avatarUrl || user?.photoUrl || 'https://placekitten.com/200/200'}
-              className="w-28 h-28 rounded-full ring-4 ring-white object-cover"
+              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full ring-4 ring-white object-cover"
               alt=""
             />
             <div className="text-white">
-              <h1 className="text-3xl font-semibold">{user?.name || 'Student'}</h1>
-              <p className="opacity-90">
+              <h1 className="text-2xl sm:text-3xl font-semibold">{user?.name || 'Student'}</h1>
+              <p className="opacity-90 text-sm sm:text-base">
                 Skill of the Month {profile.spotlightSkill.month} : {profile.spotlightSkill.title}
               </p>
             </div>
             <div className="ml-auto text-right text-white">
-              <div className="text-2xl font-semibold">Student Profile</div>
-              <div className="opacity-90">Top {profile.rankPercentile}% of Learners</div>
-              <div className="opacity-90">Joined {fmtDate(user?.createdAt)}</div>
+              <div className="text-xl sm:text-2xl font-semibold">Student Profile</div>
+              <div className="opacity-90 text-sm sm:text-base">Top {profile.rankPercentile}% of Learners</div>
+              <div className="opacity-90 text-sm sm:text-base">Joined {fmtDate(user?.createdAt)}</div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="max-w-[1600px] mx-auto px-8 mt-6">
-        <div className="bg-card border border-border rounded-lg shadow-lg p-6 card-hover">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="/learning" className="cosmic-button text-center">
-              Learning Dashboard
-            </a>
-            <a href="/courses" className="cosmic-button text-center">
-              Browse Courses
-            </a>
-            {user?.role === 'Teacher' && (
-              <a href="/create-course" className="cosmic-button text-center">
-                Create Course
-              </a>
-            )}
           </div>
         </div>
       </div>
 
       {/* Body */}
-      <main className="max-w-[1600px] mx-auto px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-10 py-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* LEFT */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Skills of {firstName}</h2>
@@ -256,7 +249,7 @@ const Dashboard = ({ theme, setTheme }) => {
                   <div className="font-medium">{c.title}</div>
                   <div className="text-sm opacity-80">Completed: 100%</div>
                 </div>
-                <div className="mt-2 text-sm grid grid-cols-2 gap-4 opacity-80">
+                <div className="mt-2 text-sm grid grid-cols-1 sm:grid-cols-2 gap-4 opacity-80">
                   <div>Course started on {fmtDate(c.startedAt)}</div>
                   <div>Course finished on {fmtDate(c.finishedAt)}</div>
                 </div>
@@ -297,9 +290,7 @@ const Dashboard = ({ theme, setTheme }) => {
   )
 }
 
-// ===================== App =====================
 function App() {
-  // theme: localStorage -> system preference -> light
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('theme')
     if (saved === 'dark' || saved === 'light') return saved
@@ -324,7 +315,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard theme={theme} setTheme={setTheme} />} />
               <Route path="/learning" element={<LearningDashboard />} />
               <Route path="/profile" element={<ProfileSettings />} />
-              <Route path="/profile/visuals" element={<ProfileVisuals />} /> {/* NEW */}
+              <Route path="/profile/visuals" element={<ProfileVisuals />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/parent" element={<ParentDashboard />} />
               <Route path="/courses" element={<CourseGrid />} />
