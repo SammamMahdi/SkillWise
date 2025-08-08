@@ -1,9 +1,9 @@
 const rateLimit = require('express-rate-limit');
 
-// General rate limiter
+// General rate limiter (no limit)
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 1, // 1ms window
+  max: Number.MAX_SAFE_INTEGER, // effectively no limit
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
@@ -11,10 +11,10 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Auth rate limiter (more strict)
+// Auth rate limiter (no limit)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: 1,
+  max: Number.MAX_SAFE_INTEGER,
   message: {
     error: 'Too many authentication attempts, please try again later.',
   },
@@ -22,10 +22,10 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// API rate limiter
+// API rate limiter (no limit)
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 requests per windowMs
+  windowMs: 1,
+  max: Number.MAX_SAFE_INTEGER,
   message: {
     error: 'Too many API requests from this IP, please try again later.',
   },
@@ -37,4 +37,4 @@ module.exports = {
   generalLimiter,
   authLimiter,
   apiLimiter,
-}; 
+};
