@@ -40,6 +40,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const watchedDateOfBirth = watch('dateOfBirth', '');
   const watchedRole = watch('role', '');
   const watchedParentEmail = watch('parentEmail', '');
+  const watchedAge = watch('age', '');
 
   // Update password strength when password changes
   React.useEffect(() => {
@@ -203,19 +204,29 @@ const SignupForm = ({ onSwitchToLogin }) => {
       return;
     }
 
-    // Calculate age from date of birth
-    const birthDate = new Date(data.dateOfBirth);
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+    // Ensure age is provided
+    let finalAge = data.age;
+    if (!finalAge) {
+      if (data.dateOfBirth) {
+        // Calculate age from date of birth if age is not provided
+        const birthDate = new Date(data.dateOfBirth);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        finalAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+      } else {
+        // If neither age nor date of birth is provided, show error
+        setError('age', { type: 'manual', message: 'Please enter your age or date of birth' });
+        return;
+      }
+    }
 
     // Only require parental approval for students under 13
-    const requiresParentalApproval = (calculatedAge < 13 && data.role === 'Student') ? true : false;
+    const requiresParentalApproval = (finalAge < 13 && data.role === 'Student') ? true : false;
 
     // Validate parent email for students under 13
     if (requiresParentalApproval && !data.parentEmail) {
-      setError('Parent email address is required for students under 13');
+      setError('parentEmail', { type: 'manual', message: 'Parent email address is required for students under 13' });
       return;
     }
 
@@ -224,8 +235,8 @@ const SignupForm = ({ onSwitchToLogin }) => {
       email: data.email,
       password: data.password,
       role: data.role,
-      dateOfBirth: data.dateOfBirth,
-      age: calculatedAge,
+      dateOfBirth: data.dateOfBirth || null, // Make dateOfBirth optional
+      age: finalAge,
       requiresParentalApproval: requiresParentalApproval,
       parentEmail: data.parentEmail, // Include parent email in registration
     });
@@ -372,13 +383,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
           {/* Date of Birth Field */}
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-foreground mb-2">
-              Date of Birth
+              Date of Birth (Optional)
             </label>
             <input
               {...register('dateOfBirth', {
-                required: 'Date of birth is required',
                 validate: (value) => {
-                  if (!value) return 'Date of birth is required';
+                  if (!value) return true; // Optional field
                   const birthDate = new Date(value);
                   const today = new Date();
                   const age = today.getFullYear() - birthDate.getFullYear();
@@ -397,21 +407,49 @@ const SignupForm = ({ onSwitchToLogin }) => {
             {errors.dateOfBirth && (
               <p className="mt-1 text-sm text-red-400">{errors.dateOfBirth.message}</p>
             )}
+            <p className="mt-1 text-xs text-foreground/60">
+              Leave empty if you prefer to enter your age directly below
+            </p>
           </div>
 
-          {/* Age Field (calculated from DOB) */}
+          {/* Age Field */}
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-foreground mb-2">
-              Age (calculated from date of birth)
+              Age <span className="text-red-500">*</span>
             </label>
             <input
-              {...register('age')}
+              {...register('age', {
+                required: 'Age is required',
+                min: { value: 5, message: 'You must be at least 5 years old' },
+                max: { value: 120, message: 'Please enter a valid age' },
+                valueAsNumber: true,
+                validate: (value) => {
+                  if (!value || value < 5) return 'You must be at least 5 years old';
+                  if (value > 120) return 'Please enter a valid age';
+                  return true;
+                }
+              })}
               type="number"
               id="age"
-              disabled
-              className="w-full px-4 py-3 bg-background/50 border border-border rounded-lg text-foreground/60 cursor-not-allowed"
-              placeholder="Will be calculated automatically"
+              min="5"
+              max="120"
+              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+              placeholder="Enter your age (5-120)"
             />
+            {errors.age && (
+              <p className="mt-1 text-sm text-red-400">{errors.age.message}</p>
+            )}
+            {watchedDateOfBirth && (
+              <p className="mt-1 text-xs text-foreground/60">
+                Age calculated from date of birth: {(() => {
+                  const birthDate = new Date(watchedDateOfBirth);
+                  const today = new Date();
+                  const age = today.getFullYear() - birthDate.getFullYear();
+                  const monthDiff = today.getMonth() - birthDate.getMonth();
+                  return monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+                })()} years (you can edit this if needed)
+              </p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -524,12 +562,23 @@ const SignupForm = ({ onSwitchToLogin }) => {
           </div>
 
           {/* Parental Approval Section */}
-          {watchedDateOfBirth && watchedRole === 'Student' && (() => {
-            const birthDate = new Date(watchedDateOfBirth);
-            const today = new Date();
-            const age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+          {watchedRole === 'Student' && (() => {
+            let calculatedAge = null;
+            
+            // Calculate age from date of birth if available
+            if (watchedDateOfBirth) {
+              const birthDate = new Date(watchedDateOfBirth);
+              const today = new Date();
+              const age = today.getFullYear() - birthDate.getFullYear();
+              const monthDiff = today.getMonth() - birthDate.getMonth();
+              calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+            } else if (watchedAge) {
+              // Use age from form if date of birth is not provided
+              calculatedAge = parseInt(watchedAge);
+            }
+            
+            if (calculatedAge === null) return null;
+            
             const isUnder13 = calculatedAge < 13;
             
             return (
@@ -579,15 +628,22 @@ const SignupForm = ({ onSwitchToLogin }) => {
           })()}
 
           {/* Parent Email Field (for students under 13) */}
-          {watchedDateOfBirth && watchedRole === 'Student' && (() => {
-            const birthDate = new Date(watchedDateOfBirth);
-            const today = new Date();
-            const age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
-            const isUnder13 = calculatedAge < 13;
+          {watchedRole === 'Student' && (() => {
+            let calculatedAge = null;
             
-            if (!isUnder13) return null;
+            // Calculate age from date of birth if available
+            if (watchedDateOfBirth) {
+              const birthDate = new Date(watchedDateOfBirth);
+              const today = new Date();
+              const age = today.getFullYear() - birthDate.getFullYear();
+              const monthDiff = today.getMonth() - birthDate.getMonth();
+              calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+            } else if (watchedAge) {
+              // Use age from form if date of birth is not provided
+              calculatedAge = parseInt(watchedAge);
+            }
+            
+            if (!calculatedAge || calculatedAge >= 13) return null;
             
             return (
               <div className="mt-4">

@@ -9,6 +9,7 @@ import AdminDashboard from './components/admin/AdminDashboard'
 import ParentDashboard from './components/parent/ParentDashboard'
 import BlockedAccount from './components/auth/BlockedAccount'
 import NotificationCenter from './components/notifications/NotificationCenter'
+import LearningDashboard from './components/dashboard/LearningDashboard'
 
 // Create a client
 const queryClient = new QueryClient()
@@ -151,9 +152,9 @@ const Dashboard = () => {
           <div className="bg-card border border-border rounded-lg shadow-lg p-6 card-hover">
             <h2 className="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="cosmic-button">
-                Start Learning
-              </button>
+              <a href="/learning" className="cosmic-button text-center">
+                Learning Dashboard
+              </a>
               <button className="cosmic-button">
                 View Progress
               </button>
@@ -184,6 +185,7 @@ function App() {
               <Route path="/login" element={<AuthPage />} />
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/learning" element={<LearningDashboard />} />
               <Route path="/profile" element={<ProfileSettings />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/parent" element={<ParentDashboard />} />

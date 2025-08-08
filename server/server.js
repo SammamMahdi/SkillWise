@@ -88,6 +88,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/parent', require('./routes/parent'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/learning', require('./routes/learning'));
 // app.use('/api/modules', require('./routes/modules'));
 
 // Error handling middleware
