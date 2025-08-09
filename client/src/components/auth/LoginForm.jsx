@@ -4,6 +4,8 @@ import { Eye, EyeOff, Mail, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import GoogleSignInDebug from '../../utils/googleSignInDebug';
 
+const CLIENT_ID = '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com';
+
 const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
   const { login, googleLogin, isLoading, error, clearError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +57,7 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
       GoogleSignInDebug.logDebugInfo();
 
       const config = {
-        client_id: '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com',
+        client_id: CLIENT_ID, // FIXED client ID
         callback: async (response) => {
           try {
             setIsGoogleLoading(true);
@@ -100,7 +102,10 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
 
       window.google.accounts.id.initialize(config);
 
-      const btnWidth = window.innerWidth < 640 ? 280 : 360;
+      // CHANGE #3: responsive Google button width (clamped)
+      const safePadding = 64; // account for card padding
+      const btnWidth = Math.max(240, Math.min(360, window.innerWidth - safePadding));
+
       googleButtonRef.current.innerHTML = '';
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: 'standard',
@@ -127,9 +132,9 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
 
   return (
     <div className="w-full">
-      {/* glass card: keep colors/gradient exactly; prettier fonts only */}
-      <div className="w-[500px] min-h-[750px] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl p-6 sm:p-10">
-        {/* Header (centered title only; form stays left) */}
+      {/* CHANGE #2: fluid, responsive card width */}
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg min-h-[650px] rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl shadow-2xl p-6 sm:p-10 overflow-hidden">
+        {/* Header */}
         <div className="text-center mb-8">
           <div
             className="mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4"
@@ -137,8 +142,9 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
           >
             <LogIn className="w-6 h-6" style={{ color: '#a78bfa' }} />
           </div>
+          {/* CHANGE #4: slightly smaller on tiny screens */}
           <h2
-            className="text-3xl lg:text-4xl font-extrabold tracking-tight text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white"
             style={{ fontFamily: '"Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", serif' }}
           >
             Welcome Back
@@ -154,7 +160,7 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
         {/* Errors */}
         {error && (
           <div className="mb-6 p-4 rounded-lg border border-red-400/30 bg-red-500/15">
-            <p className="text-red-200 text-sm">{""+error}</p>
+            <p className="text-red-200 text-sm">{'' + error}</p>
           </div>
         )}
         {googleError && (
@@ -166,7 +172,7 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
           </div>
         )}
 
-        {/* Form (kept left-aligned) */}
+        {/* Form (left-aligned) */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 text-left">
           {/* Email */}
           <div>
@@ -253,7 +259,7 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
             </button>
           </div>
 
-          {/* Submit Button (unchanged colors) */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}

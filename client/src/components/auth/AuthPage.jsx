@@ -60,9 +60,6 @@ const AuthPage = () => {
         {/* LEFT: Branding (centered on mobile, left on lg+) */}
         <div className="lg:col-span-4 xl:col-span-5 flex items-start lg:items-center justify-center lg:justify-start text-center lg:text-left">
           <div className="px-8 sm:px-12 lg:pl-16 lg:pr-8">
-            {/* If you want the exact look, add this in index.html:
-               <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-            */}
             <h1
               className="text-white text-5xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg"
               style={{ fontFamily: '"Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", serif' }}
@@ -78,9 +75,10 @@ const AuthPage = () => {
           </div>
         </div>
 
-        {/* RIGHT: Auth form (shifted more to the right on lg+) */}
+        {/* RIGHT: Auth form (center on mobile, right on lg+) */}
         <div className="lg:col-span-7 xl:col-span-6 lg:col-start-7 xl:col-start-8 flex justify-center lg:justify-end px-4 sm:px-8 lg:pl-8 lg:pr-24">
-          <div className="w-full ml-auto pb-8" style={{ width: 'min(92vw, 38rem)' }}>
+          {/* CHANGE #1: responsive wrapper (center mobile, right desktop) */}
+          <div className="w-full pb-8 mx-auto lg:ml-auto max-w-sm sm:max-w-md">
             {renderForm()}
           </div>
         </div>
