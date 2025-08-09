@@ -18,7 +18,7 @@ const AuthPage = () => {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-foreground/80">Loading...</p>
         </div>
       </div>
@@ -52,26 +52,35 @@ const AuthPage = () => {
         backgroundAttachment: 'fixed',
       }}
     >
-      {/* dark overlay for readability */}
+      {/* Dark overlay for readability */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60" />
 
-      {/* Content area: scrollable, starts at top on mobile; centers on lg+ */}
+      {/* Content grid */}
       <div className="relative z-10 min-h-screen w-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-center py-10 sm:py-14">
-        {/* LEFT: Branding */}
-        <div className="lg:col-span-5 xl:col-span-6 flex items-start lg:items-center">
+        {/* LEFT: Branding (centered on mobile, left on lg+) */}
+        <div className="lg:col-span-4 xl:col-span-5 flex items-start lg:items-center justify-center lg:justify-start text-center lg:text-left">
           <div className="px-8 sm:px-12 lg:pl-16 lg:pr-8">
-            <h1 className="text-white text-5xl md:text-6xl font-extrabold tracking-wide drop-shadow-lg font-serif">
+            {/* If you want the exact look, add this in index.html:
+               <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700..900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+            */}
+            <h1
+              className="text-white text-5xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg"
+              style={{ fontFamily: '"Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", serif' }}
+            >
               SkillWise
             </h1>
-            <p className="mt-3 text-white/85 text-lg">
+            <p
+              className="mt-3 text-white/85 text-lg leading-relaxed"
+              style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif' }}
+            >
               Your learning journey starts here
             </p>
           </div>
         </div>
 
-        {/* RIGHT: Auth form */}
-        <div className="lg:col-span-7 xl:col-span-6 flex justify-center px-4 sm:px-8 lg:px-16">
-          <div className="w-full pb-8" style={{ width: 'min(92vw, 38rem)' }}>
+        {/* RIGHT: Auth form (shifted more to the right on lg+) */}
+        <div className="lg:col-span-7 xl:col-span-6 lg:col-start-7 xl:col-start-8 flex justify-center lg:justify-end px-4 sm:px-8 lg:pl-8 lg:pr-24">
+          <div className="w-full ml-auto pb-8" style={{ width: 'min(92vw, 38rem)' }}>
             {renderForm()}
           </div>
         </div>
