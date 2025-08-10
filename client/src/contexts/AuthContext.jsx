@@ -229,6 +229,11 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   };
 
+  // Set user function for direct user updates
+  const setUser = (userData) => {
+    dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+  };
+
   const value = {
     ...state,
     login,
@@ -240,6 +245,7 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     updateProfile,
     clearError,
+    setUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

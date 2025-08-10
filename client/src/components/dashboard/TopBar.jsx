@@ -18,14 +18,14 @@ const TopBar = ({
 }) => {
   // Determine which profile picture to show
   const getProfilePicture = () => {
-    // First priority: User uploaded profile picture
-    if (user?.profilePhoto) {
-      return user.profilePhoto
+    // First priority: User uploaded profile picture (avatarUrl)
+    if (user?.avatarUrl) {
+      return user.avatarUrl
     }
     
-    // Second priority: Google profile picture (if user has googleId)
-    if (user?.googleId && user?.photoUrl) {
-      return user.photoUrl
+    // Second priority: Google profile picture (only if user has googleId and no uploaded picture)
+    if (user?.googleId && user?.profilePhoto && !user?.avatarUrl) {
+      return user.profilePhoto
     }
     
     // No profile picture available

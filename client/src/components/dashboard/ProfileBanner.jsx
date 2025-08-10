@@ -1,23 +1,10 @@
 import React from 'react'
+import { getProfilePicture, hasGoogleAuthPicture, hasUploadedPicture } from '../../utils/profilePictureUtils'
 
 const ProfileBanner = ({ user, profile, displayHandle, fmtDate }) => {
-  // Determine which profile picture to show
-  const getProfilePicture = () => {
-    // First priority: User uploaded profile picture
-    if (user?.profilePhoto) {
-      return user.profilePhoto
-    }
-    
-    // Second priority: Google profile picture (if user has googleId)
-    if (user?.googleId && user?.photoUrl) {
-      return user.photoUrl
-    }
-    
-    // No profile picture available
-    return null
-  }
-
-  const profilePicture = getProfilePicture()
+  const profilePicture = getProfilePicture(user)
+  const hasGoogleAuth = user?.googleId
+  const userHasUploadedPicture = hasUploadedPicture(user)
 
   return (
     <div className="relative mt-16 sm:mt-20">
@@ -56,8 +43,14 @@ const ProfileBanner = ({ user, profile, displayHandle, fmtDate }) => {
                     </div>
                   </div>
                 )}
+                {/* Show indicator if user has Google Auth but no uploaded picture */}
+                {hasGoogleAuth && !userHasUploadedPicture && (
+                  <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                    G
+                  </div>
+                )}
               </div>
-              {/* Full name and username next to profile picture on all screen sizes */}
+              {/* Full name and username next to it on all screen sizes */}
               <div className="text-left">
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-1 sm:mb-2">
                   {user?.name || 'Student'}
