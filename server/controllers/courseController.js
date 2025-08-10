@@ -91,17 +91,28 @@ const getAllCourses = async (req, res) => {
 
     // Search functionality
     if (search) {
+      console.log('🔍 Backend search query:', search);
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
+        { tags: { $regex: search, $options: 'i' } }
       ];
+      console.log('🔍 Backend query after search:', JSON.stringify(query, null, 2));
     }
 
-    // Filter by tags
+    // Filter by tags (only if no search is provided, or combine with search)
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
-      query.tags = { $in: tagArray };
+      if (search) {
+        // If we have both search and tags, we need to combine them properly
+        // The search already includes tag matching, so we'll add an additional tag filter
+        if (!query.$and) query.$and = [];
+        query.$and.push({ tags: { $in: tagArray } });
+      } else {
+        // If only tags filter, use simple $in
+        query.tags = { $in: tagArray };
+      }
+      console.log('🔍 Backend query after tags:', JSON.stringify(query, null, 2));
     }
 
     // Filter by price range
@@ -321,7 +332,7 @@ const searchCourses = async (req, res) => {
       query.$or = [
         { title: { $regex: q, $options: 'i' } },
         { description: { $regex: q, $options: 'i' } },
-        { tags: { $in: [new RegExp(q, 'i')] } }
+        { tags: { $regex: q, $options: 'i' } }
       ];
     }
 
@@ -376,8 +387,12 @@ const searchCourses = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count
+    // Get total count for pagination
     const total = await Course.countDocuments(query);
+
+    console.log('📚 Backend search results:', courses.length, 'courses found out of', total, 'total');
+    console.log('📚 Final query:', JSON.stringify(query, null, 2));
+    console.log('📚 Courses returned:', courses.map(c => ({ title: c.title, tags: c.tags })));
 
     res.json({
       success: true,

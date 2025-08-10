@@ -3,6 +3,7 @@ const router = express.Router();
 const Course = require('../models/Course');
 const User = require('../models/User');
 const { verifyToken } = require('../config/auth'); // sets req.userId
+const { getAllCourses, getCourseById } = require('../controllers/courseController');
 
 const CODE5 = /^\d{5}$/;
 const ROLE_SEES_INTERNAL = new Set(['Admin', 'Teacher']);
@@ -103,39 +104,13 @@ router.post('/', verifyToken, express.json(), async (req, res) => {
 });
 
 /**
- * List courses (public)
+ * List courses (public) - with search and filters
  */
-router.get('/', async (req, res) => {
-  try {
-    const role = await resolveRole(req);
-    const q = Course.find({})
-      .populate('teacher', 'name email')
-      .sort({ createdAt: -1 });
-
-    const courses = await q.lean();
-    const safe = courses.map(c => sanitizeCourseForUser(c, role));
-    res.json({ ok: true, courses: safe });
-  } catch (e) {
-    console.error('List courses error:', e);
-    res.status(500).json({ error: 'server_error' });
-  }
-});
+router.get('/', getAllCourses);
 
 /**
  * Get single course (public)
  */
-router.get('/:id', async (req, res) => {
-  try {
-    const role = await resolveRole(req);
-    const c = await Course.findById(req.params.id)
-      .populate('teacher', 'name email')
-      .exec();
-    if (!c) return res.status(404).json({ error: 'not_found' });
-    res.json({ ok: true, course: sanitizeCourseForUser(c, role) });
-  } catch (e) {
-    console.error('Get course error:', e);
-    res.status(500).json({ error: 'server_error' });
-  }
-});
+router.get('/:id', getCourseById);
 
 module.exports = router;

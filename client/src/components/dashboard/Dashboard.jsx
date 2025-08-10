@@ -7,13 +7,39 @@ import TopBar from './TopBar'
 import ProfileBanner from './ProfileBanner'
 import DashboardContent from './DashboardContent'
 import { fmtDate } from '../../utils/dateUtils'
+import { getLearningDashboard } from '../../services/learningService'
 
 const Dashboard = ({ theme, setTheme }) => {
   const { user, logout } = useAuth()
   const [openUser, setOpenUser] = useState(false)
   const [openActions, setOpenActions] = useState(false)
+  const [dashboardData, setDashboardData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const userMenuRef = useRef(null)
   const actionsMenuRef = useRef(null)
+
+  // Fetch learning dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await getLearningDashboard()
+        console.log('Learning dashboard data:', data) // Debug log
+        setDashboardData(data)
+      } catch (err) {
+        setError(err.message)
+        console.error('Error fetching learning dashboard:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) {
+      fetchDashboardData()
+    }
+  }, [user])
 
   const handleLogout = async () => {
     await logout()
@@ -42,23 +68,107 @@ const Dashboard = ({ theme, setTheme }) => {
     goalProgressPct: 5,
     goalEta: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
   }
-  const currentCourses = [
-    { title: 'Introduction to Java', progressPct: 90, lastLessonTitle: 'Recursion', startedAt: '2025-01-26', percentileInCourse: 0.001 },
-    { title: 'Discrete Mathematics', progressPct: 48, lastLessonTitle: 'Number Theory', startedAt: '2025-01-12', percentileInCourse: 0.10 },
-    { title: 'Introduction to Game Theory', progressPct: 10, lastLessonTitle: 'Prisoner Problem', startedAt: '2025-01-13', percentileInCourse: 0.80 },
-    { title: 'JavaScript Masterclass', progressPct: 10, lastLessonTitle: 'OOP in JS', startedAt: '2025-01-07', percentileInCourse: 0.90 },
-  ]
-  const completedCourses = [
-    { title: 'Introduction to College Algebra', startedAt: '2025-01-02', finishedAt: '2025-03-07' },
-    { title: 'Introduction to Microeconomics', startedAt: '2025-01-02', finishedAt: '2025-03-07' },
-  ]
+
+  // Transform API data to match component expectations
+  const currentCourses = useMemo(() => {
+    console.log('Transforming current courses from:', dashboardData?.enrolledCourses) // Debug log
+    if (!dashboardData?.enrolledCourses) return []
+    
+    return dashboardData.enrolledCourses.map(enrollment => {
+      const course = enrollment.course
+      if (!course) return null // Skip if course data is missing
+      
+      const transformed = {
+        id: enrollment._id,
+        title: course.title || 'Course Title',
+        progressPct: enrollment.progress || 0,
+        lastLessonTitle: course.lectures?.[enrollment.currentLectureIndex || 0]?.title || '—',
+        startedAt: new Date().toISOString(), // Use current date as fallback since enrolledAt doesn't exist
+        percentileInCourse: 0.5, // This would need to be calculated based on other students' progress
+        courseId: course._id,
+        teacher: course.teacher?.name || 'Instructor'
+      }
+      console.log('Transformed enrollment:', transformed) // Debug log
+      return transformed
+    }).filter(Boolean) // Remove null entries
+  }, [dashboardData])
+
+  const completedCourses = useMemo(() => {
+    console.log('Transforming completed courses from:', dashboardData?.certificates) // Debug log
+    if (!dashboardData?.certificates) return []
+    
+    return dashboardData.certificates.map(certificate => {
+      const course = certificate.course
+      if (!course) return null // Skip if course data is missing
+      
+      const transformed = {
+        id: certificate._id,
+        title: course.title || 'Course Title',
+        startedAt: certificate.issueDate || new Date().toISOString(),
+        finishedAt: certificate.issueDate || new Date().toISOString(),
+        courseId: course._id,
+        teacher: course.teacher?.name || 'Instructor'
+      }
+      console.log('Transformed certificate:', transformed) // Debug log
+      return transformed
+    }).filter(Boolean) // Remove null entries
+  }, [dashboardData])
 
   const firstName = useMemo(() => (user?.name || '').split(' ')[0] || 'You', [user])
   const isCourseCreator = user?.role === 'Teacher' || user?.role === 'Admin'
   const displayHandle = user?.username || user?.handle
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
+          <div className="animate-pulse">
+            <div className="h-8 bg-card/50 rounded-lg mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-32 bg-card/50 rounded-2xl"></div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-64 bg-card/50 rounded-2xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-sm">
+            <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
+            <p className="text-foreground/80">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary font-semibold rounded-xl transition-all duration-300"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse-subtle"></div>
+        <div className="absolute top-40 right-20 w-1 h-1 bg-primary/20 rounded-full animate-float"></div>
+        <div className="absolute bottom-40 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-bounce-gentle"></div>
+        <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-primary/15 rounded-full animate-pulse-subtle"></div>
+      </div>
+
       <TopBar 
         user={user}
         openUser={openUser}
