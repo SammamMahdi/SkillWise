@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
-import bg from './evening-bg.gif';
+import bg from './evening-b2g.jpg';
 
 const AuthPage = () => {
   const { isAuthenticated, isLoading } = useAuth();

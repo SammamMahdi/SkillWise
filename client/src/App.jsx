@@ -15,6 +15,9 @@ import CourseGrid from './components/courses/CourseGrid'
 import CreateCourseForm from './components/courses/CreateCourseForm'
 import CourseDetail from './components/courses/CourseDetail'
 
+// NEW: Set Username page (same background/glass as login)
+import SetUsername from './components/auth/SetUsername'
+
 const queryClient = new QueryClient()
 
 const fmtDate = d =>
@@ -67,6 +70,7 @@ const Dashboard = ({ theme, setTheme }) => {
 
   const firstName = useMemo(() => (user?.name || '').split(' ')[0] || 'You', [user])
   const isCourseCreator = user?.role === 'Teacher' || user?.role === 'Admin'
+  const displayHandle = user?.username || user?.handle // <-- show pretty username if set, else auto handle
 
   // helper: shared glow styles for topbar links/buttons
   const glow = 'transition-colors duration-150 rounded-lg hover:bg-card/40 hover:shadow-[0_0_12px_rgba(167,139,250,0.65)] hover:ring-2 hover:ring-violet-400'
@@ -160,6 +164,14 @@ const Dashboard = ({ theme, setTheme }) => {
                   <Link to="/profile/visuals" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                     Update Profile Visuals
                   </Link>
+
+                  {/* NEW: Show "Set Username" shortcut if user has no pretty username yet */}
+                  {!user?.username && (
+                    <Link to="/auth/set-username" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
+                      Set Username
+                    </Link>
+                  )}
+
                   {user?.role === 'Admin' && (
                     <Link to="/admin" className="block px-4 py-3 hover:bg-background transition-colors" onClick={() => setOpenUser(false)} role="menuitem">
                       Admin Dashboard
@@ -212,16 +224,17 @@ const Dashboard = ({ theme, setTheme }) => {
             />
             <div className="text-white">
               <h1 className="text-2xl sm:text-3xl font-semibold">{user?.name || 'Student'}</h1>
-              <p className="opacity-90 text-sm sm:text-base">
+              {/* NEW: show display handle below the name */}
+              <div className="opacity-90 text-sm sm:text-base">@{displayHandle || 'handle'}</div>
+              <p className="opacity-90 text-sm sm:text-base mt-1">
                 Skill of the Month {profile.spotlightSkill.month} : {profile.spotlightSkill.title}
               </p>
             </div>
             <div className="ml-auto text-right text-white">
-            <div className="text-xl sm:text-2xl font-semibold">{user?.role || 'Student'}</div>
-            <div className="opacity-90 text-sm sm:text-base">Top {profile.rankPercentile}% of Learners</div>
-            <div className="opacity-90 text-sm sm:text-base">Joined {fmtDate(user?.createdAt)}</div>
-          </div>
-
+              <div className="text-xl sm:text-2xl font-semibold">{user?.role || 'Student'}</div>
+              <div className="opacity-90 text-sm sm:text-base">Top {profile.rankPercentile}% of Learners</div>
+              <div className="opacity-90 text-sm sm:text-base">Joined {fmtDate(user?.createdAt)}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -313,6 +326,10 @@ function App() {
               <Route path="/" element={<AuthPage />} />
               <Route path="/login" element={<AuthPage />} />
               <Route path="/signup" element={<AuthPage />} />
+
+              {/* NEW: Set Username route */}
+              <Route path="/auth/set-username" element={<SetUsername />} />
+
               <Route path="/dashboard" element={<Dashboard theme={theme} setTheme={setTheme} />} />
               <Route path="/learning" element={<LearningDashboard />} />
               <Route path="/profile" element={<ProfileSettings />} />

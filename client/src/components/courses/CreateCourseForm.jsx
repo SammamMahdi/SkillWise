@@ -1,115 +1,121 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { BookOpen, Plus, X, Save, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { createCourse } from '../../services/courseService';
 
-const CreateCourseForm = () => {
-  const { user } = useAuth();
+const CODE5 = /^\d{5}$/;
+
+export default function CreateCourseForm() {
+  const { user, token } = useAuth();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lectures, setLectures] = useState([]);
+  const [error, setError] = useState('');
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState('');
+  const [lectures, setLectures] = useState([]);
+  const [courseCode, setCourseCode] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch
-  } = useForm();
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
-  const watchedPrice = watch('price', 0);
+  const invalidCourseCode = useMemo(() => !CODE5.test(courseCode), [courseCode]);
 
-  // Check if user is a teacher
-  if (user?.role !== 'Teacher') {
+  // Gate: only Teacher/Admin
+  if (user?.role !== 'Teacher' && user?.role !== 'Admin') {
     return (
       <div className="min-h-screen bg-background p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-foreground mb-2">Access Denied</h3>
-            <p className="text-foreground/60">Only teachers can create courses.</p>
-          </div>
+        <div className="max-w-4xl mx-auto text-center py-16">
+          <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold">Access Denied</h3>
+          <p className="text-foreground/60">Only teachers/admins can create courses.</p>
         </div>
       </div>
     );
   }
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag('');
+  // ----- Tags -----
+  const addTag = () => {
+    const t = newTag.trim();
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+    setNewTag('');
+  };
+  const removeTag = (t) => setTags(prev => prev.filter(x => x !== t));
+
+  // ----- Lectures -----
+  const addLecture = () =>
+    setLectures(prev => [
+      ...prev,
+      {
+        _tmpId: crypto.randomUUID(),
+        lectureCode: '',
+        title: '',
+        content: [],
+        quiz: [],
+        isLocked: true,
+        isExam: false,
+        timeLimit: '',
+        shuffleQuestions: false,
+      },
+    ]);
+
+  const removeLecture = (id) => setLectures(prev => prev.filter(l => l._tmpId !== id));
+
+  const patchLecture = (id, patch) =>
+    setLectures(prev => prev.map(l => (l._tmpId === id ? { ...l, ...patch } : l)));
+
+  const hasBadLectureCodes = () => {
+    const seen = new Set();
+    for (const l of lectures) {
+      if (!CODE5.test(l.lectureCode)) return true;
+      if (seen.has(l.lectureCode)) return true;
+      seen.add(l.lectureCode);
     }
+    return false;
   };
 
-  const handleRemoveTag = (tagToRemove) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  const handleAddLecture = () => {
-    const newLecture = {
-      id: Date.now(),
-      title: '',
-      content: [],
-      quiz: [],
-      isLocked: true,
-      isExam: false
-    };
-    setLectures([...lectures, newLecture]);
-  };
-
-  const handleRemoveLecture = (lectureId) => {
-    setLectures(lectures.filter(lecture => lecture.id !== lectureId));
-  };
-
-  const handleLectureChange = (lectureId, field, value) => {
-    setLectures(lectures.map(lecture => 
-      lecture.id === lectureId ? { ...lecture, [field]: value } : lecture
-    ));
-  };
-
-  const onSubmit = async (data) => {
+  // ----- Submit -----
+  const onSubmit = async (form) => {
     try {
       setLoading(true);
-      setError(null);
+      setError('');
 
-      const courseData = {
-        ...data,
-        tags: tags,
-        lectures: lectures.map(lecture => ({
-          title: lecture.title,
-          content: lecture.content,
-          quiz: lecture.quiz,
-          isLocked: lecture.isLocked,
-          isExam: lecture.isExam
-        })),
-        price: parseFloat(data.price) || 0
-      };
-
-      const response = await fetch('/api/courses', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(courseData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create course');
+      if (invalidCourseCode) throw new Error('Course code must be exactly 5 digits.');
+      if (lectures.length && hasBadLectureCodes()) {
+        throw new Error('Every lecture needs a unique 5-digit code.');
       }
 
-      // Show success message and redirect
-      alert('Course created successfully!');
-      navigate(`/courses/${result.data._id}`);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error creating course:', err);
+      const payload = {
+        title: form.title,
+        description: form.description,
+        price: Number(form.price) || 0,
+        tags,
+        // Internal manual codes:
+        courseCode,
+        lectures: lectures.map(l => ({
+          lectureCode: l.lectureCode,
+          title: l.title,
+          content: l.content || [],
+          quiz: l.quiz || [],
+          isLocked: !!l.isLocked,
+          isExam: !!l.isExam,
+          timeLimit: l.timeLimit ? Number(l.timeLimit) : undefined,
+          shuffleQuestions: !!l.shuffleQuestions,
+        })),
+      };
+
+      const authToken =
+        token ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('jwt') ||
+        localStorage.getItem('accessToken');
+
+      const res = await createCourse(payload, authToken);
+      const created = res.course || res.data?.course || res.data || res;
+      navigate(`/courses/${created?._id || ''}`);
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || 'Server error while creating course');
     } finally {
       setLoading(false);
     }
@@ -118,130 +124,106 @@ const CreateCourseForm = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => navigate('/courses')}
-              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Courses
-            </button>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Create New Course</h1>
-          <p className="text-foreground/60">Share your knowledge and create an engaging learning experience</p>
+          <button
+            onClick={() => navigate('/courses')}
+            className="flex items-center gap-2 text-foreground/60 hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Courses
+          </button>
+          <h1 className="text-3xl font-bold mt-3">Create New Course</h1>
+          <p className="text-foreground/60">Share your knowledge and create an engaging learning experience.</p>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <p className="text-red-400 text-sm">{error}</p>
+        {!!error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-rose-300 text-sm">
+            {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Basic Information */}
+          {/* Basic */}
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Basic Information</h2>
-            
+            <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Course Title <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm mb-2">Course Title *</label>
                 <input
-                  {...register('title', {
-                    required: 'Course title is required',
-                    minLength: { value: 3, message: 'Title must be at least 3 characters' },
-                    maxLength: { value: 200, message: 'Title must be less than 200 characters' }
-                  })}
-                  type="text"
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
-                  placeholder="Enter course title"
+                  {...register('title', { required: 'Title is required', minLength: { value: 3, message: 'Min 3 chars' } })}
+                  className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary"
+                  placeholder="Music Theory 101"
                 />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
-                )}
+                {errors.title && <div className="text-xs text-rose-400 mt-1">{errors.title.message}</div>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Price
-                </label>
+                <label className="block text-sm mb-2">Price</label>
                 <input
-                  {...register('price', {
-                    min: { value: 0, message: 'Price must be non-negative' }
-                  })}
+                  {...register('price', { min: { value: 0, message: '>= 0' } })}
                   type="number"
                   step="0.01"
-                  min="0"
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+                  className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary"
                   placeholder="0.00"
                 />
-                {errors.price && (
-                  <p className="mt-1 text-sm text-red-400">{errors.price.message}</p>
-                )}
+                {errors.price && <div className="text-xs text-rose-400 mt-1">{errors.price.message}</div>}
+              </div>
+            </div>
+
+            {/* internal course code */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-sm mb-2">Course Code (5 digits) *</label>
+                <input
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary"
+                  placeholder="00001"
+                  inputMode="numeric"
+                  required
+                />
+                <div className="mt-1 text-xs">
+                  {invalidCourseCode
+                    ? <span className="text-rose-400">Must be 5 digits</span>
+                    : <span className="text-emerald-400">Looks good</span>}
+                </div>
               </div>
             </div>
 
             <div className="mt-6">
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Description <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm mb-2">Description *</label>
               <textarea
-                {...register('description', {
-                  required: 'Course description is required',
-                  minLength: { value: 10, message: 'Description must be at least 10 characters' },
-                  maxLength: { value: 2000, message: 'Description must be less than 2000 characters' }
-                })}
+                {...register('description', { required: 'Description is required', minLength: { value: 10, message: 'Min 10 chars' } })}
                 rows={4}
-                className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
-                placeholder="Describe your course content, objectives, and what students will learn..."
+                className="w-full px-4 py-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary"
+                placeholder="What will students learn? Any prerequisites?…"
               />
-              {errors.description && (
-                <p className="mt-1 text-sm text-red-400">{errors.description.message}</p>
-              )}
+              {errors.description && <div className="text-xs text-rose-400 mt-1">{errors.description.message}</div>}
             </div>
           </div>
 
           {/* Tags */}
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Tags</h2>
-            
-            <div className="flex gap-2 mb-4">
+            <h2 className="text-xl font-semibold mb-4">Tags</h2>
+            <div className="flex gap-2">
               <input
-                type="text"
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                placeholder="Add a tag..."
-                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                className="flex-1 px-4 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary"
+                placeholder="Add a tag…"
               />
-              <button
-                type="button"
-                onClick={handleAddTag}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
-              >
+              <button type="button" onClick={addTag} className="px-4 py-2 rounded-lg bg-primary text-white">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
-
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-primary/80"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+            {!!tags.length && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {tags.map(t => (
+                  <span key={t} className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm flex items-center gap-2">
+                    {t}
+                    <button type="button" onClick={() => removeTag(t)}><X className="w-3 h-3" /></button>
                   </span>
                 ))}
               </div>
@@ -251,70 +233,89 @@ const CreateCourseForm = () => {
           {/* Lectures */}
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">Lectures</h2>
-              <button
-                type="button"
-                onClick={handleAddLecture}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Lecture
+              <h2 className="text-xl font-semibold">Lectures</h2>
+              <button type="button" onClick={addLecture} className="px-4 py-2 rounded-lg bg-primary text-white flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Add Lecture
               </button>
             </div>
 
-            {lectures.length === 0 ? (
+            {!lectures.length ? (
               <div className="text-center py-8">
-                <BookOpen className="w-12 h-12 text-foreground/40 mx-auto mb-4" />
-                <p className="text-foreground/60">No lectures added yet. Click "Add Lecture" to get started.</p>
+                <BookOpen className="w-12 h-12 text-foreground/40 mx-auto mb-3" />
+                <div className="text-foreground/60">No lectures yet. Click “Add Lecture”.</div>
               </div>
             ) : (
               <div className="space-y-4">
-                {lectures.map((lecture, index) => (
-                  <div key={lecture.id} className="border border-border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-foreground">Lecture {index + 1}</h3>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveLecture(lecture.id)}
-                        className="text-red-400 hover:text-red-600"
-                      >
+                {lectures.map((l, idx) => (
+                  <div key={l._tmpId} className="p-4 rounded-lg border border-border bg-background">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="font-medium">Lecture {idx + 1}</div>
+                      <button type="button" onClick={() => removeLecture(l._tmpId)} className="text-rose-400 hover:text-rose-300">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Lecture Title
-                        </label>
+                        <label className="block text-sm mb-2">Lecture Title</label>
                         <input
-                          type="text"
-                          value={lecture.title}
-                          onChange={(e) => handleLectureChange(lecture.id, 'title', e.target.value)}
-                          className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
-                          placeholder="Enter lecture title"
+                          value={l.title}
+                          onChange={(e) => patchLecture(l._tmpId, { title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-card border border-border"
+                          placeholder="Intro to Scales"
                         />
                       </div>
-                      
+                      <div>
+                        <label className="block text-sm mb-2">Lecture Code (5 digits) *</label>
+                        <input
+                          value={l.lectureCode}
+                          onChange={(e) =>
+                            patchLecture(l._tmpId, { lectureCode: e.target.value.replace(/\D/g, '').slice(0, 5) })
+                          }
+                          className="w-full px-3 py-2 rounded-lg bg-card border border-border"
+                          placeholder="00001"
+                          inputMode="numeric"
+                        />
+                        {!CODE5.test(l.lectureCode) && <div className="text-xs text-rose-400 mt-1">Must be 5 digits</div>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm mb-2">Time Limit (min)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={l.timeLimit ?? ''}
+                          onChange={(e) => patchLecture(l._tmpId, { timeLimit: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg bg-card border border-border"
+                          placeholder="Optional"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={l.isLocked}
+                          onChange={(e) => patchLecture(l._tmpId, { isLocked: e.target.checked })}
+                        />
+                        <span className="text-sm">Locked</span>
+                      </label>
                       <div className="flex items-center gap-4">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            checked={lecture.isLocked}
-                            onChange={(e) => handleLectureChange(lecture.id, 'isLocked', e.target.checked)}
-                            className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
+                            checked={l.shuffleQuestions}
+                            onChange={(e) => patchLecture(l._tmpId, { shuffleQuestions: e.target.checked })}
                           />
-                          <span className="text-sm text-foreground">Locked</span>
+                          <span className="text-sm">Shuffle</span>
                         </label>
-                        
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            checked={lecture.isExam}
-                            onChange={(e) => handleLectureChange(lecture.id, 'isExam', e.target.checked)}
-                            className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
+                            checked={l.isExam}
+                            onChange={(e) => patchLecture(l._tmpId, { isExam: e.target.checked })}
                           />
-                          <span className="text-sm text-foreground">Exam</span>
+                          <span className="text-sm">Exam</span>
                         </label>
                       </div>
                     </div>
@@ -324,29 +325,20 @@ const CreateCourseForm = () => {
             )}
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/courses')}
-              className="px-6 py-3 bg-background border border-border rounded-lg text-foreground hover:bg-foreground/5 transition-colors"
-            >
+          {/* Submit */}
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => navigate('/courses')} className="px-6 py-3 rounded-lg bg-background border border-border">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            <button type="submit" disabled={loading} className="px-6 py-3 rounded-lg bg-primary text-white flex items-center gap-2 disabled:opacity-50">
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Creating...
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Creating…
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4" />
-                  Create Course
+                  <Save className="w-4 h-4" /> Create Course
                 </>
               )}
             </button>
@@ -355,6 +347,4 @@ const CreateCourseForm = () => {
       </div>
     </div>
   );
-};
-
-export default CreateCourseForm;
+}
