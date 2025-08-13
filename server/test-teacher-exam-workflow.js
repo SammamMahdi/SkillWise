@@ -9,34 +9,42 @@ const Notification = require('./models/Notification');
 
 async function testTeacherExamWorkflow() {
   try {
-    // Connect to MongoDB
+    // Connect to MongoDB with timeout
+    console.log('🔄 Connecting to MongoDB...');
     const mongoUri = process.env.MONGODB_URI || "mongodb+srv://sammam:1234@sammam.e58qn.mongodb.net/SkillWise?retryWrites=true&w=majority&appName=sammam";
-    await mongoose.connect(mongoUri);
-    console.log('Connected to MongoDB');
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000, // 5 second timeout
+      socketTimeoutMS: 45000, // 45 second socket timeout
+    });
+    console.log('✅ Connected to MongoDB');
 
     console.log('=== TESTING TEACHER EXAM WORKFLOW ===\n');
 
     // 1. Find a teacher
+    console.log('🔍 Step 1: Looking for teachers...');
     const teacher = await User.findOne({ role: 'Teacher' });
     if (!teacher) {
       console.log('❌ No teachers found in the system');
       return;
     }
-    console.log('1. Found teacher:', teacher.name, '(', teacher._id, ')');
+    console.log('✅ Step 1: Found teacher:', teacher.name, '(', teacher._id, ')');
 
     // 2. Find a course created by this teacher
+    console.log('🔍 Step 2: Looking for courses...');
     const course = await Course.findOne({ teacher: teacher._id });
     if (!course) {
       console.log('❌ No courses found for this teacher');
       return;
     }
-    console.log('2. Found course:', course.title, '(', course._id, ')');
+    console.log('✅ Step 2: Found course:', course.title, '(', course._id, ')');
 
     // 3. Check existing exams for this course
+    console.log('🔍 Step 3: Checking existing exams...');
     const existingExams = await Exam.find({ course: course._id })
       .populate('teacher', 'name role');
-    
-    console.log('3. Existing exams for this course:', existingExams.length);
+
+    console.log('✅ Step 3: Found', existingExams.length, 'existing exams for this course');
     existingExams.forEach((exam, index) => {
       console.log(`   ${index + 1}. "${exam.title}" - Status: ${exam.status} - Teacher: ${exam.teacher.name}`);
     });
@@ -162,10 +170,31 @@ async function testTeacherExamWorkflow() {
     console.log('\n=== WORKFLOW TEST COMPLETE ===');
 
   } catch (error) {
-    console.error('❌ Error testing teacher exam workflow:', error);
+    console.error('❌ Error testing teacher exam workflow:', error.message);
+    console.error('Stack trace:', error.stack);
   } finally {
-    mongoose.connection.close();
+    try {
+      await mongoose.connection.close();
+      console.log('🔌 MongoDB connection closed');
+    } catch (closeError) {
+      console.error('❌ Error closing MongoDB connection:', closeError.message);
+    }
+    process.exit(0); // Ensure the process exits
   }
 }
 
-testTeacherExamWorkflow();
+// Add a timeout to prevent hanging
+const timeoutId = setTimeout(() => {
+  console.error('❌ Script timeout after 30 seconds');
+  process.exit(1);
+}, 30000);
+
+testTeacherExamWorkflow()
+  .then(() => {
+    clearTimeout(timeoutId);
+  })
+  .catch((error) => {
+    clearTimeout(timeoutId);
+    console.error('❌ Unhandled error:', error.message);
+    process.exit(1);
+  });

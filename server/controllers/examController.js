@@ -407,16 +407,8 @@ const getPendingReviewExams = async (req, res) => {
       console.log(`   Submitted for review: ${exam.submittedForReviewAt || 'Not set'}`);
     });
 
-    // Also test a simpler query to see all pending exams
-    const allPendingExams = await Exam.find({ status: 'pending_review' })
-      .populate('teacher', 'name role');
-
-    console.log(`\nALL PENDING EXAMS (${allPendingExams.length}):`);
-    allPendingExams.forEach((exam, index) => {
-      console.log(`${index + 1}. "${exam.title}" by ${exam.teacher.name} (${exam.teacher.role})`);
-      console.log(`   Teacher ID: ${exam.teacher._id}`);
-      console.log(`   Should admin see? ${exam.teacher._id.toString() !== req.userId.toString()}`);
-    });
+    // Debug: Show summary
+    console.log(`\nSUMMARY: Admin should see ${exams.length} exams out of ${allPendingExams.length} total pending exams`);
 
     res.json({
       success: true,
