@@ -17,13 +17,21 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request:', req.method, req.url, '-> http://localhost:5000' + req.url);
+          });
+        }
       },
-    '/uploads': {
+      '/uploads': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },
-    
     },
   },
   build: {

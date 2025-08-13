@@ -124,7 +124,13 @@ router.post('/me/cover',  protect, upload.single('image'), updateCover);
 
 
 
+// Get public user profile by handle/username
+router.get('/public/:handle', userController.getPublicProfile);
+
+// Search users
+router.get('/search', userController.searchUsers);
+
 // Delete user account
 router.delete('/account', userController.deleteAccount);
 
-module.exports = router; 
+module.exports = router;

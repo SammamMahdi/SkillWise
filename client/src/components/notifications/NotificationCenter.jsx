@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  UserPlus, 
+import {
+  Bell,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  UserPlus,
   UserMinus,
   Eye,
   Trash2,
+  X,
   Settings
 } from 'lucide-react';
 
@@ -125,6 +126,22 @@ const NotificationCenter = () => {
         return <AlertTriangle className="w-5 h-5 text-red-600" />;
       case 'account_unblocked':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'friend_request':
+        return <UserPlus className="w-5 h-5 text-purple-600" />;
+      case 'friend_accepted':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'friend_rejected':
+        return <X className="w-5 h-5 text-red-600" />;
+      case 'exam_review_request':
+        return <Eye className="w-5 h-5 text-orange-600" />;
+      case 'exam_approved':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'exam_rejected':
+        return <XCircle className="w-5 h-5 text-red-600" />;
+      case 'exam_published':
+        return <Bell className="w-5 h-5 text-blue-600" />;
+      case 'exam_graded':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
       default:
         return <Bell className="w-5 h-5 text-foreground/60" />;
     }
@@ -138,9 +155,21 @@ const NotificationCenter = () => {
       case 'parent_approval':
       case 'child_approval':
       case 'account_unblocked':
+      case 'friend_accepted':
         return 'border-l-green-500';
       case 'account_blocked':
+      case 'friend_rejected':
+      case 'exam_rejected':
         return 'border-l-red-500';
+      case 'friend_request':
+        return 'border-l-purple-500';
+      case 'exam_review_request':
+        return 'border-l-orange-500';
+      case 'exam_approved':
+      case 'exam_graded':
+        return 'border-l-green-500';
+      case 'exam_published':
+        return 'border-l-blue-500';
       default:
         return 'border-l-gray-500';
     }

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Shield, 
-  UserCheck, 
-  UserX, 
-  AlertTriangle, 
+import {
+  Users,
+  Shield,
+  UserCheck,
+  UserX,
+  AlertTriangle,
   Settings,
   Eye,
   EyeOff,
   Edit,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  BookOpen,
+  FileText,
+  ClipboardCheck,
+  RotateCcw
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -24,10 +28,16 @@ const AdminDashboard = () => {
   const [blockReason, setBlockReason] = useState('');
   const [isBlocking, setIsBlocking] = useState(false);
   const [blockError, setBlockError] = useState('');
+  const [pendingSubmissions, setPendingSubmissions] = useState(0);
+  const [pendingReAttempts, setPendingReAttempts] = useState(0);
+  const [pendingExamReviews, setPendingExamReviews] = useState(0);
 
   useEffect(() => {
     fetchUsers();
     fetchStats();
+    fetchPendingSubmissions();
+    fetchPendingReAttempts();
+    fetchPendingExamReviews();
   }, []);
 
   const fetchUsers = async () => {
@@ -61,6 +71,56 @@ const AdminDashboard = () => {
       console.error('Error fetching stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingSubmissions = async () => {
+    try {
+      const response = await fetch('/api/exams/attempts/pending-review', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPendingSubmissions(data.data.length || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching pending submissions:', error);
+      setPendingSubmissions(0);
+    }
+  };
+
+  const fetchPendingReAttempts = async () => {
+    try {
+      const response = await fetch('/api/exams/re-attempt-requests?status=pending', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPendingReAttempts(data.data.requests?.length || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending re-attempts:', error);
+    }
+  };
+
+  const fetchPendingExamReviews = async () => {
+    try {
+      const response = await fetch('/api/exams/pending-review', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPendingExamReviews(data.data.exams?.length || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending exam reviews:', error);
+      setPendingExamReviews(0);
     }
   };
 
@@ -202,8 +262,64 @@ const AdminDashboard = () => {
           <p className="text-foreground/80">Manage users, roles, and platform settings</p>
         </div>
 
+        {/* Quick Navigation */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-4">
+            <a
+              href="/exams"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center space-x-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>My Exams</span>
+            </a>
+            <a
+              href="/admin/exams/review"
+              className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg hover:bg-secondary/90 transition-colors flex items-center space-x-2 relative"
+            >
+              <Eye className="w-4 h-4" />
+              <span>Review Exams</span>
+              {pendingExamReviews > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {pendingExamReviews}
+                </span>
+              )}
+            </a>
+            <a
+              href="/admin/submissions/review"
+              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center space-x-2 relative"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              <span>Review Submissions</span>
+              {pendingSubmissions > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {pendingSubmissions}
+                </span>
+              )}
+            </a>
+            <a
+              href="/admin/re-attempt-requests"
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 relative"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Re-attempt Requests</span>
+              {pendingReAttempts > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {pendingReAttempts}
+                </span>
+              )}
+            </a>
+            <a
+              href="/courses"
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>My Courses</span>
+            </a>
+          </div>
+        </div>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
           <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -248,6 +364,30 @@ const AdminDashboard = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-foreground/60">Blocked Users</p>
                 <p className="text-2xl font-bold text-foreground">{stats.blockedUsers || 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <FileText className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-foreground/60">Pending Submission Reviews</p>
+                <p className="text-2xl font-bold text-foreground">{pendingSubmissions}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Eye className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-foreground/60">Pending Exam Reviews</p>
+                <p className="text-2xl font-bold text-foreground">{pendingExamReviews}</p>
               </div>
             </div>
           </div>

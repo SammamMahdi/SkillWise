@@ -87,11 +87,14 @@ const getLearningDashboard = async (req, res) => {
 // @access  Private
 const enrollInCourse = async (req, res) => {
   try {
+    console.log('=== ENROLL IN COURSE DEBUG ===');
     const { courseId } = req.params;
     const userId = req.userId;
+    console.log('Course ID:', courseId, 'User ID:', userId);
 
     // Check if course exists
     const course = await Course.findById(courseId);
+    console.log('Course found:', course ? { id: course._id, title: course.title } : 'null');
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -101,11 +104,34 @@ const enrollInCourse = async (req, res) => {
 
     // Check if user is already enrolled
     const user = await User.findById(userId);
+    console.log('User found:', user ? { id: user._id, name: user.name, dashboardData: !!user.dashboardData } : 'null');
+
+    // Initialize dashboardData if it doesn't exist
+    if (!user.dashboardData) {
+      console.log('Initializing dashboardData for user');
+      user.dashboardData = {
+        enrolledCourses: [],
+        completedCourses: [],
+        certificates: [],
+        skillPosts: []
+      };
+    }
+
+    if (!user.dashboardData.enrolledCourses) {
+      console.log('Initializing enrolledCourses array');
+      user.dashboardData.enrolledCourses = [];
+    }
+
+    console.log('Current enrolled courses:', user.dashboardData.enrolledCourses.map(e => e.course));
+
     const isAlreadyEnrolled = user.dashboardData.enrolledCourses.some(
-      enrollment => enrollment.course.toString() === courseId
+      enrollment => enrollment.course && enrollment.course.toString() === courseId
     );
 
+    console.log('Is already enrolled:', isAlreadyEnrolled);
+
     if (isAlreadyEnrolled) {
+      console.log('User already enrolled, returning 400');
       return res.status(400).json({
         success: false,
         message: 'You are already enrolled in this course'
@@ -115,9 +141,12 @@ const enrollInCourse = async (req, res) => {
     // Add course to user's enrolled courses
     user.dashboardData.enrolledCourses.push({
       course: courseId,
-      currentLectureIndex: 0,
-      completedLectures: [],
-      completedQuizzes: []
+      enrolledAt: new Date(),
+      progress: {
+        completedLectures: [],
+        completedAssignments: [],
+        overallProgress: 0
+      }
     });
 
     await user.save();
@@ -206,16 +235,7 @@ const getEnrolledCourseDetails = async (req, res) => {
   try {
     const { courseId } = req.params;
 
-    const user = await User.findById(req.userId)
-      .populate({
-        path: 'dashboardData.enrolledCourses.course',
-        match: { _id: courseId },
-        populate: {
-          path: 'teacher',
-          select: 'name email'
-        }
-      });
-
+    const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -223,20 +243,65 @@ const getEnrolledCourseDetails = async (req, res) => {
       });
     }
 
-    const enrollment = user.dashboardData.enrolledCourses.find(
-      enrollment => enrollment.course && enrollment.course._id.toString() === courseId
+    // Check if already enrolled
+    const enrollment = user.dashboardData?.enrolledCourses?.find(
+      enrollment => enrollment.course && enrollment.course.toString() === courseId
     );
 
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found in enrolled courses'
+    if (enrollment) {
+      // Return existing enrollment
+      const populatedUser = await User.findById(req.userId)
+        .populate({
+          path: 'dashboardData.enrolledCourses.course',
+          match: { _id: courseId },
+          populate: {
+            path: 'teacher',
+            select: 'name email'
+          }
+        });
+
+      const populatedEnrollment = populatedUser.dashboardData.enrolledCourses.find(
+        e => e.course && e.course._id.toString() === courseId
+      );
+
+      return res.json({
+        success: true,
+        data: populatedEnrollment
       });
     }
 
+    // For testing: Auto-enroll student in course
+    const course = await Course.findById(courseId).populate('teacher', 'name email');
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Auto-enroll the student
+    const newEnrollment = {
+      course: courseId,
+      enrolledAt: new Date(),
+      progress: {
+        completedLectures: [],
+        completedAssignments: [],
+        overallProgress: 0
+      }
+    };
+
+    await User.findByIdAndUpdate(req.userId, {
+      $push: { 'dashboardData.enrolledCourses': newEnrollment }
+    });
+
+    // Return the course details
     res.json({
       success: true,
-      data: enrollment
+      data: {
+        course,
+        enrolledAt: newEnrollment.enrolledAt,
+        progress: newEnrollment.progress
+      }
     });
 
   } catch (error) {

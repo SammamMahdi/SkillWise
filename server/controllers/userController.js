@@ -519,6 +519,136 @@ module.exports = { updateAvatar, updateCover };
 
 
 
+// @desc    Get public user profile by handle/username
+// @route   GET /api/users/public/:handle
+// @access  Private
+const getPublicProfile = async (req, res) => {
+  try {
+    const { handle } = req.params;
+    const viewerId = req.userId;
+
+    // Find target user by handle or username
+    const targetUser = await User.findOne({
+      $or: [
+        { handle: handle.toLowerCase() },
+        { username: handle.toLowerCase() }
+      ]
+    })
+    .select('-password -resetPasswordToken -resetPasswordExpires -emailVerificationToken -email')
+    .populate('dashboardData.enrolledCourses.course')
+    .populate('dashboardData.certificates.course');
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Get viewer to check friendship status
+    const viewer = await User.findById(viewerId).select('friends role');
+    if (!viewer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Viewer not found'
+      });
+    }
+
+    // Check if viewer and target are friends
+    const areFriends = viewer.friends.includes(targetUser._id);
+    const isOwnProfile = viewerId === targetUser._id.toString();
+
+    // Prepare public profile data
+    const publicProfile = {
+      _id: targetUser._id,
+      name: targetUser.name,
+      handle: targetUser.handle,
+      username: targetUser.username,
+      displayHandle: targetUser.username || targetUser.handle,
+      role: targetUser.role,
+      profilePhoto: targetUser.profilePhoto,
+      avatarUrl: targetUser.avatarUrl,
+      coverUrl: targetUser.coverUrl,
+      xp: targetUser.xp,
+      badges: targetUser.badges,
+      interests: targetUser.interests,
+      createdAt: targetUser.createdAt,
+      isPeerMentor: targetUser.isPeerMentor,
+      areFriends,
+      isOwnProfile
+    };
+
+    // If they are friends or it's own profile, include learning progress
+    if (areFriends || isOwnProfile) {
+      publicProfile.dashboardData = targetUser.dashboardData;
+      publicProfile.concentrations = targetUser.concentrations;
+      publicProfile.skillQuests = targetUser.skillQuests;
+      publicProfile.credits = targetUser.credits;
+      publicProfile.avatarsUnlocked = targetUser.avatarsUnlocked;
+    }
+
+    res.json({
+      success: true,
+      data: { user: publicProfile }
+    });
+
+  } catch (error) {
+    console.error('Get public profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching public profile'
+    });
+  }
+};
+
+// @desc    Search users by username/handle
+// @route   GET /api/users/search
+// @access  Private
+const searchUsers = async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    const searcherId = req.userId;
+
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query must be at least 2 characters'
+      });
+    }
+
+    const searchTerm = q.trim().toLowerCase();
+
+    // Search by username, handle, or name (only students)
+    const users = await User.find({
+      $and: [
+        { _id: { $ne: searcherId } }, // Exclude searcher
+        { role: 'Student' }, // Only students
+        {
+          $or: [
+            { username: { $regex: searchTerm, $options: 'i' } },
+            { handle: { $regex: searchTerm, $options: 'i' } },
+            { name: { $regex: searchTerm, $options: 'i' } }
+          ]
+        }
+      ]
+    })
+    .select('name handle username profilePhoto avatarUrl xp badges role')
+    .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      data: { users }
+    });
+
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while searching users'
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -532,4 +662,6 @@ module.exports = {
   deleteAccount,
   updateAvatar,
   updateCover,
-}; 
+  getPublicProfile,
+  searchUsers,
+};

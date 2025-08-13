@@ -101,6 +101,11 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
   googleId: String,
 
+  // Friend system fields
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  sentFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  receivedFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
   // extra placeholders (as requested earlier)
   extradictionary1: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
   extradictionary2: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },

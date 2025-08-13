@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = import.meta.env?.VITE_API_BASE || '/api';
+const API = import.meta.env?.VITE_API_BASE || 'http://localhost:5000/api';
 
 // ---------- reads ----------
 export async function listCourses(params = {}) {
@@ -41,6 +41,14 @@ export async function enroll(courseId, token) {
 
 export async function unenroll(courseId, token) {
   const { data } = await axios.delete(`${API}/learning/courses/${courseId}/enroll`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return data;
+}
+
+// Get courses created by the current teacher/admin
+export async function getTeacherCourses(token) {
+  const { data } = await axios.get(`${API}/courses?instructor=me`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   return data;

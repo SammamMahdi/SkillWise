@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpen, User, Tag, DollarSign, Clock, ArrowLeft, Play, Lock, Copy } from 'lucide-react';
+import { BookOpen, User, Tag, DollarSign, Clock, ArrowLeft, Play, Lock, Copy, Plus, FileText, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCourse, checkEnrollment, enroll, unenroll } from '../../services/courseService';
+import examService from '../../services/examService';
+import toast from 'react-hot-toast';
+import ContactCreatorModal from '../exams/ContactCreatorModal';
+import ExamWarningModal from '../exams/ExamWarningModal';
 
 const canSeeInternal = (user) => user?.role === 'Teacher' || user?.role === 'Admin';
 
@@ -16,8 +20,17 @@ export default function CourseDetail() {
   const [err, setErr] = useState('');
   const [enrolling, setEnrolling] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [exams, setExams] = useState([]);
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [selectedExam, setSelectedExam] = useState(null);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => {
+    load();
+    loadExams();
+    /* eslint-disable-next-line */
+  }, [id]);
 
   async function load() {
     try {
@@ -74,6 +87,108 @@ export default function CourseDetail() {
     const h = Math.floor(total / 3600);
     const m = Math.floor((total % 3600) / 60);
     return h ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  const loadExams = async () => {
+    try {
+      setLoadingExams(true);
+      const response = await examService.getCourseExams(id);
+      if (response.success) {
+        setExams(response.data.exams || []);
+      }
+    } catch (error) {
+      console.error('Failed to load exams:', error);
+      setExams([]);
+    } finally {
+      setLoadingExams(false);
+    }
+  };
+
+  const canCreateExam = () => {
+    return (user?.role === 'Teacher' || user?.role === 'Admin') &&
+           course?.instructor?._id === user?.id;
+  };
+
+  const handleCreateExam = () => {
+    // Navigate to create exam form for this specific course
+    navigate(`/courses/${id}/create-exam`);
+  };
+
+  const handleTakeExam = (exam) => {
+    if (!exam.canAttempt) {
+      toast.error('You have reached the maximum number of attempts for this exam');
+      return;
+    }
+
+    // Show warning modal first
+    setSelectedExam(exam);
+    setShowWarningModal(true);
+  };
+
+  const handleProceedWithExam = async () => {
+    setShowWarningModal(false);
+
+    console.log('=== COURSE DETAIL - STARTING EXAM ===');
+    console.log('Exam data:', selectedExam);
+
+    try {
+      const browserInfo = examService.getBrowserInfo();
+      console.log('Calling startExamAttempt API...');
+      const response = await examService.startExamAttempt(selectedExam._id, browserInfo);
+      console.log('API response:', response);
+
+      // Store exam data in session storage for the exam interface
+      const examData = {
+        attemptId: response.data.attemptId,
+        timeLimit: response.data.timeLimit,
+        questions: response.data.questions,
+        antiCheat: response.data.antiCheat
+      };
+
+      console.log('Storing exam data in sessionStorage:', examData);
+      sessionStorage.setItem('currentExamData', JSON.stringify(examData));
+
+      // Navigate to exam interface
+      console.log('Navigating to exam interface:', `/exams/take/${response.data.attemptId}`);
+      navigate(`/exams/take/${response.data.attemptId}`);
+
+    } catch (error) {
+      console.error('=== COURSE DETAIL - EXAM START ERROR ===');
+      console.error('Error details:', error);
+      toast.error(error.message || 'Failed to start exam');
+    }
+  };
+
+  const handleContactCreator = (exam) => {
+    setSelectedExam(exam);
+    setShowContactModal(true);
+  };
+
+  const getExamStatusBadge = (exam) => {
+    if (!exam.isPublished) {
+      return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Not Published</span>;
+    }
+
+    // Show re-attempt status if applicable
+    if (exam.reAttemptRequest) {
+      if (exam.reAttemptRequest.status === 'approved' && exam.reAttemptRequest.newAttemptGranted && !exam.reAttemptRequest.newAttemptUsed) {
+        return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Retake Approved</span>;
+      } else if (exam.reAttemptRequest.status === 'pending') {
+        return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Request Pending</span>;
+      } else if (exam.reAttemptRequest.status === 'rejected') {
+        return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Request Rejected</span>;
+      }
+    }
+
+    if (exam.lastAttempt) {
+      if (exam.lastAttempt.passed) {
+        return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Passed</span>;
+      } else {
+        return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Failed</span>;
+      }
+    }
+
+    return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">Available</span>;
   };
 
   if (loading) {
@@ -183,6 +298,139 @@ export default function CourseDetail() {
                 </div>
               )}
             </div>
+
+            {/* Exams */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Exams</h2>
+                <div className="flex items-center space-x-4">
+                  <div className="text-xs text-foreground/70">
+                    Exams: {exams.length}
+                  </div>
+                  {canCreateExam() && (
+                    <button
+                      onClick={handleCreateExam}
+                      className="bg-primary text-primary-foreground px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center space-x-2 text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Exam</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {loadingExams ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : exams.length > 0 ? (
+                <div className="space-y-3">
+                  {exams.map((exam) => (
+                    <div key={exam._id} className="bg-background rounded-lg border border-border">
+                      <div className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div>
+                            <h3 className="font-medium">{exam.title}</h3>
+                            <p className="text-sm text-foreground/60">
+                              {exam.timeLimit}m • {exam.questions?.length || 0} questions • {exam.totalPoints} points
+                              {exam.teacher?.role && (
+                                <> • Created by {exam.teacher.role}</>
+                              )}
+                            </p>
+                            {exam.lastAttempt && (
+                              <p className="text-xs text-foreground/50 mt-1">
+                                Last attempt: {exam.lastAttempt.score || 0} points • {exam.lastAttempt.passed ? 'Passed' : 'Failed'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {getExamStatusBadge(exam)}
+                          {user?.role === 'Student' && exam.isPublished && (
+                            <button
+                              onClick={() => handleContactCreator(exam)}
+                              className="border border-border text-foreground px-3 py-1 rounded text-sm hover:bg-accent transition-colors flex items-center space-x-1"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              <span>Contact Creator</span>
+                            </button>
+                          )}
+                          {user?.role === 'Student' && exam.isPublished && exam.canAttempt && (
+                            <button
+                              onClick={() => handleTakeExam(exam)}
+                              className={`px-3 py-1 rounded text-sm transition-colors ${
+                                exam.isRetake
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              }`}
+                            >
+                              {exam.isRetake ? 'Retake Exam' : 'Take Exam'}
+                            </button>
+                          )}
+                          {user?.role === 'Student' && exam.lastAttempt && (
+                            <button
+                              onClick={() => navigate(`/exams/results/${exam.lastAttempt.attemptId || exam.lastAttempt._id}`)}
+                              className="bg-secondary text-secondary-foreground px-3 py-1 rounded text-sm hover:bg-secondary/90 transition-colors"
+                            >
+                              View Results
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Show re-attempt request information */}
+                      {user?.role === 'Student' && exam.reAttemptRequest && (
+                        <div className="border-t border-border p-4 bg-accent/20">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-medium text-foreground mb-2">
+                                Re-attempt Request Status
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-foreground/60">Status:</span>
+                                  <span className={`font-medium ${
+                                    exam.reAttemptRequest.status === 'approved' ? 'text-green-600' :
+                                    exam.reAttemptRequest.status === 'rejected' ? 'text-red-600' :
+                                    'text-yellow-600'
+                                  }`}>
+                                    {exam.reAttemptRequest.status.charAt(0).toUpperCase() + exam.reAttemptRequest.status.slice(1)}
+                                  </span>
+                                </div>
+                                {exam.reAttemptRequest.creatorResponse && (
+                                  <div>
+                                    <span className="text-foreground/60">Instructor Response:</span>
+                                    <p className="text-foreground mt-1 p-2 bg-background rounded border">
+                                      {exam.reAttemptRequest.creatorResponse}
+                                    </p>
+                                  </div>
+                                )}
+                                {exam.reAttemptRequest.reviewedAt && (
+                                  <div className="text-xs text-foreground/50">
+                                    Reviewed on {new Date(exam.reAttemptRequest.reviewedAt).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-foreground/40 mx-auto mb-4" />
+                  <p className="text-foreground/60">
+                    {canCreateExam()
+                      ? 'No exams created yet. Create your first exam!'
+                      : 'No exams available for this course yet.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -257,6 +505,28 @@ export default function CourseDetail() {
           </aside>
         </div>
       </div>
+
+      {/* Modals */}
+      {showWarningModal && selectedExam && (
+        <ExamWarningModal
+          exam={selectedExam}
+          onProceed={handleProceedWithExam}
+          onCancel={() => {
+            setShowWarningModal(false);
+            setSelectedExam(null);
+          }}
+        />
+      )}
+
+      {showContactModal && selectedExam && (
+        <ContactCreatorModal
+          exam={selectedExam}
+          onClose={() => {
+            setShowContactModal(false);
+            setSelectedExam(null);
+          }}
+        />
+      )}
     </div>
   );
 }

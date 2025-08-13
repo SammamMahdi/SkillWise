@@ -105,6 +105,22 @@ const TopBar = ({
                     </Link>
                   </div>
                   
+                  <Link to="/friends" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                    <div className="font-medium text-sm sm:text-base">Friends</div>
+                    <div className="text-xs sm:text-sm text-foreground/60">Connect with other students</div>
+                  </Link>
+                  <Link to="/exams" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                    <div className="font-medium text-sm sm:text-base">Exams</div>
+                    <div className="text-xs sm:text-sm text-foreground/60">
+                      {(user?.role === 'Teacher' || user?.role === 'Admin') ? 'Manage your exams' : 'Take available exams'}
+                    </div>
+                  </Link>
+                  {user?.role === 'Teacher' && (
+                    <Link to="/teacher" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                      <div className="font-medium text-sm sm:text-base">Teacher Dashboard</div>
+                      <div className="text-xs sm:text-sm text-foreground/60">Review submissions & manage courses</div>
+                    </Link>
+                  )}
                   <Link to="/progress" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                     <div className="font-medium text-sm sm:text-base">View Progress</div>
                     <div className="text-xs sm:text-sm text-foreground/60">Track your learning journey</div>
@@ -181,6 +197,10 @@ const TopBar = ({
 
                 {/* Menu items */}
                 <div className="p-2">
+                  <Link to={`/profile/${user?.username || user?.handle || user?.id}`} className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenUser(false)} role="menuitem">
+                    <div className="font-medium text-sm sm:text-base">Go to Profile</div>
+                    <div className="text-xs sm:text-sm text-foreground/60">View your public profile</div>
+                  </Link>
                   <Link to="/profile" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenUser(false)} role="menuitem">
                     <div className="font-medium text-sm sm:text-base">Profile Settings</div>
                     <div className="text-xs sm:text-sm text-foreground/60">Manage your account</div>
