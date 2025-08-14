@@ -44,9 +44,27 @@ router.post('/login', [
     .withMessage('Password is required')
 ], authLimiter, authController.login);
 
-// Google OAuth routes
+// Google OAuth routes (without rate limiting to avoid CORS issues)
 router.post('/google', authController.googleAuth);
 router.get('/google/callback', authController.googleCallback);
+
+// Handle OPTIONS requests for Google auth endpoints
+router.options('/google', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
+router.options('/google/callback', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
 
 // Password reset routes
 router.post('/forgot-password', [

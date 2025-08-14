@@ -14,7 +14,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://localhost:5000',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,
@@ -23,12 +23,12 @@ export default defineConfig({
             console.log('Proxy error:', err);
           });
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying request:', req.method, req.url, '-> http://localhost:5000' + req.url);
+            console.log('Proxying request:', req.method, req.url, '-> https://localhost:5000' + req.url);
           });
         }
       },
       '/uploads': {
-        target: 'http://localhost:5000',
+        target: 'https://localhost:5000',
         changeOrigin: true,
         secure: false,
       },

@@ -510,9 +510,15 @@ const googleAuth = async (req, res) => {
 // @route   GET /api/auth/google/callback
 // @access  Public
 const googleCallback = async (req, res) => {
+  // Handle preflight requests properly
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  
   // This would typically handle the OAuth callback
   // For now, redirect to frontend
-  res.redirect(`${process.env.FRONTEND_URL}/auth/google-callback`);
+  const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:5173';
+  res.redirect(`${frontendUrl}/auth/google-callback`);
 };
 
 // @desc    Forgot password
