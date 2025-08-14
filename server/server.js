@@ -171,32 +171,77 @@ app.use("*", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// SSL certificate paths
-const certPath = path.join(__dirname, '..', 'localhost+2.pem');
-const keyPath = path.join(__dirname, '..', 'localhost+2-key.pem');
+// SSL certificate paths - try multiple possible locations
+const possibleCertPaths = [
+  path.join(__dirname, '..', 'localhost+2.pem'),
+  path.join(__dirname, '..', 'localhost+1.pem'),
+  path.join(__dirname, '..', 'localhost.pem'),
+  path.join(__dirname, 'localhost+2.pem'),
+  path.join(__dirname, 'localhost+1.pem'),
+  path.join(__dirname, 'localhost.pem')
+];
+
+const possibleKeyPaths = [
+  path.join(__dirname, '..', 'localhost+2-key.pem'),
+  path.join(__dirname, '..', 'localhost+1-key.pem'),
+  path.join(__dirname, '..', 'localhost-key.pem'),
+  path.join(__dirname, 'localhost+2-key.pem'),
+  path.join(__dirname, 'localhost+1-key.pem'),
+  path.join(__dirname, 'localhost-key.pem')
+];
+
+// Find the first existing certificate pair
+let certPath = null;
+let keyPath = null;
+
+for (let i = 0; i < possibleCertPaths.length; i++) {
+  if (fs.existsSync(possibleCertPaths[i]) && fs.existsSync(possibleKeyPaths[i])) {
+    certPath = possibleCertPaths[i];
+    keyPath = possibleKeyPaths[i];
+    break;
+  }
+}
 
 // Check if SSL certificates exist
-if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-  const httpsOptions = {
-    cert: fs.readFileSync(certPath),
-    key: fs.readFileSync(keyPath)
-  };
+if (certPath && keyPath) {
+  console.log(`🔐 Using SSL certificates: ${certPath} and ${keyPath}`);
+  
+  try {
+    const httpsOptions = {
+      cert: fs.readFileSync(certPath),
+      key: fs.readFileSync(keyPath)
+    };
 
-  https.createServer(httpsOptions, app).listen(PORT, () => {
-    console.log(`🚀 SkillWise Server running on HTTPS port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
-    console.log(`🔑 Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set'}`);
-  });
+    https.createServer(httpsOptions, app).listen(PORT, () => {
+      console.log(`🚀 SkillWise Server running on HTTPS port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
+      console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
+      console.log(`🔑 Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set'}`);
+      console.log(`🔐 SSL: Enabled with certificates`);
+    });
+  } catch (error) {
+    console.error(`❌ Failed to start HTTPS server: ${error.message}`);
+    console.log(`🔄 Falling back to HTTP server...`);
+    startHttpServer();
+  }
 } else {
-  // Fallback to HTTP if certificates don't exist
+  console.log(`⚠️  No SSL certificates found. Available paths checked:`);
+  possibleCertPaths.forEach((path, index) => {
+    console.log(`   ${index + 1}. ${path} - ${fs.existsSync(path) ? '✅ Exists' : '❌ Not found'}`);
+  });
+  console.log(`🔄 Starting HTTP server...`);
+  startHttpServer();
+}
+
+function startHttpServer() {
   app.listen(PORT, () => {
     console.log(`🚀 SkillWise Server running on HTTP port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
     console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
     console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
     console.log(`🔑 Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set'}`);
+    console.log(`⚠️  SSL: Disabled - running on HTTP`);
   });
 }
 
