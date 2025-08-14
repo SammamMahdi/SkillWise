@@ -44,6 +44,40 @@ router.put('/courses/:courseId/progress', [
     .withMessage('Current lecture index must be a non-negative integer')
 ], learningController.updateCourseProgress);
 
+// NEW: Lecture progress tracking routes
+router.put('/courses/:courseId/lectures/:lectureIndex/progress', [
+  body('videoProgress')
+    .optional()
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Video progress must be between 0 and 100'),
+  body('videoWatched')
+    .optional()
+    .isBoolean()
+    .withMessage('Video watched must be a boolean'),
+  body('pdfRead')
+    .optional()
+    .isBoolean()
+    .withMessage('PDF read must be a boolean'),
+  body('pdfPagesRead')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('PDF pages read must be a non-negative integer'),
+  body('timeSpent')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Time spent must be a non-negative integer'),
+  body('notes')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Notes must be less than 1000 characters')
+], learningController.updateLectureProgress);
+
+router.get('/courses/:courseId/lectures/:lectureIndex/progress', learningController.getLectureProgress);
+
+// NEW: Course progress overview
+router.get('/courses/:courseId/progress', learningController.getCourseProgress);
+
 // Get user certificates
 router.get('/certificates', learningController.getUserCertificates);
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpen, User, Tag, DollarSign, Clock, ArrowLeft, Play, Lock, Copy, Plus, FileText, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { BookOpen, User, Tag, DollarSign, Clock, ArrowLeft, Play, Lock, Copy, Plus, FileText, CheckCircle, XCircle, MessageSquare, Edit, ChevronDown, ChevronRight, Video, File, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCourse, checkEnrollment, enroll, unenroll } from '../../services/courseService';
 import examService from '../../services/examService';
@@ -9,6 +9,20 @@ import ContactCreatorModal from '../exams/ContactCreatorModal';
 import ExamWarningModal from '../exams/ExamWarningModal';
 
 const canSeeInternal = (user) => user?.role === 'Teacher' || user?.role === 'Admin';
+const isCourseOwner = (user, course) => {
+  // Check multiple possible field names for user ID
+  const userId = user?._id || user?.id;
+  const teacherId = course?.teacher?._id || course?.teacher?.id;
+  
+  console.log('Course owner check:', {
+    userId,
+    teacherId,
+    userRole: user?.role,
+    isOwner: userId === teacherId || user?.role === 'Admin'
+  });
+  
+  return userId === teacherId || user?.role === 'Admin';
+};
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -25,6 +39,9 @@ export default function CourseDetail() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
+  const [expandedLectures, setExpandedLectures] = useState(new Set());
+  const [selectedContent, setSelectedContent] = useState(null);
+  const [showContentModal, setShowContentModal] = useState(false);
 
   useEffect(() => {
     load();
@@ -38,6 +55,12 @@ export default function CourseDetail() {
       const res = await getCourse(id);
       const c = res.course || res.data || res;
       setCourse(c);
+      
+      // Debug logging
+      console.log('Course loaded:', c);
+      console.log('Current user:', user);
+      console.log('Is course owner:', isCourseOwner(user, c));
+      
       if (user) {
         const ok = await checkEnrollment(id, localStorage.getItem('token'));
         setIsEnrolled(ok);
@@ -106,12 +129,20 @@ export default function CourseDetail() {
 
   const canCreateExam = () => {
     return (user?.role === 'Teacher' || user?.role === 'Admin') &&
-           course?.instructor?._id === user?.id;
+           course?.teacher?._id === user?._id;
   };
 
   const handleCreateExam = () => {
     // Navigate to create exam form for this specific course
     navigate(`/courses/${id}/create-exam`);
+  };
+
+  const handleEditCourse = () => {
+    navigate(`/courses/${id}/edit`);
+  };
+
+  const handleAddLecture = () => {
+    navigate(`/courses/${id}/add-lecture`);
   };
 
   const handleTakeExam = (exam) => {
@@ -164,6 +195,21 @@ export default function CourseDetail() {
     setShowContactModal(true);
   };
 
+  const toggleLectureExpansion = (lectureId) => {
+    const newExpanded = new Set(expandedLectures);
+    if (newExpanded.has(lectureId)) {
+      newExpanded.delete(lectureId);
+    } else {
+      newExpanded.add(lectureId);
+    }
+    setExpandedLectures(newExpanded);
+  };
+
+  const handleViewContent = (content) => {
+    setSelectedContent(content);
+    setShowContentModal(true);
+  };
+
   const getExamStatusBadge = (exam) => {
     if (!exam.isPublished) {
       return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Not Published</span>;
@@ -189,6 +235,50 @@ export default function CourseDetail() {
     }
 
     return <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">Available</span>;
+  };
+
+  const renderContentItem = (content, index) => {
+    const isVideo = content.type === 'video';
+    const isPdf = content.type === 'pdf';
+
+    return (
+      <div key={content._id || index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+        <div className="flex items-center gap-3">
+          {isVideo ? (
+            <Video className="w-5 h-5 text-blue-600" />
+          ) : isPdf ? (
+            <File className="w-5 h-5 text-red-600" />
+          ) : (
+            <FileText className="w-5 h-5 text-foreground/60" />
+          )}
+          <div>
+            <h4 className="font-medium text-sm">{content.title}</h4>
+            <p className="text-xs text-foreground/60">
+              {isVideo ? 'Video' : isPdf ? 'PDF Document' : 'Content'}
+              {content.duration && ` • ${Math.floor(content.duration / 60)}:${(content.duration % 60).toString().padStart(2, '0')}`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleViewContent(content)}
+            className="p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+            title="View content"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {isCourseOwner(user, course) && (
+            <button
+              onClick={() => navigate(`/courses/${id}/lectures/${content._id}/edit`)}
+              className="p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+              title="Edit content"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -234,19 +324,45 @@ export default function CourseDetail() {
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </button>
 
-          <h1 className="text-3xl font-bold">{course.title}</h1>
-          <p className="text-foreground/70 mt-1">{course.description}</p>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold">{course.title}</h1>
+              <p className="text-foreground/70 mt-1">{course.description}</p>
 
-          <div className="mt-2 text-sm text-foreground/70 flex items-center gap-2">
-            Public Code: <code>{course.publicCode || '—'}</code>
-            {course.publicCode && <button className="opacity-70 hover:opacity-100" onClick={() => copy(course.publicCode)}><Copy className="w-3 h-3" /></button>}
-          </div>
-          {canSeeInternal(user) && course.courseCode && (
-            <div className="text-sm text-foreground/70 flex items-center gap-2">
-              Internal Code: <code>{course.courseCode}</code>
-              <button className="opacity-70 hover:opacity-100" onClick={() => copy(course.courseCode)}><Copy className="w-3 h-3" /></button>
+              <div className="mt-2 text-sm text-foreground/70 flex items-center gap-2">
+                Public Code: <code>{course.publicCode || '—'}</code>
+                {course.publicCode && <button className="opacity-70 hover:opacity-100" onClick={() => copy(course.publicCode)}><Copy className="w-3 h-3" /></button>}
+              </div>
+              {canSeeInternal(user) && course.courseCode && (
+                <div className="text-sm text-foreground/70 flex items-center gap-2">
+                  Internal Code: <code>{course.courseCode}</code>
+                  <button className="opacity-70 hover:opacity-100" onClick={() => copy(course.courseCode)}><Copy className="w-3 h-3" /></button>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Teacher Actions */}
+            {isCourseOwner(user, course) && (
+              <div className="flex items-center gap-3 ml-4">
+                <button
+                  onClick={handleEditCourse}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Course
+                </button>
+                <button
+                  onClick={handleAddLecture}
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Lecture
+                </button>
+              </div>
+            )}
+            
+
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -266,35 +382,123 @@ export default function CourseDetail() {
             <div className="bg-card border border-border rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Course Content</h2>
-                <div className="text-xs text-foreground/70">
-                  Lectures: {course.lectures?.length || 0}
+                <div className="flex items-center gap-4">
+                  <div className="text-xs text-foreground/70">
+                    Lectures: {course.lectures?.length || 0}
+                  </div>
+                  {isCourseOwner(user, course) && (
+                    <button
+                      onClick={handleAddLecture}
+                      className="px-3 py-1 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-1 text-sm"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Lecture
+                    </button>
+                  )}
                 </div>
               </div>
 
               {course.lectures?.length ? (
                 <div className="space-y-3">
-                  {course.lectures.map((lec, i) => (
-                    <div key={lec._id || i} className="flex items-center justify-between p-4 bg-background rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {lec.isLocked ? <Lock className="w-5 h-5 text-foreground/40" /> : <Play className="w-5 h-5 text-primary" />}
-                        <div>
-                          <h3 className="font-medium">{lec.title || `Lecture ${i + 1}`}</h3>
-                          <p className="text-sm text-foreground/60">
-                            {lec.isExam ? 'Exam' : 'Lecture'}
-                            {canSeeInternal(user) && lec.lectureCode && (
-                              <> • Internal: <code>{lec.lectureCode}</code></>
+                  {course.lectures.map((lec, i) => {
+                    const isExpanded = expandedLectures.has(lec._id || i);
+                    const hasContent = lec.content && lec.content.length > 0;
+                    
+                    return (
+                      <div key={lec._id || i} className="bg-background rounded-lg border">
+                        <div className="flex items-center justify-between p-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <button
+                              onClick={() => toggleLectureExpansion(lec._id || i)}
+                              className="p-1 hover:bg-accent rounded transition-colors"
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                            </button>
+                            {lec.isLocked ? <Lock className="w-5 h-5 text-foreground/40" /> : <Play className="w-5 h-5 text-primary" />}
+                            <div className="flex-1">
+                              <h3 className="font-medium">{lec.title || `Lecture ${i + 1}`}</h3>
+                              <p className="text-sm text-foreground/60">
+                                {lec.isExam ? 'Exam' : 'Lecture'}
+                                {canSeeInternal(user) && lec.lectureCode && (
+                                  <> • Internal: <code>{lec.lectureCode}</code></>
+                                )}
+                                {hasContent && ` • ${lec.content.length} items`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isCourseOwner(user, course) && (
+                              <button
+                                onClick={() => navigate(`/courses/${id}/lectures/${lec._id || i}/edit`)}
+                                className="p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                                title="Edit lecture"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
                             )}
-                          </p>
+                          </div>
                         </div>
+
+                        {/* Expanded Content */}
+                        {isExpanded && hasContent && (
+                          <div className="border-t border-border p-4 space-y-3">
+                            <h4 className="font-medium text-sm text-foreground/80">Content</h4>
+                            {lec.content.map((content, contentIndex) => 
+                              renderContentItem(content, contentIndex)
+                            )}
+                          </div>
+                        )}
+
+                        {/* Exam Information */}
+                        {isExpanded && lec.exam && (
+                          <div className="border-t border-border p-4">
+                            <h4 className="font-medium text-sm text-foreground/80 mb-3">Exam</h4>
+                            <div className="bg-accent/20 rounded-lg p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-sm">
+                                    {typeof lec.exam === 'string' ? 'Linked Exam' : lec.exam.title}
+                                  </p>
+                                  <p className="text-xs text-foreground/60">
+                                    Passing Score: {lec.passingScore || 60}%
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => navigate(`/exams/${lec.exam._id || lec.exam}`)}
+                                  className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
+                                >
+                                  View Exam
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-sm text-foreground/60">{lec.content?.length || 0} items</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <BookOpen className="w-12 h-12 text-foreground/40 mx-auto mb-4" />
-                  <p className="text-foreground/60">No lectures available yet.</p>
+                  <p className="text-foreground/60">
+                    {isCourseOwner(user, course) 
+                      ? 'No lectures available yet. Add your first lecture!'
+                      : 'No lectures available yet.'
+                    }
+                  </p>
+                  {isCourseOwner(user, course) && (
+                    <button
+                      onClick={handleAddLecture}
+                      className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 mx-auto"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add First Lecture
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -374,6 +578,15 @@ export default function CourseDetail() {
                               className="bg-secondary text-secondary-foreground px-3 py-1 rounded text-sm hover:bg-secondary/90 transition-colors"
                             >
                               View Results
+                            </button>
+                          )}
+                          {isCourseOwner(user, course) && (
+                            <button
+                              onClick={() => navigate(`/exams/${exam._id}/edit`)}
+                              className="px-3 py-1 bg-secondary text-secondary-foreground rounded text-sm hover:bg-secondary/90 flex items-center gap-1"
+                            >
+                              <Edit className="w-3 h-3" />
+                              Edit
                             </button>
                           )}
                         </div>
@@ -505,6 +718,119 @@ export default function CourseDetail() {
           </aside>
         </div>
       </div>
+
+      {/* Content Modal */}
+      {showContentModal && selectedContent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">{selectedContent.title}</h3>
+              <button
+                onClick={() => setShowContentModal(false)}
+                className="text-foreground/60 hover:text-foreground"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            {selectedContent.type === 'video' ? (
+              <div className="space-y-4">
+                <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                  {selectedContent.url && (
+                    (() => {
+                      // Handle different video types
+                      const url = selectedContent.url;
+                      let embedUrl = url;
+                      
+                      // YouTube URL conversion
+                      if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+                        const videoId = url.includes('youtube.com/watch') 
+                          ? url.split('v=')[1]?.split('&')[0]
+                          : url.split('youtu.be/')[1]?.split('?')[0];
+                        
+                        if (videoId) {
+                          embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                        }
+                      }
+                      // Vimeo URL conversion
+                      else if (url.includes('vimeo.com/')) {
+                        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+                        if (videoId) {
+                          embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                        }
+                      }
+                      
+                      return (
+                        <iframe
+                          src={embedUrl}
+                          title={selectedContent.title}
+                          className="w-full h-full"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      );
+                    })()
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">{selectedContent.title}</h4>
+                  {selectedContent.duration && (
+                    <p className="text-sm text-foreground/60">
+                      Duration: {Math.floor(selectedContent.duration / 60)}:{(selectedContent.duration % 60).toString().padStart(2, '0')}
+                    </p>
+                  )}
+                  <p className="text-sm text-foreground/60">
+                    <a 
+                      href={selectedContent.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline"
+                    >
+                      Open in new tab
+                    </a>
+                  </p>
+                </div>
+              </div>
+            ) : selectedContent.type === 'pdf' ? (
+              <div className="space-y-4">
+                <div className="aspect-[4/3] bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">PDF Document</p>
+                    <a
+                      href={selectedContent.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                    >
+                      Open PDF
+                    </a>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium">{selectedContent.title}</h4>
+                  <p className="text-sm text-foreground/60">
+                    <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {selectedContent.url}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-accent/20 rounded-lg p-4">
+                  <h4 className="font-medium">{selectedContent.title}</h4>
+                  <p className="text-sm text-foreground/60 mt-2">
+                    <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {selectedContent.url}
+                    </a>
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showWarningModal && selectedExam && (

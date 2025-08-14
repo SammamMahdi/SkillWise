@@ -81,15 +81,45 @@ const userSchema = new mongoose.Schema({
   dashboardData: {
     enrolledCourses: [{
       course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+      enrolledAt: { type: Date, default: Date.now },
       currentLectureIndex: { type: Number, default: 0 },
       completedLectures: [Number],
-      completedQuizzes: [Number]
+      completedQuizzes: [Number],
+      // NEW: Enhanced progress tracking
+      lectureProgress: [{
+        lectureIndex: { type: Number, required: true },
+        completed: { type: Boolean, default: false },
+        completedAt: Date,
+        timeSpent: Number, // in seconds
+        examAttempts: [{
+          examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+          attemptId: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamAttempt' },
+          score: Number,
+          passed: Boolean,
+          completedAt: Date
+        }],
+        lastAccessed: Date
+      }],
+      // NEW: Course completion tracking
+      overallProgress: { type: Number, default: 0, min: 0, max: 100 }, // percentage
+      totalTimeSpent: Number, // in seconds
+      lastAccessed: Date,
+      // NEW: Exam scores tracking
+      examScores: [{
+        examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },
+        bestScore: Number,
+        attempts: Number,
+        lastAttemptDate: Date,
+        passed: Boolean
+      }]
     }],
     skillPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SkillPost' }],
     certificates: [{
       course: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
       issueDate: Date,
-      credentialId: String
+      credentialId: String,
+      finalScore: Number,
+      completionDate: Date
     }],
     feedbackScore: Number,
   },

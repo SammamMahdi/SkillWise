@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const SkillPost = require('../models/SkillPost');
+const LectureProgress = require('../models/LectureProgress');
+const ExamAttempt = require('../models/ExamAttempt');
 
 // @desc    Get user learning dashboard data
 // @route   GET /api/learning/dashboard
@@ -444,6 +446,277 @@ const getUserSkillPosts = async (req, res) => {
   }
 };
 
+// @desc    Update lecture progress
+// @route   PUT /api/learning/courses/:courseId/lectures/:lectureIndex/progress
+// @access  Private
+const updateLectureProgress = async (req, res) => {
+  try {
+    const { courseId, lectureIndex } = req.params;
+    const { 
+      videoProgress, 
+      videoWatched, 
+      pdfRead, 
+      pdfPagesRead,
+      timeSpent,
+      notes 
+    } = req.body;
+
+    // Validate lecture index
+    const lectureIdx = parseInt(lectureIndex);
+    if (isNaN(lectureIdx) || lectureIdx < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lecture index'
+      });
+    }
+
+    // Check if user is enrolled in the course
+    const user = await User.findById(req.userId);
+    const enrollment = user.dashboardData?.enrolledCourses?.find(
+      e => e.course.toString() === courseId
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found in enrolled courses'
+      });
+    }
+
+    // Get or create lecture progress
+    let lectureProgress = await LectureProgress.findOne({
+      student: req.userId,
+      course: courseId,
+      lectureIndex: lectureIdx
+    });
+
+    if (!lectureProgress) {
+      lectureProgress = new LectureProgress({
+        student: req.userId,
+        course: courseId,
+        lectureIndex: lectureIdx,
+        status: 'in_progress'
+      });
+    }
+
+    // Update progress
+    if (videoProgress !== undefined) {
+      lectureProgress.contentProgress.videoProgress = Math.min(100, Math.max(0, videoProgress));
+      if (videoProgress >= 90) { // Consider 90% as watched
+        lectureProgress.contentProgress.videoWatched = true;
+      }
+    }
+
+    if (videoWatched !== undefined) {
+      lectureProgress.contentProgress.videoWatched = videoWatched;
+    }
+
+    if (pdfRead !== undefined) {
+      lectureProgress.contentProgress.pdfRead = pdfRead;
+    }
+
+    if (pdfPagesRead !== undefined) {
+      lectureProgress.contentProgress.pdfPagesRead = pdfPagesRead;
+    }
+
+    if (timeSpent !== undefined) {
+      lectureProgress.contentProgress.videoTimeSpent = (lectureProgress.contentProgress.videoTimeSpent || 0) + timeSpent;
+    }
+
+    if (notes !== undefined) {
+      lectureProgress.studentNotes = notes;
+    }
+
+    lectureProgress.lastAccessed = new Date();
+    if (!lectureProgress.startedAt) {
+      lectureProgress.startedAt = new Date();
+    }
+
+    await lectureProgress.save();
+
+    // Update user's overall course progress
+    await updateUserCourseProgress(req.userId, courseId);
+
+    res.json({
+      success: true,
+      message: 'Lecture progress updated successfully',
+      data: lectureProgress
+    });
+
+  } catch (error) {
+    console.error('Update lecture progress error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating lecture progress'
+    });
+  }
+};
+
+// @desc    Get lecture progress
+// @route   GET /api/learning/courses/:courseId/lectures/:lectureIndex/progress
+// @access  Private
+const getLectureProgress = async (req, res) => {
+  try {
+    const { courseId, lectureIndex } = req.params;
+    const lectureIdx = parseInt(lectureIndex);
+
+    if (isNaN(lectureIdx) || lectureIdx < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lecture index'
+      });
+    }
+
+    const lectureProgress = await LectureProgress.findOne({
+      student: req.userId,
+      course: courseId,
+      lectureIndex: lectureIdx
+    });
+
+    if (!lectureProgress) {
+      return res.json({
+        success: true,
+        data: {
+          status: 'not_started',
+          contentProgress: {
+            videoWatched: false,
+            videoProgress: 0,
+            videoTimeSpent: 0,
+            pdfDownloaded: false,
+            pdfRead: false,
+            pdfPagesRead: 0
+          },
+          examProgress: {
+            examId: null,
+            attempts: [],
+            bestScore: 0,
+            totalAttempts: 0,
+            passed: false
+          },
+          overallProgress: 0
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: lectureProgress
+    });
+
+  } catch (error) {
+    console.error('Get lecture progress error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching lecture progress'
+    });
+  }
+};
+
+// @desc    Get course progress overview
+// @route   GET /api/learning/courses/:courseId/progress
+// @access  Private
+const getCourseProgress = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // Get course details
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Get all lecture progress for this course and student
+    const lectureProgress = await LectureProgress.find({
+      student: req.userId,
+      course: courseId
+    }).sort({ lectureIndex: 1 });
+
+    // Calculate overall progress
+    const totalLectures = course.lectures.length;
+    const completedLectures = lectureProgress.filter(lp => lp.status === 'completed').length;
+    const overallProgress = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
+
+    // Get exam scores
+    const examScores = await ExamAttempt.aggregate([
+      {
+        $match: {
+          student: req.userId,
+          exam: { $in: course.lectures.filter(l => l.exam).map(l => l.exam) }
+        }
+      },
+      {
+        $group: {
+          _id: '$exam',
+          bestScore: { $max: '$finalScore' },
+          attempts: { $sum: 1 },
+          passed: { $max: '$finalPassed' }
+        }
+      }
+    ]);
+
+    const progressData = {
+      courseId,
+      totalLectures,
+      completedLectures,
+      overallProgress,
+      lectureProgress: lectureProgress.map(lp => ({
+        lectureIndex: lp.lectureIndex,
+        status: lp.status,
+        contentProgress: lp.contentProgress,
+        examProgress: lp.examProgress,
+        overallProgress: lp.overallProgress,
+        lastAccessed: lp.lastAccessed
+      })),
+      examScores
+    };
+
+    res.json({
+      success: true,
+      data: progressData
+    });
+
+  } catch (error) {
+    console.error('Get course progress error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching course progress'
+    });
+  }
+};
+
+// Helper function to update user's overall course progress
+const updateUserCourseProgress = async (userId, courseId) => {
+  try {
+    const lectureProgress = await LectureProgress.find({
+      student: userId,
+      course: courseId
+    });
+
+    const totalLectures = lectureProgress.length;
+    const completedLectures = lectureProgress.filter(lp => lp.status === 'completed').length;
+    const overallProgress = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
+
+    // Update user's course progress
+    await User.updateOne(
+      { 
+        _id: userId,
+        'dashboardData.enrolledCourses.course': courseId
+      },
+      {
+        $set: {
+          'dashboardData.enrolledCourses.$.overallProgress': overallProgress,
+          'dashboardData.enrolledCourses.$.lastAccessed': new Date()
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error updating user course progress:', error);
+  }
+};
+
 module.exports = {
   getLearningDashboard,
   enrollInCourse,
@@ -451,5 +724,8 @@ module.exports = {
   getEnrolledCourseDetails,
   updateCourseProgress,
   getUserCertificates,
-  getUserSkillPosts
+  getUserSkillPosts,
+  updateLectureProgress,
+  getLectureProgress,
+  getCourseProgress
 };

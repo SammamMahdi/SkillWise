@@ -21,6 +21,13 @@ export async function createCourse(course, token) {
   return data; // expect { ok, course }
 }
 
+export async function updateCourse(id, course, token) {
+  const { data } = await axios.put(`${API}/courses/${id}`, course, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return data; // expect { ok, course }
+}
+
 // ---------- learning/enrollment ----------
 export async function checkEnrollment(courseId, token) {
   const { status } = await axios.get(`${API}/learning/courses/${courseId}`, {

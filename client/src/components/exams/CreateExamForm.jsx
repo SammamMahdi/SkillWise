@@ -66,7 +66,7 @@ const CreateExamForm = () => {
     setEstimatedTime(time);
   }, [examData.questions]);
 
-  // Real-time validation
+  // Real-time validation - only run when needed
   const validateForm = useCallback(() => {
     const errors = {};
 
@@ -113,9 +113,15 @@ const CreateExamForm = () => {
     return Object.keys(errors).length === 0;
   }, [examData]);
 
+  // Only validate on specific changes, not on every render
   useEffect(() => {
-    validateForm();
-  }, [validateForm]);
+    // Debounce validation to avoid excessive calls
+    const timeoutId = setTimeout(() => {
+      validateForm();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [examData.title, examData.courseId, examData.timeLimit, examData.passingScore, examData.questions.length]);
 
   const fetchTeacherCourses = async () => {
     try {
