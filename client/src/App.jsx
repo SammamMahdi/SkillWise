@@ -14,6 +14,7 @@ import CreateCourseForm from './components/courses/CreateCourseForm'
 import EditCourseForm from './components/courses/EditCourseForm'
 import AddLectureForm from './components/courses/AddLectureForm'
 import CourseDetail from './components/courses/CourseDetail'
+import StudentCourseView from './components/courses/StudentCourseView'
 import Dashboard from './components/dashboard/Dashboard'
 import FriendsPage from './components/friends/FriendsPage'
 import PublicProfile from './components/profile/PublicProfile'
@@ -59,7 +60,8 @@ function AppRoutes({ theme, setTheme }) {
       <Route path="/parent" element={<ParentDashboard />} />
       <Route path="/courses" element={<CourseGrid />} />
       <Route path="/create-course" element={<CreateCourseForm />} />
-      <Route path="/courses/:id" element={<CourseDetail />} />
+      <Route path="/courses/:id" element={<StudentCourseView />} />
+      <Route path="/courses/:id/admin" element={<CourseDetail />} />
       <Route path="/courses/:id/edit" element={<EditCourseForm />} />
       <Route path="/courses/:id/add-lecture" element={<AddLectureForm />} />
       <Route path="/friends" element={<FriendsPage />} />

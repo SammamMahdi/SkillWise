@@ -1264,7 +1264,17 @@ const getCourseExams = async (req, res) => {
       });
     }
 
-    const course = await Course.findById(courseId).populate('teacher', '_id name');
+    // Get the course with its lectures to find associated exams
+    const course = await Course.findById(courseId)
+      .populate('teacher', '_id name')
+      .populate({
+        path: 'lectures.exam',
+        populate: {
+          path: 'teacher',
+          select: 'name role'
+        }
+      });
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -1272,24 +1282,34 @@ const getCourseExams = async (req, res) => {
       });
     }
 
-    let query = { course: courseId };
+    // Extract exam IDs from course lectures
+    const examIds = course.lectures
+      .filter(lecture => lecture.exam)
+      .map(lecture => lecture.exam._id);
 
-    console.log('Get course exams - User role:', user.role, 'Course ID:', courseId);
+    console.log('Get course exams - User role:', user.role, 'Course ID:', courseId, 'Exam IDs:', examIds);
 
-    // Students can only see published exams (simplified for testing)
+    if (examIds.length === 0) {
+      return res.json({
+        success: true,
+        data: { exams: [] }
+      });
+    }
+
+    let query = { _id: { $in: examIds } };
+
+    // Students can only see published exams
     if (user.role === 'Student') {
       query.status = 'approved';
       query.isPublished = true;
-      console.log('Student query (simplified):', query);
+      console.log('Student query:', query);
     }
-    // Teachers and Admins can see all exams (simplified for testing)
+    // Teachers and Admins can see all exams
     else if (user.role === 'Teacher' || user.role === 'Admin') {
       console.log('Teacher/Admin - full access to all exams');
-      // Show all exams for teachers and admins
     }
 
     const exams = await Exam.find(query)
-      .populate('course', 'title')
       .populate('teacher', 'name role')
       .sort({ createdAt: -1 });
 

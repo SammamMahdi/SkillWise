@@ -61,6 +61,12 @@ export default function CourseDetail() {
       console.log('Current user:', user);
       console.log('Is course owner:', isCourseOwner(user, c));
       
+      // Redirect students to main course view
+      if (user?.role === 'Student') {
+        navigate(`/courses/${id}`);
+        return;
+      }
+      
       if (user) {
         const ok = await checkEnrollment(id, localStorage.getItem('token'));
         setIsEnrolled(ok);
@@ -77,9 +83,13 @@ export default function CourseDetail() {
       setEnrolling(true);
       await enroll(id, localStorage.getItem('token'));
       setIsEnrolled(true);
-      alert('Successfully enrolled!');
+      toast.success('Successfully enrolled!');
+      // Redirect to main course view for students
+      if (user?.role === 'Student') {
+        navigate(`/courses/${id}`);
+      }
     } catch (e) {
-      alert(e?.response?.data?.error || e.message || 'Failed to enroll');
+      toast.error(e?.response?.data?.error || e.message || 'Failed to enroll');
     } finally {
       setEnrolling(false);
     }
@@ -91,9 +101,9 @@ export default function CourseDetail() {
       setEnrolling(true);
       await unenroll(id, localStorage.getItem('token'));
       setIsEnrolled(false);
-      alert('Unenrolled.');
+      toast.success('Unenrolled.');
     } catch (e) {
-      alert(e?.response?.data?.error || e.message || 'Failed to unenroll');
+      toast.error(e?.response?.data?.error || e.message || 'Failed to unenroll');
     } finally {
       setEnrolling(false);
     }
@@ -668,14 +678,14 @@ export default function CourseDetail() {
                 </button>
               )}
 
-              {isEnrolled && (
-                <button
-                  onClick={() => navigate('/learning')}
-                  className="w-full mt-3 py-3 px-4 bg-background border border-border rounded-lg hover:bg-foreground/5"
-                >
-                  Continue Learning
-                </button>
-              )}
+                             {isEnrolled && user?.role === 'Student' && (
+                 <button
+                   onClick={() => navigate(`/courses/${id}`)}
+                   className="w-full mt-3 py-3 px-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium"
+                 >
+                   Continue Learning
+                 </button>
+               )}
 
               <div className="mt-6 space-y-2 text-sm">
                 <div className="flex items-center justify-between">

@@ -452,6 +452,14 @@ export default function CourseGrid() {
                               </button>
                             )
                           )}
+                          {(user?.role === 'Teacher' || user?.role === 'Admin') && (
+                            <button
+                              onClick={() => navigate(`/courses/${c._id}/admin`)}
+                              className="flex-1 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all duration-200 font-medium"
+                            >
+                              Admin View
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

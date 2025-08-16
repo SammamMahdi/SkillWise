@@ -272,38 +272,10 @@ const getEnrolledCourseDetails = async (req, res) => {
       });
     }
 
-    // For testing: Auto-enroll student in course
-    const course = await Course.findById(courseId).populate('teacher', 'name email');
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
-    }
-
-    // Auto-enroll the student
-    const newEnrollment = {
-      course: courseId,
-      enrolledAt: new Date(),
-      progress: {
-        completedLectures: [],
-        completedAssignments: [],
-        overallProgress: 0
-      }
-    };
-
-    await User.findByIdAndUpdate(req.userId, {
-      $push: { 'dashboardData.enrolledCourses': newEnrollment }
-    });
-
-    // Return the course details
-    res.json({
-      success: true,
-      data: {
-        course,
-        enrolledAt: newEnrollment.enrolledAt,
-        progress: newEnrollment.progress
-      }
+    // User is not enrolled in this course
+    return res.status(404).json({
+      success: false,
+      message: 'Not enrolled in this course'
     });
 
   } catch (error) {
@@ -329,7 +301,13 @@ const updateCourseProgress = async (req, res) => {
     }
 
     const { courseId } = req.params;
-    const { completedLectures, completedQuizzes, currentLectureIndex } = req.body;
+    const { 
+      completedLectures, 
+      completedQuizzes, 
+      currentLectureIndex,
+      lectureProgress,
+      examAttempts 
+    } = req.body;
 
     const user = await User.findById(req.userId);
     if (!user) {
@@ -350,23 +328,68 @@ const updateCourseProgress = async (req, res) => {
       });
     }
 
-    // Update progress
+    const enrollment = user.dashboardData.enrolledCourses[enrollmentIndex];
+
+    // Update basic progress
     if (completedLectures) {
-      user.dashboardData.enrolledCourses[enrollmentIndex].completedLectures = completedLectures;
+      enrollment.completedLectures = completedLectures;
     }
     if (completedQuizzes) {
-      user.dashboardData.enrolledCourses[enrollmentIndex].completedQuizzes = completedQuizzes;
+      enrollment.completedQuizzes = completedQuizzes;
     }
     if (currentLectureIndex !== undefined) {
-      user.dashboardData.enrolledCourses[enrollmentIndex].currentLectureIndex = currentLectureIndex;
+      enrollment.currentLectureIndex = currentLectureIndex;
     }
+
+    // Update enhanced lecture progress
+    if (lectureProgress && Array.isArray(lectureProgress)) {
+      enrollment.lectureProgress = lectureProgress.map(progress => ({
+        lectureIndex: progress.lectureIndex,
+        completed: progress.completed || false,
+        completedAt: progress.completed ? new Date() : undefined,
+        timeSpent: progress.timeSpent || 0,
+        lastAccessed: new Date()
+      }));
+    }
+
+    // Update exam attempts
+    if (examAttempts && Array.isArray(examAttempts)) {
+      examAttempts.forEach(attempt => {
+        const lectureIndex = attempt.lectureIndex;
+        const existingProgress = enrollment.lectureProgress.find(p => p.lectureIndex === lectureIndex);
+        
+        if (existingProgress) {
+          if (!existingProgress.examAttempts) {
+            existingProgress.examAttempts = [];
+          }
+          
+          existingProgress.examAttempts.push({
+            examId: attempt.examId,
+            attemptId: attempt.attemptId,
+            score: attempt.score,
+            passed: attempt.passed,
+            completedAt: new Date()
+          });
+        }
+      });
+    }
+
+    // Calculate overall progress
+    const course = await Course.findById(courseId);
+    if (course && course.lectures) {
+      const totalLectures = course.lectures.length;
+      const completedCount = enrollment.lectureProgress?.filter(p => p.completed).length || 0;
+      enrollment.overallProgress = totalLectures > 0 ? Math.round((completedCount / totalLectures) * 100) : 0;
+    }
+
+    enrollment.lastAccessed = new Date();
 
     await user.save();
 
     res.json({
       success: true,
       message: 'Course progress updated successfully',
-      data: user.dashboardData.enrolledCourses[enrollmentIndex]
+      data: enrollment
     });
 
   } catch (error) {

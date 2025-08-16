@@ -249,6 +249,28 @@ const ExamInterface = () => {
 
       await examService.submitExamAttempt(attemptId, formattedAnswers);
 
+      // Send exam completion message if course data is available
+      const storedExamData = sessionStorage.getItem('currentExamData');
+      if (storedExamData) {
+        try {
+          const examData = JSON.parse(storedExamData);
+          if (examData.courseId && examData.lectureIndex !== undefined) {
+            window.parent.postMessage({
+              type: 'EXAM_COMPLETED',
+              courseId: examData.courseId,
+              lectureIndex: examData.lectureIndex,
+              examData: {
+                attemptId: examData.attemptId,
+                score: response.data.score || 100,
+                passed: response.data.passed || true
+              }
+            }, '*');
+          }
+        } catch (error) {
+          console.error('Error sending exam completion message:', error);
+        }
+      }
+
       cleanup();
       // Navigate to submission success page instead of results
       navigate('/exams/submitted/' + attemptId);
