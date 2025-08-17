@@ -56,27 +56,55 @@ const StudentExamList = () => {
       const response = await examService.startExamAttempt(selectedExam._id, browserInfo);
       console.log('API response:', response);
 
+      if (!response.success || !response.data) {
+        throw new Error('Invalid response from server');
+      }
+
       // Store exam data in session storage for the exam interface
       const examData = {
         attemptId: response.data.attemptId,
         timeLimit: response.data.timeLimit,
         questions: response.data.questions,
-        antiCheat: response.data.antiCheat
+        antiCheat: response.data.antiCheat || {},
+        examTitle: selectedExam.title,
+        courseTitle: selectedExam.course?.title,
+        totalPoints: selectedExam.totalPoints,
+        passingScore: selectedExam.passingScore
       };
 
       console.log('Storing exam data in sessionStorage:', examData);
+      
+      // Clear any existing exam data first
+      sessionStorage.removeItem('currentExamData');
+      
+      // Store the new exam data
       sessionStorage.setItem('currentExamData', JSON.stringify(examData));
+      
+      // Verify the data was stored correctly
+      const storedData = sessionStorage.getItem('currentExamData');
+      if (!storedData) {
+        throw new Error('Failed to store exam data in session storage');
+      }
 
+      console.log('Exam data stored successfully, navigating to exam interface...');
+      
       // Navigate to exam interface
-      console.log('Navigating to exam interface:', `/exams/take/${response.data.attemptId}`);
-      navigate(`/exams/take/${response.data.attemptId}`);
+      const examUrl = `/exams/take/${response.data.attemptId}`;
+      console.log('Navigating to:', examUrl);
+      navigate(examUrl);
 
     } catch (error) {
       console.error('=== EXAM START ERROR ===');
       console.error('Error details:', error);
       console.error('Error message:', error.message);
       console.error('Error response:', error.response?.data);
-      toast.error(error.message || 'Failed to start exam');
+      
+      // Clear any corrupted session data
+      sessionStorage.removeItem('currentExamData');
+      
+      // Show user-friendly error message
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start exam';
+      toast.error(errorMessage);
     }
   };
 

@@ -46,14 +46,7 @@ class ExamService {
     }
   }
 
-  async submitForReview(examId) {
-    try {
-      const response = await api.put(`/exams/${examId}/submit-for-review`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to submit exam for review' };
-    }
-  }
+
 
   async publishExam(examId) {
     try {
@@ -64,27 +57,7 @@ class ExamService {
     }
   }
 
-  // Admin methods
-  async getPendingReviewExams() {
-    try {
-      const response = await api.get('/exams/pending-review');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to fetch pending review exams' };
-    }
-  }
 
-  async reviewExam(examId, action, comments) {
-    try {
-      const response = await api.put(`/exams/${examId}/review`, {
-        action,
-        comments
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to review exam' };
-    }
-  }
 
   // Student methods
   async getAvailableExams() {
@@ -176,6 +149,26 @@ class ExamService {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to fetch exam results' };
+    }
+  }
+
+  // Get attempt details (for exam interface)
+  async getAttemptDetails(attemptId) {
+    try {
+      const response = await api.get(`/exams/attempts/${attemptId}/details`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to fetch attempt details' };
+    }
+  }
+
+  // Debug attempt data (for troubleshooting)
+  async debugAttemptData(attemptId) {
+    try {
+      const response = await api.get(`/exams/debug/attempt/${attemptId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to debug attempt data' };
     }
   }
 

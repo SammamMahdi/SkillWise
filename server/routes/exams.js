@@ -41,21 +41,11 @@ const validateExamCreation = [
 // Teacher routes
 router.post('/', validateExamCreation, examController.createExam);
 router.get('/my-exams', examController.getTeacherExams);
-router.put('/:id/submit-for-review', examController.submitForReview);
+
 router.put('/:id/publish', examController.publishExam);
 
 // Admin routes
-router.get('/pending-review', examController.getPendingReviewExams);
-router.put('/:id/review', [
-  body('action')
-    .isIn(['approve', 'reject'])
-    .withMessage('Action must be approve or reject'),
-  body('comments')
-    .optional()
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Comments must be less than 1000 characters')
-], examController.reviewExam);
+
 
 // Student routes
 router.get('/available', examController.getAvailableExams);
@@ -88,6 +78,11 @@ router.put('/attempts/:attemptId/publish-score', [
   body('feedback').optional().trim().isLength({ max: 1000 }).withMessage('Feedback must be less than 1000 characters')
 ], examController.publishExamScore);
 
+// Student attempt details route
+router.get('/attempts/:attemptId/details', [
+  param('attemptId').isMongoId().withMessage('Valid attempt ID is required')
+], examController.getAttemptDetails);
+
 // Student results review route
 router.get('/attempts/:attemptId/results', examController.getExamResults);
 
@@ -97,11 +92,15 @@ router.post('/test-notification', examController.testNotification);
 // Debug admin submissions endpoint (for debugging)
 router.get('/debug/admin-submissions', examController.debugAdminSubmissions);
 
-// Debug exam review workflow endpoint (for debugging)
-router.get('/debug/exam-review', examController.debugExamReview);
+
 
 // Debug all exams endpoint (for debugging)
 router.get('/debug/all-exams', examController.debugAllExams);
+
+// Debug attempt data endpoint (for debugging)
+router.get('/debug/attempt/:attemptId', [
+  param('attemptId').isMongoId().withMessage('Valid attempt ID is required')
+], examController.debugAttemptData);
 
 // Re-attempt request routes
 router.post('/re-attempt-request', [

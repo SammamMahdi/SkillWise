@@ -30,14 +30,14 @@ const AdminDashboard = () => {
   const [blockError, setBlockError] = useState('');
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [pendingReAttempts, setPendingReAttempts] = useState(0);
-  const [pendingExamReviews, setPendingExamReviews] = useState(0);
+
 
   useEffect(() => {
     fetchUsers();
     fetchStats();
     fetchPendingSubmissions();
     fetchPendingReAttempts();
-    fetchPendingExamReviews();
+
   }, []);
 
   const fetchUsers = async () => {
@@ -107,22 +107,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchPendingExamReviews = async () => {
-    try {
-      const response = await fetch('/api/exams/pending-review', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setPendingExamReviews(data.data.exams?.length || 0);
-      }
-    } catch (error) {
-      console.error('Failed to fetch pending exam reviews:', error);
-      setPendingExamReviews(0);
-    }
-  };
+
 
   const updateUserRole = async (userId, newRole) => {
     try {
@@ -272,18 +257,7 @@ const AdminDashboard = () => {
               <CheckCircle className="w-4 h-4" />
               <span>My Exams</span>
             </a>
-            <a
-              href="/admin/exams/review"
-              className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg hover:bg-secondary/90 transition-colors flex items-center space-x-2 relative"
-            >
-              <Eye className="w-4 h-4" />
-              <span>Review Exams</span>
-              {pendingExamReviews > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {pendingExamReviews}
-                </span>
-              )}
-            </a>
+
             <a
               href="/admin/submissions/review"
               className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center space-x-2 relative"
@@ -380,17 +354,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Eye className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-foreground/60">Pending Exam Reviews</p>
-                <p className="text-2xl font-bold text-foreground">{pendingExamReviews}</p>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         {/* Users Table */}
