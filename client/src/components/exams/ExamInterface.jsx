@@ -19,6 +19,7 @@ const ExamInterface = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [showTerminationModal, setShowTerminationModal] = useState(false);
   const [terminationData, setTerminationData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
@@ -55,7 +56,11 @@ const ExamInterface = () => {
 
   const loadExamData = () => {
     console.log('=== LOADING EXAM DATA ===');
-    // This would normally load from the exam start response stored in sessionStorage
+    console.log('Attempt ID from params:', attemptId);
+    
+    setIsLoading(true);
+    
+    // First try to load from sessionStorage
     const storedExamData = sessionStorage.getItem('currentExamData');
     console.log('Stored exam data:', storedExamData);
 
@@ -63,20 +68,81 @@ const ExamInterface = () => {
       try {
         const examData = JSON.parse(storedExamData);
         console.log('Parsed exam data:', examData);
+        
+        // Validate that the stored data matches the current attempt
+        if (examData.attemptId === attemptId) {
+          setExamData(examData);
+          setTimeRemaining(examData.timeLimit * 60);
+          startTimeRef.current = new Date();
+          setIsLoading(false);
+          console.log('Exam data loaded successfully from sessionStorage');
+          
+          // Show success message
+          toast.success(`Exam "${examData.examTitle}" loaded successfully!`);
+          return;
+        } else {
+          console.log('Attempt ID mismatch, clearing sessionStorage');
+          sessionStorage.removeItem('currentExamData');
+        }
+      } catch (error) {
+        console.error('Error parsing exam data:', error);
+        sessionStorage.removeItem('currentExamData');
+      }
+    }
+
+    // If no valid session data, try to fetch from server
+    console.log('Attempting to fetch exam data from server...');
+    fetchExamDataFromServer();
+  };
+
+  const fetchExamDataFromServer = async () => {
+    try {
+      // Get the attempt details from the server
+      const response = await examService.getAttemptDetails(attemptId);
+      console.log('Server response:', response);
+      
+      if (response.success && response.data) {
+        const examData = {
+          attemptId: response.data._id,
+          timeLimit: response.data.examSnapshot.timeLimit,
+          questions: response.data.examSnapshot.questions,
+          antiCheat: response.data.examSnapshot.antiCheat || {},
+          examTitle: response.data.examSnapshot.title,
+          totalPoints: response.data.examSnapshot.totalPoints,
+          passingScore: response.data.examSnapshot.passingScore || 60
+        };
+        
+        console.log('Processed exam data:', examData);
         setExamData(examData);
         setTimeRemaining(examData.timeLimit * 60);
         startTimeRef.current = new Date();
-        console.log('Exam data loaded successfully');
-      } catch (error) {
-        console.error('Error parsing exam data:', error);
-        navigate('/exams');
-        toast.error('Invalid exam session data');
+        setIsLoading(false);
+        
+        // Store in sessionStorage for future use
+        sessionStorage.setItem('currentExamData', JSON.stringify(examData));
+        console.log('Exam data loaded successfully from server');
+        
+        // Show success message
+        toast.success(`Exam "${examData.examTitle}" loaded successfully!`);
+      } else {
+        throw new Error('Invalid response from server');
       }
-    } else {
-      // Redirect back if no exam data found
-      console.log('No exam data found in sessionStorage');
-      navigate('/exams');
-      toast.error('No active exam session found');
+    } catch (error) {
+      console.error('Failed to fetch exam data from server:', error);
+      setIsLoading(false);
+      
+      // Try to get debug information
+      try {
+        const debugResponse = await examService.debugAttemptData(attemptId);
+        console.log('Debug data:', debugResponse);
+      } catch (debugError) {
+        console.error('Debug failed:', debugError);
+      }
+      
+      toast.error('Failed to load exam data. Please try refreshing the page.');
+      setTimeout(() => {
+        navigate('/exams');
+      }, 2000);
     }
   };
 
@@ -378,10 +444,38 @@ const ExamInterface = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-foreground/60">Loading exam data...</p>
+          <p className="text-xs text-foreground/40 mt-2">Attempt ID: {attemptId}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!examData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <AlertTriangle className="w-12 h-12 mx-auto" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Exam Data Not Found</h2>
+          <p className="text-foreground/60 mb-4">Unable to load exam data. Please try refreshing the page.</p>
+          <div className="text-xs text-foreground/40 mb-4">
+            <p>Attempt ID: {attemptId}</p>
+            <p>Session Data: {sessionStorage.getItem('currentExamData') ? 'Available' : 'Not Available'}</p>
+          </div>
+          <button
+            onClick={() => navigate('/exams')}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Return to Exams
+          </button>
+        </div>
       </div>
     );
   }
@@ -403,9 +497,9 @@ const ExamInterface = () => {
         <div className="max-w-4xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold">Exam in Progress</h1>
+              <h1 className="text-xl font-semibold">{examData.examTitle || 'Exam in Progress'}</h1>
               <p className="text-sm text-foreground/60">
-                Violations: {violations.length}/3
+                {examData.questions?.length || 0} questions • Violations: {violations.length}/3
               </p>
             </div>
             

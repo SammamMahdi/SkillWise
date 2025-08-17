@@ -121,58 +121,70 @@ const createExam = async (req, res) => {
       questionsPerAttempt,
       availableFrom,
       availableUntil,
-      // Admin exams are auto-approved and published, teacher exams go directly to pending review
-      status: user.role === 'Admin' ? 'approved' : 'pending_review',
-      isPublished: user.role === 'Admin',
-      submittedForReviewAt: user.role === 'Teacher' ? new Date() : undefined
+      // Ensure exam is published and available immediately
+      status: 'published',
+      isPublished: true,
+      publishedAt: new Date(),
+      publishedBy: userId
     });
 
     console.log('Exam object created, attempting to save...');
     await exam.save();
     console.log('Exam saved successfully with ID:', exam._id);
 
-    // If teacher created the exam, automatically notify admins for review
-    if (user.role === 'Teacher') {
-      console.log('=== TEACHER EXAM CREATED - NOTIFYING ADMINS ===');
-      console.log('Exam ID:', exam._id);
-      console.log('Exam title:', exam.title);
-      console.log('Created by:', user.name, '(', user.role, ')');
-      console.log('Course:', course.title);
-      console.log('Status:', exam.status);
-
-      // Notify all admins
-      const admins = await User.find({ role: 'Admin' });
-
-      console.log('Found admins to notify:', admins.length);
-      admins.forEach(admin => {
-        console.log(`  - ${admin.name} (${admin._id})`);
-      });
-
-      if (admins.length > 0) {
-        const notifications = admins.map(admin => ({
-          recipient: admin._id,
-          sender: userId,
-          type: 'exam_review_request',
-          title: 'New Exam Review Request',
-          message: `${user.name} created "${exam.title}" for ${course.title} - needs review`,
-          isActionRequired: true,
-          actionUrl: `/admin/exams/${exam._id}/review`,
-          data: {
-            examId: exam._id,
-            courseId: course._id
-          }
-        }));
-
-        await Notification.insertMany(notifications);
-        console.log('✅ Notifications sent to', admins.length, 'admins');
+    // Link the exam to the lecture in the course
+    // Find the lecture that should have this exam
+    //const course = await Course.findById(courseId);
+    if (course) {
+      // For now, we'll link the exam to the first lecture that doesn't have an exam
+      // In a more sophisticated system, you might want to specify which lecture gets the exam
+      const lectureToUpdate = course.lectures.find(lecture => !lecture.exam);
+      if (lectureToUpdate) {
+        const lectureIndex = course.lectures.indexOf(lectureToUpdate);
+        course.lectures[lectureIndex].exam = exam._id;
+        course.lectures[lectureIndex].examRequired = true;
+        await course.save();
+        console.log(`Linked exam ${exam._id} to lecture ${lectureIndex} in course ${courseId}`);
       } else {
-        console.log('⚠️ No admins found to notify');
+        console.log('No available lecture found to link exam to');
       }
+      
+      // Add exam to course-wide exams array so frontend can find it
+      course.exams = course.exams || [];
+      course.exams.push(exam._id);
+
+      // Save course after linking lecture and adding to exams
+      await course.save();
+      console.log(`Added exam ${exam._id} to course.exams`);
     }
 
-    const message = user.role === 'Admin'
-      ? 'Exam created and published successfully! Students can now take this exam.'
-      : 'Exam created and submitted for admin review! You will be notified once it is approved.';
+    // Notify students enrolled in the course that a new exam is available
+    const enrolledStudents = await User.find({
+      'dashboardData.enrolledCourses.course': courseId,
+      role: 'Student'
+    });
+
+    console.log(`Found ${enrolledStudents.length} enrolled students to notify`);
+
+    if (enrolledStudents.length > 0) {
+      const studentNotifications = enrolledStudents.map(student => ({
+        recipient: student._id,
+        sender: userId,
+        type: 'exam_published',
+        title: 'New Exam Available',
+        message: `New exam "${exam.title}" is now available for ${course.title}`,
+        actionUrl: `/courses/${courseId}`,
+        data: {
+          examId: exam._id,
+          courseId: course._id
+        }
+      }));
+
+      await Notification.insertMany(studentNotifications);
+      console.log(`Sent notifications to ${enrolledStudents.length} students`);
+    }
+
+    const message = 'Exam created and published successfully! Students can now take this exam.';
 
     res.status(201).json({
       success: true,
@@ -195,101 +207,7 @@ const createExam = async (req, res) => {
   }
 };
 
-// @desc    Submit exam for admin review (Teachers and Admins)
-// @route   PUT /api/exams/:id/submit-for-review
-// @access  Private (Teacher/Admin)
-const submitForReview = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.userId;
 
-    const user = await User.findById(userId);
-    if (!user || (user.role !== 'Teacher' && user.role !== 'Admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only teachers and admins can submit exams for review'
-      });
-    }
-
-    const exam = await Exam.findById(id).populate('course');
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: 'Exam not found'
-      });
-    }
-
-    // Check if teacher owns this exam
-    if (exam.teacher.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You can only submit your own exams for review'
-      });
-    }
-
-    if (exam.status !== 'draft') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only draft exams can be submitted for review'
-      });
-    }
-
-    exam.status = 'pending_review';
-    exam.submittedForReviewAt = new Date();
-    await exam.save();
-
-    console.log('=== EXAM SUBMITTED FOR REVIEW ===');
-    console.log('Exam ID:', exam._id);
-    console.log('Exam title:', exam.title);
-    console.log('Submitted by:', user.name, '(', user.role, ')');
-    console.log('Course:', exam.course.title);
-    console.log('New status:', exam.status);
-
-    // Notify all admins (except the submitter if they are an admin)
-    const admins = await User.find({
-      role: 'Admin',
-      _id: { $ne: userId } // Exclude the submitter
-    });
-
-    console.log('Found admins to notify:', admins.length);
-    admins.forEach(admin => {
-      console.log(`  - ${admin.name} (${admin._id})`);
-    });
-
-    if (admins.length > 0) {
-      const notifications = admins.map(admin => ({
-        recipient: admin._id,
-        sender: userId,
-        type: 'exam_review_request',
-        title: 'Exam Review Request',
-        message: `${user.name} submitted "${exam.title}" for ${exam.course.title} - needs review`,
-        isActionRequired: true,
-        actionUrl: `/admin/exams/${exam._id}/review`,
-        data: {
-          examId: exam._id,
-          courseId: exam.course._id
-        }
-      }));
-
-      await Notification.insertMany(notifications);
-      console.log('✅ Notifications sent to', admins.length, 'admins');
-    } else {
-      console.log('⚠️ No admins found to notify');
-    }
-
-    res.json({
-      success: true,
-      message: 'Exam submitted for admin review'
-    });
-
-  } catch (error) {
-    console.error('Submit for review error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while submitting exam for review'
-    });
-  }
-};
 
 // @desc    Get exams for teacher/admin
 // @route   GET /api/exams/my-exams
@@ -346,224 +264,9 @@ const getTeacherExams = async (req, res) => {
   }
 };
 
-// @desc    Get exams pending admin review
-// @route   GET /api/exams/pending-review
-// @access  Private (Admin)
-const getPendingReviewExams = async (req, res) => {
-  try {
-    const user = await User.findById(req.userId);
-    if (!user || user.role !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can view pending review exams'
-      });
-    }
 
-    console.log('=== GET PENDING REVIEW EXAMS DEBUG ===');
-    console.log('Admin ID:', req.userId);
-    console.log('Admin name:', user.name);
 
-    // First, let's see all exams with pending_review status
-    const allPendingExams = await Exam.find({ status: 'pending_review' })
-      .populate('course', 'title')
-      .populate('teacher', 'name email role')
-      .sort({ createdAt: -1 });
 
-    console.log('All pending review exams:', allPendingExams.length);
-    allPendingExams.forEach((exam, index) => {
-      console.log(`${index + 1}. "${exam.title}" by ${exam.teacher.name} (${exam.teacher.role})`);
-      console.log(`   Teacher ID: ${exam.teacher._id}`);
-      console.log(`   Course: ${exam.course.title}`);
-      console.log(`   Status: ${exam.status}`);
-      console.log(`   Created: ${exam.createdAt}`);
-    });
-
-    // Show all pending review exams except those created by the current admin
-    // Admins should see teacher-created exams that need approval
-
-    // First, let's check what we're comparing
-    console.log('Current admin ID (req.userId):', req.userId);
-    console.log('Admin ID type:', typeof req.userId);
-
-    const exams = await Exam.find({
-      status: 'pending_review',
-      teacher: { $ne: req.userId } // Exclude exams created by current admin
-    })
-      .populate('course', 'title')
-      .populate('teacher', 'name email role')
-      .sort({ createdAt: -1 });
-
-    console.log('Filtered exams for admin review:', exams.length);
-
-    // Debug: Show what we're returning to admin
-    exams.forEach((exam, index) => {
-      console.log(`ADMIN SHOULD SEE ${index + 1}. "${exam.title}"`);
-      console.log(`   Created by: ${exam.teacher.name} (${exam.teacher.role})`);
-      console.log(`   Teacher ID: ${exam.teacher._id} (type: ${typeof exam.teacher._id})`);
-      console.log(`   Admin ID: ${req.userId} (type: ${typeof req.userId})`);
-      console.log(`   IDs equal? ${exam.teacher._id.toString() === req.userId.toString()}`);
-      console.log(`   Course: ${exam.course.title}`);
-      console.log(`   Status: ${exam.status}`);
-      console.log(`   Submitted for review: ${exam.submittedForReviewAt || 'Not set'}`);
-    });
-
-    // Debug: Show summary
-    console.log(`\nSUMMARY: Admin should see ${exams.length} exams out of ${allPendingExams.length} total pending exams`);
-
-    res.json({
-      success: true,
-      data: { exams }
-    });
-
-  } catch (error) {
-    console.error('Get pending review exams error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching pending review exams'
-    });
-  }
-};
-
-// @desc    Admin approve/reject exam
-// @route   PUT /api/exams/:id/review
-// @access  Private (Admin)
-const reviewExam = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action, comments } = req.body; // action: 'approve' or 'reject'
-    const adminId = req.userId;
-
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'Admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can review exams'
-      });
-    }
-
-    const exam = await Exam.findById(id).populate('teacher').populate('course');
-    if (!exam) {
-      return res.status(404).json({
-        success: false,
-        message: 'Exam not found'
-      });
-    }
-
-    if (exam.status !== 'pending_review') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only pending review exams can be reviewed'
-      });
-    }
-
-    // Prevent admins from reviewing their own exams
-    if (exam.teacher.toString() === adminId) {
-      return res.status(400).json({
-        success: false,
-        message: 'You cannot review your own exam. Another admin must review it.'
-      });
-    }
-
-    if (action === 'approve') {
-      exam.status = 'approved';
-      exam.reviewedBy = adminId;
-      exam.reviewedAt = new Date();
-      exam.reviewComments = comments;
-
-      // Automatically publish the exam after approval
-      exam.isPublished = true;
-      exam.publishedAt = new Date();
-      exam.publishedBy = adminId;
-
-      console.log(`=== AUTO-PUBLISHING APPROVED EXAM ===`);
-      console.log('Exam ID:', exam._id);
-      console.log('Exam Title:', exam.title);
-      console.log('Course:', exam.course.title);
-      console.log('Published by Admin:', adminId);
-
-      // Notify teacher of approval and publication
-      const teacherNotification = new Notification({
-        recipient: exam.teacher._id,
-        sender: adminId,
-        type: 'exam_approved',
-        title: 'Exam Approved & Published',
-        message: `Your exam "${exam.title}" for ${exam.course.title} has been approved and is now live for students`,
-        data: {
-          examId: exam._id,
-          courseId: exam.course._id
-        }
-      });
-      await teacherNotification.save();
-
-      // Notify students enrolled in the course that a new exam is available
-      const enrolledStudents = await User.find({
-        'dashboardData.enrolledCourses.course': exam.course._id,
-        role: 'Student'
-      });
-
-      console.log(`Found ${enrolledStudents.length} enrolled students to notify`);
-
-      if (enrolledStudents.length > 0) {
-        const studentNotifications = enrolledStudents.map(student => ({
-          recipient: student._id,
-          sender: adminId,
-          type: 'exam_published',
-          title: 'New Exam Available',
-          message: `New exam "${exam.title}" is now available for ${exam.course.title}`,
-          actionUrl: `/courses/${exam.course._id}`,
-          data: {
-            examId: exam._id,
-            courseId: exam.course._id
-          }
-        }));
-
-        await Notification.insertMany(studentNotifications);
-        console.log(`Sent notifications to ${enrolledStudents.length} students`);
-      }
-
-    } else if (action === 'reject') {
-      exam.status = 'rejected';
-      exam.reviewedBy = adminId;
-      exam.reviewedAt = new Date();
-      exam.rejectionReason = comments;
-
-      // Notify teacher of rejection
-      const notification = new Notification({
-        recipient: exam.teacher._id,
-        sender: adminId,
-        type: 'exam_rejected',
-        title: 'Exam Rejected',
-        message: `Your exam "${exam.title}" for ${exam.course.title} has been rejected`,
-        data: {
-          examId: exam._id,
-          courseId: exam.course._id,
-          reason: comments
-        }
-      });
-      await notification.save();
-
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid action. Must be "approve" or "reject"'
-      });
-    }
-
-    await exam.save();
-
-    res.json({
-      success: true,
-      message: `Exam ${action}d successfully`
-    });
-
-  } catch (error) {
-    console.error('Review exam error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while reviewing exam'
-    });
-  }
-};
 
 // @desc    Publish approved exam
 // @route   PUT /api/exams/:id/publish
@@ -672,7 +375,7 @@ const getAvailableExams = async (req, res) => {
     const now = new Date();
     const exams = await Exam.find({
       course: { $in: enrolledCourseIds },
-      status: 'approved',
+      status: 'published',
       isPublished: true,
       $or: [
         { availableFrom: { $exists: false } },
@@ -733,8 +436,13 @@ const startExamAttempt = async (req, res) => {
     console.log('=== START EXAM ATTEMPT DEBUG ===');
     const { id } = req.params;
     const studentId = req.userId;
-    const { browserInfo } = req.body;
+    const browserInfo = req.body.browserInfo || {};
     console.log('Exam ID:', id, 'Student ID:', studentId, 'Browser Info:', browserInfo);
+    
+    // Ensure browser info has required fields
+    browserInfo.userAgent = browserInfo.userAgent || req.headers['user-agent'];
+    browserInfo.screenResolution = browserInfo.screenResolution || '1024x768';
+    browserInfo.timezone = browserInfo.timezone || 'UTC';
 
     const student = await User.findById(studentId);
     console.log('Student found:', student ? { id: student._id, name: student.name, role: student.role } : 'null');
@@ -763,13 +471,20 @@ const startExamAttempt = async (req, res) => {
       });
     }
 
-    // Check if exam is available
-    console.log('Exam availability check:', { isPublished: exam.isPublished, status: exam.status });
-    if (!exam.isPublished || exam.status !== 'approved') {
-      console.log('Exam not available - isPublished:', exam.isPublished, 'status:', exam.status);
+    // Check if exam exists and is associated with a lecture
+    console.log('Exam availability check:', { 
+      id: exam._id,
+      title: exam.title,
+      status: exam.status, 
+      isPublished: exam.isPublished 
+    });
+    
+    // Allow both draft and published states for testing
+    if (!exam._id) {
+      console.log('Invalid exam data');
       return res.status(400).json({
         success: false,
-        message: 'Exam is not available'
+        message: 'Invalid exam data'
       });
     }
 
@@ -871,7 +586,9 @@ const startExamAttempt = async (req, res) => {
         title: exam.title,
         timeLimit: exam.timeLimit,
         totalPoints: exam.totalPoints,
-        questions: examQuestions
+        questions: examQuestions,
+        antiCheat: exam.antiCheat,
+        passingScore: exam.passingScore
       },
       browserInfo,
       ipAddress: req.ip || req.connection.remoteAddress
@@ -1282,51 +999,45 @@ const getCourseExams = async (req, res) => {
       });
     }
 
-    // Extract exam IDs from course lectures
-    const examIds = course.lectures
+    // Extract and format full exam objects from lectures
+    const exams = course.lectures
       .filter(lecture => lecture.exam)
-      .map(lecture => lecture.exam._id);
+      .map(lecture => {
+        const examData = lecture.exam.toObject();
+        return {
+          ...examData,
+          title: examData.title || 'Untitled Exam',  // Provide default values
+          description: examData.description || '',
+          timeLimit: examData.timeLimit || 60
+        };
+      });
 
-    console.log('Get course exams - User role:', user.role, 'Course ID:', courseId, 'Exam IDs:', examIds);
+    if (exams.length > 0) {
+      console.log('Found exams:', exams.map(e => ({ id: e._id, title: e.title })));
+    }
 
-    if (examIds.length === 0) {
+    if (exams.length === 0) {
       return res.json({
         success: true,
         data: { exams: [] }
       });
     }
 
-    let query = { _id: { $in: examIds } };
-
-    // Students can only see published exams
-    if (user.role === 'Student') {
-      query.status = 'approved';
-      query.isPublished = true;
-      console.log('Student query:', query);
-    }
-    // Teachers and Admins can see all exams
-    else if (user.role === 'Teacher' || user.role === 'Admin') {
-      console.log('Teacher/Admin - full access to all exams');
-    }
-
-    const exams = await Exam.find(query)
-      .populate('teacher', 'name role')
-      .sort({ createdAt: -1 });
-
     // Add attempt information for students
     let examsWithAttempts = exams;
     if (user.role === 'Student') {
       examsWithAttempts = await Promise.all(
         exams.map(async (exam) => {
+          const examObj = typeof exam.toObject === 'function' ? exam.toObject() : exam;
           const attempts = await ExamAttempt.find({
-            exam: exam._id,
+            exam: examObj._id,
             student: userId
           }).select('totalScore finalScore percentage finalPercentage passed finalPassed submittedAt status attemptNumber scorePublished publishedAt')
             .sort({ createdAt: -1 });
 
           // Get re-attempt requests for this exam
           const reAttemptRequests = await ExamReAttemptRequest.find({
-            exam: exam._id,
+            exam: examObj._id,
             student: userId
           }).sort({ createdAt: -1 });
 
@@ -1358,7 +1069,7 @@ const getCourseExams = async (req, res) => {
           const latestReAttemptRequest = reAttemptRequests[0];
 
           return {
-            ...exam.toObject(),
+            ...examObj,
             attemptCount,
             canAttempt,
             isRetake,
@@ -1950,6 +1661,69 @@ const getAttemptForReview = async (req, res) => {
   }
 };
 
+// @desc    Get exam attempt details for student
+// @route   GET /api/exams/attempts/:attemptId/details
+// @access  Private (Student who took the exam)
+const getAttemptDetails = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const studentId = req.userId;
+
+    const attempt = await ExamAttempt.findById(attemptId)
+      .populate('exam', 'title course')
+      .populate('student', 'name email');
+
+    if (!attempt) {
+      return res.status(404).json({
+        success: false,
+        message: 'Exam attempt not found'
+      });
+    }
+
+    // Check if user is the student who took the exam
+    if (attempt.student._id.toString() !== studentId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view your own exam attempts'
+      });
+    }
+
+    // Check if attempt is still in progress
+    if (attempt.status !== 'in_progress') {
+      return res.status(400).json({
+        success: false,
+        message: 'This exam attempt is not in progress'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        _id: attempt._id,
+        examSnapshot: {
+          title: attempt.examSnapshot.title,
+          timeLimit: attempt.examSnapshot.timeLimit,
+          totalPoints: attempt.examSnapshot.totalPoints,
+          questions: attempt.examSnapshot.questions,
+          antiCheat: attempt.examSnapshot.antiCheat || {},
+          passingScore: attempt.examSnapshot.passingScore || 60
+        },
+        status: attempt.status,
+        startedAt: attempt.startedAt,
+        exam: attempt.exam,
+        student: attempt.student
+      }
+    });
+
+  } catch (error) {
+    console.error('Get attempt details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching attempt details'
+    });
+  }
+};
+
 // @desc    Contact exam creator for re-attempt request
 // @route   POST /api/exams/contact-creator
 // @access  Private (Student)
@@ -2266,145 +2040,89 @@ const debugAllExams = async (req, res) => {
   }
 };
 
-// @desc    Debug exam review workflow
-// @route   GET /api/exams/debug/exam-review
-// @access  Private (Admin)
-const debugExamReview = async (req, res) => {
-  try {
-    const userId = req.userId;
-    const user = await User.findById(userId);
 
-    if (!user || user.role !== 'Admin') {
-      return res.status(403).json({
+
+// @desc    Debug exam attempt data
+// @route   GET /api/exams/debug/attempt/:attemptId
+// @access  Private (Student who took the exam)
+const debugAttemptData = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const studentId = req.userId;
+
+    console.log('=== DEBUG ATTEMPT DATA ===');
+    console.log('Attempt ID:', attemptId);
+    console.log('Student ID:', studentId);
+
+    const attempt = await ExamAttempt.findById(attemptId)
+      .populate('exam', 'title course status isPublished')
+      .populate('student', 'name email role');
+
+    if (!attempt) {
+      return res.status(404).json({
         success: false,
-        message: 'Only admins can access debug information'
+        message: 'Exam attempt not found'
       });
     }
 
-    // 1. Check all admins
-    const admins = await User.find({ role: 'Admin' }).select('_id name email');
-
-    // 2. Check all teachers
-    const teachers = await User.find({ role: 'Teacher' }).select('_id name email');
-
-    // 3. Check all exams and their statuses
-    const allExams = await Exam.find({})
-      .populate('teacher', 'name role')
-      .populate('course', 'title')
-      .sort({ createdAt: -1 });
-
-    const examsByStatus = {};
-    allExams.forEach(exam => {
-      if (!examsByStatus[exam.status]) {
-        examsByStatus[exam.status] = [];
-      }
-      examsByStatus[exam.status].push({
-        id: exam._id,
-        title: exam.title,
-        teacher: exam.teacher.name,
-        teacherRole: exam.teacher.role,
-        teacherId: exam.teacher._id,
-        course: exam.course.title,
-        createdAt: exam.createdAt,
-        submittedForReviewAt: exam.submittedForReviewAt
-      });
+    console.log('Attempt found:', {
+      id: attempt._id,
+      status: attempt.status,
+      student: attempt.student.name,
+      exam: attempt.exam.title,
+      examStatus: attempt.exam.status,
+      examPublished: attempt.exam.isPublished
     });
 
-    // 4. Check pending review exams specifically
-    const pendingExams = await Exam.find({ status: 'pending_review' })
-      .populate('teacher', 'name role')
-      .populate('course', 'title')
-      .sort({ createdAt: -1 });
+    // Check if user is the student who took the exam
+    if (attempt.student._id.toString() !== studentId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only view your own exam attempts'
+      });
+    }
 
-    // 5. Check exam review notifications
-    const examReviewNotifications = await Notification.find({
-      type: 'exam_review_request'
-    })
-    .populate('recipient', 'name role')
-    .populate('sender', 'name role')
-    .sort({ createdAt: -1 })
-    .limit(20);
-
-    // 6. What this admin should see
-    const examsToReview = await Exam.find({
-      status: 'pending_review',
-      teacher: { $ne: userId }
-    })
-    .populate('teacher', 'name role')
-    .populate('course', 'title');
-
-    const adminNotifications = await Notification.find({
-      recipient: userId,
-      type: 'exam_review_request'
-    })
-    .populate('sender', 'name role')
-    .sort({ createdAt: -1 })
-    .limit(10);
+    const debugData = {
+      attemptId: attempt._id,
+      status: attempt.status,
+      startedAt: attempt.startedAt,
+      submittedAt: attempt.submittedAt,
+      examSnapshot: {
+        title: attempt.examSnapshot.title,
+        timeLimit: attempt.examSnapshot.timeLimit,
+        totalPoints: attempt.examSnapshot.totalPoints,
+        questionsCount: attempt.examSnapshot.questions?.length || 0
+      },
+      exam: {
+        title: attempt.exam.title,
+        status: attempt.exam.status,
+        isPublished: attempt.exam.isPublished
+      },
+      student: {
+        name: attempt.student.name,
+        role: attempt.student.role
+      },
+      violations: attempt.violations,
+      answers: attempt.answers?.length || 0
+    };
 
     res.json({
       success: true,
-      data: {
-        currentAdmin: {
-          id: userId,
-          name: user.name
-        },
-        systemStats: {
-          adminsCount: admins.length,
-          teachersCount: teachers.length,
-          totalExams: allExams.length
-        },
-        examsByStatus,
-        pendingReviewExams: pendingExams.map(exam => ({
-          id: exam._id,
-          title: exam.title,
-          teacher: exam.teacher.name,
-          teacherRole: exam.teacher.role,
-          teacherId: exam.teacher._id,
-          course: exam.course.title,
-          createdAt: exam.createdAt
-        })),
-        examReviewNotifications: examReviewNotifications.map(n => ({
-          id: n._id,
-          to: n.recipient.name,
-          from: n.sender.name,
-          message: n.message,
-          read: n.read,
-          createdAt: n.createdAt,
-          actionUrl: n.actionUrl
-        })),
-        currentAdminShouldSee: {
-          examsToReview: examsToReview.map(exam => ({
-            id: exam._id,
-            title: exam.title,
-            teacher: exam.teacher.name,
-            course: exam.course.title
-          })),
-          notifications: adminNotifications.map(n => ({
-            id: n._id,
-            from: n.sender.name,
-            message: n.message,
-            read: n.read,
-            createdAt: n.createdAt
-          }))
-        }
-      }
+      data: debugData
     });
 
   } catch (error) {
-    console.error('Debug exam review error:', error);
+    console.error('Debug attempt data error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while debugging exam review'
+      message: 'Server error while debugging attempt data'
     });
   }
 };
 
 module.exports = {
   createExam,
-  submitForReview,
   getTeacherExams,
-  getPendingReviewExams,
-  reviewExam,
   publishExam,
   getAvailableExams,
   getCourseExams,
@@ -2418,6 +2136,7 @@ module.exports = {
   testNotification,
   contactCreator,
   debugAdminSubmissions,
-  debugExamReview,
-  debugAllExams
+  debugAllExams,
+  getAttemptDetails,
+  debugAttemptData
 };

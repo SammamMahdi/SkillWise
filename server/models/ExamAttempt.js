@@ -91,7 +91,15 @@ const examAttemptSchema = new mongoose.Schema({
     title: String,
     timeLimit: Number,
     totalPoints: Number,
-    questions: [examQuestionSchema] // Copy of questions from Exam model
+    questions: [examQuestionSchema], // Copy of questions from Exam model
+    antiCheat: {
+      blockCopyPaste: { type: Boolean, default: true },
+      blockTabSwitching: { type: Boolean, default: true },
+      blockRightClick: { type: Boolean, default: true },
+      fullScreenRequired: { type: Boolean, default: false },
+      webcamRequired: { type: Boolean, default: false }
+    },
+    passingScore: { type: Number, default: 60 }
   },
   
   // Student's answers

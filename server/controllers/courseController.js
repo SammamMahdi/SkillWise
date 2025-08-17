@@ -176,7 +176,8 @@ const getCourseById = async (req, res) => {
 
     const course = await Course.findById(id)
       .populate('teacher', 'name email')
-      .populate('prerequisites', 'title description');
+      .populate('prerequisites', 'title description')
+      .populate('lectures.exam', 'title description timeLimit questions');
 
     if (!course) {
       return res.status(404).json({

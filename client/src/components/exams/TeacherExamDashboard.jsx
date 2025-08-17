@@ -39,17 +39,7 @@ const TeacherExamDashboard = () => {
     }
   };
 
-  const handleSubmitForReview = async (examId) => {
-    if (!confirm('Are you sure you want to submit this exam for admin review?')) return;
 
-    try {
-      await examService.submitForReview(examId);
-      toast.success('Exam submitted for review');
-      fetchExams();
-    } catch (error) {
-      toast.error(error.message || 'Failed to submit exam for review');
-    }
-  };
 
   const handlePublishExam = async (examId) => {
     if (!confirm('Are you sure you want to publish this exam? Students will be able to take it.')) return;
@@ -66,9 +56,7 @@ const TeacherExamDashboard = () => {
   const getStatusBadge = (status, isPublished) => {
     const statusConfig = {
       draft: { color: 'bg-gray-100 text-gray-800', text: 'Draft' },
-      pending_review: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending Review' },
-      approved: { color: 'bg-green-100 text-green-800', text: isPublished ? 'Published' : 'Approved' },
-      rejected: { color: 'bg-red-100 text-red-800', text: 'Rejected' },
+      published: { color: 'bg-green-100 text-green-800', text: 'Published' },
       archived: { color: 'bg-gray-100 text-gray-600', text: 'Archived' }
     };
 

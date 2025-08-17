@@ -75,18 +75,12 @@ const examSchema = new mongoose.Schema({
   showResultsImmediately: { type: Boolean, default: false },
   showCorrectAnswers: { type: Boolean, default: false },
   
-  // Admin approval workflow
+  // Exam status
   status: {
     type: String,
-    enum: ['draft', 'pending_review', 'approved', 'rejected', 'archived'],
+    enum: ['draft', 'published', 'archived'],
     default: 'draft'
   },
-  
-  // Admin review details
-  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  reviewedAt: Date,
-  reviewComments: String,
-  rejectionReason: String,
   
   // Scheduling
   availableFrom: Date,

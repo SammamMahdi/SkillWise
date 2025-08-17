@@ -25,7 +25,7 @@ import TeacherExamDashboard from './components/exams/TeacherExamDashboard'
 import CreateExamForm from './components/exams/CreateExamForm'
 import StudentExamList from './components/exams/StudentExamList'
 import ExamInterface from './components/exams/ExamInterface'
-import AdminExamReview from './components/exams/AdminExamReview'
+
 import ExamSubmissionReview from './components/exams/ExamSubmissionReview'
 import ExamResults from './components/exams/ExamResults'
 import ExamSubmissionSuccess from './components/exams/ExamSubmissionSuccess'
@@ -79,7 +79,7 @@ function AppRoutes({ theme, setTheme }) {
       <Route path="/exams/take/:attemptId" element={<ExamInterface />} />
       <Route path="/exams/submitted/:attemptId" element={<ExamSubmissionSuccess />} />
       <Route path="/exams/results/:attemptId" element={<ExamResults />} />
-      <Route path="/admin/exams/review" element={<AdminExamReview />} />
+      
       <Route path="/admin/submissions/review" element={<ExamSubmissionReview />} />
       <Route path="/admin/re-attempt-requests" element={<ReAttemptRequests />} />
       <Route path="/teacher" element={<TeacherDashboard />} />
