@@ -115,6 +115,10 @@ const TopBar = ({
                       {(user?.role === 'Teacher' || user?.role === 'Admin') ? 'Manage your exams' : 'Take available exams'}
                     </div>
                   </Link>
+                  <Link to="/skillpay" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                    <div className="font-medium text-sm sm:text-base">SkillPay Wallet</div>
+                    <div className="text-xs sm:text-sm text-foreground/60">Manage credits and redeem codes</div>
+                  </Link>
                   {user?.role === 'Teacher' && (
                     <Link to="/teacher" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                       <div className="font-medium text-sm sm:text-base">Teacher Dashboard</div>

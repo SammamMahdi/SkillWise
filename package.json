@@ -29,6 +29,7 @@
     "server"
   ],
   "dependencies": {
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "node": "^24.6.0"
   }
 }

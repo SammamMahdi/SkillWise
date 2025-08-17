@@ -37,6 +37,9 @@ import TeacherReAttemptRequests from './components/teacher/TeacherReAttemptReque
 // NEW: Set Username page (same background/glass as login)
 import SetUsername from './components/auth/SetUsername'
 
+// Payment components
+import SkillPayWallet from './components/payment/SkillPayWallet'
+
 const queryClient = new QueryClient()
 
 // Component that has access to auth context
@@ -82,6 +85,9 @@ function AppRoutes({ theme, setTheme }) {
       <Route path="/teacher" element={<TeacherDashboard />} />
       <Route path="/teacher/submissions/review" element={<TeacherSubmissionReview />} />
       <Route path="/teacher/re-attempt-requests" element={<TeacherReAttemptRequests />} />
+
+      {/* Payment routes */}
+      <Route path="/skillpay" element={<SkillPayWallet />} />
     </Routes>
   )
 }

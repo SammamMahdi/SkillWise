@@ -153,6 +153,7 @@ app.use("/api/learning", require("./routes/learning"));
 app.use("/api/courses", require("./routes/courses"));
 app.use("/api/friends", require("./routes/friends"));
 app.use("/api/exams", require("./routes/exams"));
+app.use("/api/payments", require("./routes/payments"));
 // app.use('/api/modules', require('./routes/modules'));
 
 // ---- Username routes (public availability + set username) ----

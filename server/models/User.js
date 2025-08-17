@@ -62,6 +62,16 @@ const userSchema = new mongoose.Schema({
   badges: [String],
   xp: { type: Number, default: 0 },
   credits: { type: Number, default: 0 },
+
+  // SkillPay Wallet
+  wallet: {
+    isActivated: { type: Boolean, default: false },
+    activatedAt: { type: Date, default: null },
+    termsAcceptedAt: { type: Date, default: null },
+    totalEarned: { type: Number, default: 0 },
+    totalSpent: { type: Number, default: 0 },
+    lastTransactionAt: { type: Date, default: null }
+  },
   avatarsUnlocked: [String],
   skillQuests: [{
     questId: { type: mongoose.Schema.Types.ObjectId, ref: 'SkillQuest' },
