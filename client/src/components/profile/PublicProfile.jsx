@@ -11,16 +11,30 @@ const PublicProfile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Debug handle parameter
+  console.log('PublicProfile handle:', handle);
+
   useEffect(() => {
+    if (!handle || handle === 'undefined' || handle === 'null') {
+      toast.error('Invalid profile handle');
+      setLoading(false);
+      return;
+    }
     fetchProfile();
   }, [handle]);
 
   const fetchProfile = async () => {
+    if (!handle || handle === 'undefined' || handle === 'null') {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await friendService.getPublicProfile(handle);
       setProfile(response.data.user);
     } catch (error) {
+      console.error('Profile fetch error:', error);
       toast.error(error.message || 'Failed to load profile');
     } finally {
       setLoading(false);

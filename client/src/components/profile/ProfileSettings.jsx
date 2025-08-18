@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { User, Mail, Globe, Palette, Save, Loader2, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccentColorPicker from './AccentColorPicker';
+import ThemeToggle from '../common/ThemeToggle';
 import toast from 'react-hot-toast';
 
 const ProfileSettings = () => {
@@ -226,13 +227,17 @@ const ProfileSettings = () => {
               <h1 className="text-3xl font-bold text-foreground mb-2">Profile Settings</h1>
               <p className="text-foreground/80">Manage your account preferences and appearance</p>
             </div>
-            <a
-              href="/dashboard"
-              className="flex items-center space-x-2 px-4 py-2 bg-background border border-border text-foreground rounded-lg hover:bg-card transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Dashboard</span>
-            </a>
+            <div className="flex items-center space-x-3">
+              {/* Theme Toggle */}
+              <ThemeToggle size="md" />
+              <a
+                href="/dashboard"
+                className="flex items-center space-x-2 px-4 py-2 bg-background border border-border text-foreground rounded-lg hover:bg-card transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Dashboard</span>
+              </a>
+            </div>
           </div>
 
                      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">

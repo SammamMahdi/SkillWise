@@ -27,6 +27,19 @@ const paymentCodeSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  batchId: {
+    type: String,
+    default: null
+  },
   expiresAt: {
     type: Date,
     default: () => new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from creation

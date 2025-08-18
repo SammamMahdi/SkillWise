@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import examService from '../../services/examService';
 import ContactCreatorModal from './ContactCreatorModal';
 import ExamWarningModal from './ExamWarningModal';
+import ThemeToggle from '../common/ThemeToggle';
 
 const StudentExamList = () => {
   const navigate = useNavigate();
@@ -258,8 +259,15 @@ const StudentExamList = () => {
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Available Exams</h1>
-          <p className="text-foreground/60">Take exams for your enrolled courses</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Available Exams</h1>
+              <p className="text-foreground/60">Take exams for your enrolled courses</p>
+            </div>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
+          </div>
         </div>
 
         {loading ? (

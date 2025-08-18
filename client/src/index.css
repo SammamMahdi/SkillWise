@@ -4,7 +4,22 @@
 
 @layer base {
   :root {
-    /* Dark mode only */
+    /* Light mode colors */
+    --background: 0 0% 100%;
+    --foreground: 222 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 4.9%;
+    --primary: 262 83% 60%; /* Purple (#7C3AED) */
+    --primary-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 84% 4.9%;
+  }
+
+  .dark {
+    /* Dark mode colors */
     --background: 222 47% 4%;
     --foreground: 213 31% 91%;
     --card: 222 47% 8%;
@@ -12,6 +27,10 @@
     --primary: 262 83% 60%; /* Purple (#7C3AED) */
     --primary-foreground: 213 31% 91%;
     --border: 217 33% 20%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 15%;
+    --accent-foreground: 213 31% 91%;
   }
 
   * {
@@ -118,6 +137,32 @@
 
   .stat-card {
     @apply bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20;
+  }
+
+  /* Light mode specific styles */
+  .light-bg {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  }
+
+  .light-glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-slate-200/50;
+  }
+
+  .light-glass-card-hover {
+    @apply hover:bg-white/90 hover:border-primary/30 hover:shadow-[0_8px_32px_rgba(124,58,237,0.1)] transition-all duration-300;
+  }
+
+  /* Light mode auth background */
+  .auth-bg-light {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 25%, #a5b4fc 50%, #8b5cf6 75%, #7c3aed 100%);
+  }
+
+  /* Dark mode auth background - keeping original cosmic theme */
+  .auth-bg-dark {
+    background-image: url('./components/auth/evening-b2g.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
   }
 }
 

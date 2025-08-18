@@ -14,6 +14,7 @@ import { toast } from 'react-hot-toast';
 import paymentService from '../../services/paymentService';
 import RedeemCodeModal from './RedeemCodeModal';
 import TransactionHistory from './TransactionHistory';
+import ThemeToggle from '../common/ThemeToggle';
 
 const SkillPayWallet = () => {
   const [wallet, setWallet] = useState(null);
@@ -75,10 +76,17 @@ const SkillPayWallet = () => {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent mb-2">
-              SkillPay Wallet
-            </h1>
-            <p className="text-muted-foreground">Secure digital wallet for SkillWise credits</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent mb-2">
+                  SkillPay Wallet
+                </h1>
+                <p className="text-muted-foreground">Secure digital wallet for SkillWise credits</p>
+              </div>
+              
+              {/* Theme Toggle */}
+              <ThemeToggle size="md" />
+            </div>
           </div>
 
           {/* Activation Card */}
@@ -146,9 +154,14 @@ const SkillPayWallet = () => {
             </h1>
             <p className="text-muted-foreground">Manage your SkillWise credits</p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle className="w-4 h-4 text-green-500" />
-            Wallet Activated
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Wallet Activated
+            </div>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
           </div>
         </div>
 

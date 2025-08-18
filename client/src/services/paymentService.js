@@ -71,6 +71,31 @@ const paymentService = {
         }
       }
     };
+  },
+
+  // Admin functions
+  admin: {
+    // Generate payment codes
+    generateCodes: async (data) => {
+      return await api.post('/admin/generate-codes', data);
+    },
+
+    // Get payment codes with pagination
+    getPaymentCodes: async (params = {}) => {
+      const queryParams = new URLSearchParams();
+      
+      if (params.page) queryParams.append('page', params.page);
+      if (params.limit) queryParams.append('limit', params.limit);
+      if (params.status) queryParams.append('status', params.status);
+
+      const url = `/admin/codes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      return await api.get(url);
+    },
+
+    // Get payment codes statistics
+    getCodeStats: async () => {
+      return await api.get('/admin/codes/stats');
+    }
   }
 };
 

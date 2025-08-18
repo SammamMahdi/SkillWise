@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import examService from '../../services/examService';
 import { useAuth } from '../../contexts/AuthContext';
+import ThemeToggle from '../common/ThemeToggle';
 
 const TeacherExamDashboard = () => {
   const { user } = useAuth();
@@ -178,6 +179,9 @@ const TeacherExamDashboard = () => {
               Manage exams for courses you created. Create exams from individual course pages. All exams are automatically submitted for admin review and will be published once approved.
             </p>
           </div>
+          
+          {/* Theme Toggle */}
+          <ThemeToggle size="md" />
         </div>
 
         {/* Filter Tabs */}

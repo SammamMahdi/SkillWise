@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import ForgotPasswordForm from './ForgotPasswordForm';
+import ThemeToggle from '../common/ThemeToggle';
 import bg from './evening-b2g.jpg';
 
 const AuthPage = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { theme } = useTheme();
   const [currentForm, setCurrentForm] = useState('login'); // 'login' | 'signup' | 'forgot-password'
 
   if (isAuthenticated) {
@@ -44,16 +47,27 @@ const AuthPage = () => {
 
   return (
     <section
-      className="relative min-h-screen overflow-y-auto"
-      style={{
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
         backgroundImage: `url(${bg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
-      }}
+      } : {}}
     >
-      {/* Dark overlay for readability */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60" />
+      {/* Theme toggle - fixed position top right */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle size="md" />
+      </div>
+
+      {/* Overlay for readability - different for light/dark */}
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
 
       {/* Content grid */}
       <div className="relative z-10 min-h-screen w-full grid grid-cols-1 lg:grid-cols-12 items-start lg:items-center py-10 sm:py-14">
@@ -61,13 +75,17 @@ const AuthPage = () => {
         <div className="lg:col-span-4 xl:col-span-5 flex items-start lg:items-center justify-center lg:justify-start text-center lg:text-left">
           <div className="px-8 sm:px-12 lg:pl-16 lg:pr-8">
             <h1
-              className="text-white text-5xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg"
+              className={`text-5xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg transition-colors duration-500 ${
+                theme === 'dark' ? 'text-white' : 'text-slate-800'
+              }`}
               style={{ fontFamily: '"Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", serif' }}
             >
               SkillWise
             </h1>
             <p
-              className="mt-3 text-white/85 text-lg leading-relaxed"
+              className={`mt-3 text-lg leading-relaxed transition-colors duration-500 ${
+                theme === 'dark' ? 'text-white/85' : 'text-slate-700'
+              }`}
               style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif' }}
             >
               Your learning journey starts here

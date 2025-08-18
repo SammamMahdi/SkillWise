@@ -3,10 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import AuthPage from './components/auth/AuthPage'
 import ProfileSettings from './components/profile/ProfileSettings'
 import ProfileVisuals from './components/profile/ProfileVisuals'
 import AdminDashboard from './components/admin/AdminDashboard'
+import PaymentCodeManager from './components/admin/PaymentCodeManager'
 import ParentDashboard from './components/parent/ParentDashboard'
 import LearningDashboard from './components/dashboard/LearningDashboard'
 import CourseGrid from './components/courses/CourseGrid'
@@ -43,7 +45,7 @@ import SkillPayWallet from './components/payment/SkillPayWallet'
 const queryClient = new QueryClient()
 
 // Component that has access to auth context
-function AppRoutes({ theme, setTheme }) {
+function AppRoutes() {
   const { user } = useAuth()
 
   return (
@@ -55,11 +57,12 @@ function AppRoutes({ theme, setTheme }) {
       {/* NEW: Set Username route */}
       <Route path="/auth/set-username" element={<SetUsername />} />
 
-      <Route path="/dashboard" element={<Dashboard theme={theme} setTheme={setTheme} />} />
+      <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/learning" element={<LearningDashboard />} />
       <Route path="/profile" element={<ProfileSettings />} />
       <Route path="/profile/visuals" element={<ProfileVisuals />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/payment-codes" element={<PaymentCodeManager />} />
       <Route path="/parent" element={<ParentDashboard />} />
       <Route path="/courses" element={<CourseGrid />} />
       <Route path="/create-course" element={<CreateCourseForm />} />
@@ -93,37 +96,27 @@ function AppRoutes({ theme, setTheme }) {
 }
 
 function App() {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'dark' || saved === 'light') return saved
-    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-    return prefersDark ? 'dark' : 'light'
-  })
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <div className="App">
-            <AppRoutes theme={theme} setTheme={setTheme} />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                style: {
-                  background: 'hsl(var(--card))',
-                  color: 'hsl(var(--foreground))',
-                  border: '1px solid hsl(var(--border))',
-                },
-              }}
-            />
-          </div>
-        </Router>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <Router>
+            <div className="App">
+              <AppRoutes />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  style: {
+                    background: 'hsl(var(--card))',
+                    color: 'hsl(var(--foreground))',
+                    border: '1px solid hsl(var(--border))',
+                  },
+                }}
+              />
+            </div>
+          </Router>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }

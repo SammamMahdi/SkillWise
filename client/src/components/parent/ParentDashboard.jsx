@@ -15,6 +15,7 @@ import {
   Shield,
   Lock
 } from 'lucide-react';
+import ThemeToggle from '../common/ThemeToggle';
 
 const ParentDashboard = () => {
   const [children, setChildren] = useState([]);
@@ -249,8 +250,15 @@ const ParentDashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Parent Dashboard</h1>
-          <p className="text-foreground/80">Monitor your children's learning progress</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Parent Dashboard</h1>
+              <p className="text-foreground/80">Monitor your children's learning progress</p>
+            </div>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
+          </div>
         </div>
 
         {/* Stats Cards */}

@@ -15,8 +15,11 @@ import {
   BookOpen,
   FileText,
   ClipboardCheck,
-  RotateCcw
+  RotateCcw,
+  CreditCard,
+  Book
 } from 'lucide-react';
+import ThemeToggle from '../common/ThemeToggle';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -30,15 +33,32 @@ const AdminDashboard = () => {
   const [blockError, setBlockError] = useState('');
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [pendingReAttempts, setPendingReAttempts] = useState(0);
-
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
     fetchStats();
     fetchPendingSubmissions();
     fetchPendingReAttempts();
-
+    fetchCurrentUser();
   }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/users/profile', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser(data.data.user);
+        console.log('Current user:', data.data.user); // Debug log
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -243,8 +263,15 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-foreground/80">Manage users, roles, and platform settings</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+              <p className="text-foreground/80">Manage users, roles, and platform settings</p>
+            </div>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
+          </div>
         </div>
 
         {/* Quick Navigation */}
@@ -289,6 +316,21 @@ const AdminDashboard = () => {
               <BookOpen className="w-4 h-4" />
               <span>My Courses</span>
             </a>
+            {currentUser?.email === 'husnainfarhan@gmail.com' && (
+              <a
+                href="/admin/payment-codes"
+                className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Payment Codes</span>
+              </a>
+            )}
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-2">
+                Debug: User email: {currentUser?.email || 'Not loaded'}
+              </div>
+            )}
           </div>
         </div>
 

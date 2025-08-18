@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ThemeToggle from '../common/ThemeToggle';
 
 const LearningDashboard = () => {
   const { user } = useAuth();
@@ -128,6 +129,9 @@ const LearningDashboard = () => {
               </svg>
               Back to Dashboard
             </button>
+            
+            {/* Theme Toggle */}
+            <ThemeToggle size="md" />
           </div>
           
           <div className="text-center">

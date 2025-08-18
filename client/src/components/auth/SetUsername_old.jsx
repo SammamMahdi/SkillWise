@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { use          <div className="text-center">
+            <h1 className={`text-2xl font-semibold transition-colors duration-500 ${
+              theme === 'dark' ? 'text-white' : 'text-slate-800'
+            }`}>Choose your username</h1>
+            <p className={`mt-1 text-sm transition-colors duration-500 ${
+              theme === 'dark' ? 'text-white/80' : 'text-slate-600'
+            }`}>
+              This will be your public handle. Allowed: a–z, 0–9, "." and "_", 3–20 chars.
+            </p>
+          </div> from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Check, X, Loader2 } from 'lucide-react'
 import bg from './evening-bg.gif'
@@ -120,45 +129,29 @@ export default function SetUsername() {
           }`}
         >
           <div className="text-center">
-            <h1 className={`text-2xl font-semibold transition-colors duration-500 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-800'
-            }`}>Choose your username</h1>
-            <p className={`mt-1 text-sm transition-colors duration-500 ${
-              theme === 'dark' ? 'text-white/80' : 'text-slate-600'
-            }`}>
-              This will be your public handle. Allowed: a–z, 0–9, "." and "_", 3–20 chars.
+            <h1 className="text-2xl font-semibold">Choose your username</h1>
+            <p className="mt-1 text-sm text-white/80">
+              This will be your public handle. Allowed: a–z, 0–9, “.” and “_”, 3–20 chars.
             </p>
           </div>
 
           {autoHandle && (
-            <div className={`mt-4 text-sm transition-colors duration-500 ${
-              theme === 'dark' ? 'text-white/80' : 'text-slate-600'
-            }`}>
+            <div className="mt-4 text-sm">
               Temporary handle:&nbsp;
-              <code className={`px-2 py-1 rounded border transition-colors duration-500 ${
-                theme === 'dark' 
-                  ? 'bg-black/30 border-white/10 text-white' 
-                  : 'bg-slate-100 border-slate-200 text-slate-800'
-              }`}>
+              <code className="px-2 py-1 rounded bg-black/30 border border-white/10">
                 {autoHandle}
               </code>
             </div>
           )}
 
           <div className="mt-5">
-            <label className={`block text-sm mb-2 transition-colors duration-500 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-700'
-            }`}>Username</label>
+            <label className="block text-sm mb-2">Username</label>
             <div className="relative">
               <input
                 value={value}
                 onChange={(e) => setValue(e.target.value.toLowerCase())}
                 placeholder="your.name"
-                className={`w-full px-4 py-3 rounded-xl outline-none border transition-all duration-300 ${
-                  theme === 'dark'
-                    ? 'bg-black/30 border-white/10 focus:border-white/30 text-white placeholder-white/50'
-                    : 'bg-white/80 border-slate-200 focus:border-slate-400 text-slate-800 placeholder-slate-400'
-                }`}
+                className="w-full px-4 py-3 rounded-xl bg-black/30 outline-none border border-white/10 focus:border-white/30"
                 autoFocus
                 maxLength={20}
               />
@@ -170,27 +163,25 @@ export default function SetUsername() {
             </div>
 
             <div className="mt-2 h-5 text-sm">
-              {status === 'ok' && <span className="text-emerald-400">Available</span>}
-              {status === 'taken' && <span className="text-rose-400">This username is taken</span>}
-              {status === 'invalid' && <span className="text-rose-400">Invalid format</span>}
+              {status === 'ok' && <span className="text-emerald-300">Available</span>}
+              {status === 'taken' && <span className="text-rose-300">This username is taken</span>}
+              {status === 'invalid' && <span className="text-rose-300">Invalid format</span>}
             </div>
           </div>
 
           {!!submitError && (
-            <div className="mt-3 text-sm text-rose-400">{submitError}</div>
+            <div className="mt-3 text-sm text-rose-300">{submitError}</div>
           )}
 
           <button
             type="submit"
             disabled={saving || status !== 'ok'}
-            className="mt-4 w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition-colors duration-300"
+            className="mt-4 w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save username'}
           </button>
 
-          <div className={`mt-4 text-xs text-center transition-colors duration-500 ${
-            theme === 'dark' ? 'text-white/70' : 'text-slate-500'
-          }`}>
+          <div className="mt-4 text-xs text-white/70 text-center">
             You can change this later (admin policy permitting).
           </div>
         </form>

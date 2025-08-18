@@ -247,9 +247,267 @@ const getTransactions = async (req, res) => {
   }
 };
 
+// Function to generate random payment code
+const generatePaymentCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  
+  for (let i = 0; i < 12; i++) {
+    if (i > 0 && i % 4 === 0) {
+      code += '-';
+    }
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  return code;
+};
+
+// @desc    Generate payment codes (Admin only)
+// @route   POST /api/payments/admin/generate-codes
+// @access  Private (Admin)
+const generateCodes = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { amount, quantity, description } = req.body;
+    const generatedCodes = [];
+    const failedCodes = [];
+
+    console.log(`🔄 Generating ${quantity} payment codes of ${amount} credits each...`);
+
+    for (let i = 0; i < quantity; i++) {
+      let attempts = 0;
+      let success = false;
+      
+      while (attempts < 10 && !success) {
+        try {
+          const code = generatePaymentCode();
+          
+          // Check if code already exists
+          const existingCode = await PaymentCode.findOne({ code });
+          if (existingCode) {
+            attempts++;
+            continue;
+          }
+
+          // Create new payment code
+          const paymentCode = new PaymentCode({
+            code,
+            value: amount,
+            createdBy: req.userId,
+            description: description || `Generated ${amount} credit code`,
+            batchId: new Date().toISOString().split('T')[0] // Use date as batch ID
+          });
+
+          await paymentCode.save();
+          generatedCodes.push({
+            code,
+            value: amount,
+            expiresAt: paymentCode.expiresAt
+          });
+          
+          success = true;
+        } catch (error) {
+          attempts++;
+          if (attempts >= 10) {
+            failedCodes.push(`Failed after 10 attempts`);
+          }
+        }
+      }
+      
+      if (!success) {
+        failedCodes.push(`Code ${i + 1}`);
+      }
+    }
+
+    console.log(`✅ Successfully generated ${generatedCodes.length} payment codes`);
+    if (failedCodes.length > 0) {
+      console.log(`❌ Failed to generate ${failedCodes.length} codes`);
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully generated ${generatedCodes.length} payment codes`,
+      data: {
+        generatedCodes,
+        failedCount: failedCodes.length,
+        totalGenerated: generatedCodes.length,
+        totalRequested: quantity
+      }
+    });
+
+  } catch (error) {
+    console.error('Generate codes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while generating payment codes'
+    });
+  }
+};
+
+// @desc    Get payment codes with pagination (Admin only)
+// @route   GET /api/payments/admin/codes
+// @access  Private (Admin)
+const getPaymentCodes = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = 'all' } = req.query;
+
+    let query = {};
+    if (status === 'active') {
+      query = { isRedeemed: false, expiresAt: { $gt: new Date() } };
+    } else if (status === 'redeemed') {
+      query = { isRedeemed: true };
+    }
+
+    const codes = await PaymentCode.find(query)
+      .populate('redeemedBy', 'name email username')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await PaymentCode.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        codes,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalCodes: total,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get payment codes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching payment codes'
+    });
+  }
+};
+
+// @desc    Get payment codes statistics (Admin only)
+// @route   GET /api/payments/admin/codes/stats
+// @access  Private (Admin)
+const getCodeStats = async (req, res) => {
+  try {
+    const stats = await PaymentCode.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalCodes: { $sum: 1 },
+          totalValue: { $sum: '$value' },
+          redeemedCodes: {
+            $sum: { $cond: ['$isRedeemed', 1, 0] }
+          },
+          redeemedValue: {
+            $sum: { $cond: ['$isRedeemed', '$value', 0] }
+          },
+          activeCodes: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$isRedeemed', false] },
+                    { $gt: ['$expiresAt', new Date()] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          activeValue: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$isRedeemed', false] },
+                    { $gt: ['$expiresAt', new Date()] }
+                  ]
+                },
+                '$value',
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    // Get codes by value breakdown
+    const valueBreakdown = await PaymentCode.aggregate([
+      {
+        $group: {
+          _id: '$value',
+          total: { $sum: 1 },
+          redeemed: {
+            $sum: { $cond: ['$isRedeemed', 1, 0] }
+          },
+          active: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$isRedeemed', false] },
+                    { $gt: ['$expiresAt', new Date()] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    const result = stats[0] || {
+      totalCodes: 0,
+      totalValue: 0,
+      redeemedCodes: 0,
+      redeemedValue: 0,
+      activeCodes: 0,
+      activeValue: 0
+    };
+
+    res.json({
+      success: true,
+      data: {
+        overview: result,
+        valueBreakdown
+      }
+    });
+
+  } catch (error) {
+    console.error('Get code stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching code statistics'
+    });
+  }
+};
+
 module.exports = {
   activateWallet,
   getWallet,
   redeemCode,
-  getTransactions
+  getTransactions,
+  generateCodes,
+  getPaymentCodes,
+  getCodeStats
 };

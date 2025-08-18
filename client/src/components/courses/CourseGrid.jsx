@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { listCourses, enroll, checkEnrollment } from '../../services/courseService';
+import ThemeToggle from '../common/ThemeToggle';
 
 const canSeeInternal = (user) => user?.role === 'Teacher' || user?.role === 'Admin';
 
@@ -225,6 +226,9 @@ export default function CourseGrid() {
                 </svg>
                 Back to Dashboard
               </button>
+              
+              {/* Theme Toggle */}
+              <ThemeToggle size="md" />
             </div>
             
             <div className="text-center">
