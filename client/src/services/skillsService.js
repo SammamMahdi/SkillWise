@@ -1,4 +1,6 @@
-const API_URL = '/api/skills';
+import API_CONFIG from '../config/api.js';
+
+const API_URL = `${API_CONFIG.BASE_URL}/skills`;
 
 export const skillsService = {
   // Get all skill posts with filtering

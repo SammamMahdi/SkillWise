@@ -1,10 +1,10 @@
 import axios from 'axios';
-
-const API_URL = '/api/payments';
+import API_CONFIG from '../config/api.js';
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_CONFIG.BASE_URL}/payments`,
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },

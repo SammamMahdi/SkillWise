@@ -1,4 +1,6 @@
-const API_URL = '/api/messages';
+import API_CONFIG from '../config/api.js';
+
+const API_URL = `${API_CONFIG.BASE_URL}/messages`;
 
 export const messagesService = {
   // Send a message

@@ -517,7 +517,7 @@ const googleCallback = async (req, res) => {
   
   // This would typically handle the OAuth callback
   // For now, redirect to frontend
-  const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   res.redirect(`${frontendUrl}/auth/google-callback`);
 };
 

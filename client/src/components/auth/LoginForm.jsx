@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import GoogleSignInDebug from '../../utils/googleSignInDebug';
 
-const CLIENT_ID = '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com';
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
   const { login, googleLogin, isLoading, error, clearError } = useAuth();

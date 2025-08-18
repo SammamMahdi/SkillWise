@@ -1,4 +1,6 @@
-const API_BASE_URL = 'https://localhost:5000/api/learning';
+import API_CONFIG from '../config/api.js';
+
+const API_BASE_URL = `${API_CONFIG.BASE_URL}/learning`;
 
 // Get learning dashboard data
 export const getLearningDashboard = async () => {

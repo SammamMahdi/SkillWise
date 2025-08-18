@@ -4,8 +4,8 @@
 
 class GoogleAuthService {
   constructor() {
-    // Use the actual Google OAuth Client ID from environment variables
-    this.clientId = '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com';
+    // Use the Google OAuth Client ID from environment variables
+    this.clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your_google_client_id_here';
     this.isInitialized = false;
     this.callback = null;
   }

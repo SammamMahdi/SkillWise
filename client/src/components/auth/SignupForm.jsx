@@ -109,7 +109,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
       GoogleSignInDebug.logDebugInfo();
 
       const config = {
-        client_id: '269526213654-n074agil0bclv6aiu651jd2hgfdfikil.apps.googleusercontent.com',
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: async (response) => {
           try {
             console.log('Google callback received:', response);

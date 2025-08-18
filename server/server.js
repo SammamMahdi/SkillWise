@@ -3,10 +3,11 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const morgan = require("morgan");
+// Updated to use port 5001
 const https = require("https");
 const fs = require("fs");
 const path = require("path");
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config();
 
 const connectDB = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
@@ -40,15 +41,18 @@ app.use(helmet({
   crossOriginOpenerPolicy: false
 }));
 
-// --- CORS origin helper (supports http/https localhost in dev) ---
-const devAllowed = ["https://localhost:5173", "http://localhost:5173"];
+// --- CORS origin helper ---
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
 const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true); // non-browser clients
     if (process.env.NODE_ENV === "production") {
-      return cb(null, origin === process.env.FRONTEND_URL);
+      return cb(null, allowedOrigins.includes(origin));
     }
-    return cb(null, devAllowed.includes(origin));
+    return cb(null, allowedOrigins.includes(origin));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -73,10 +77,10 @@ if (process.env.NODE_ENV === "development") {
 app.use(generalLimiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: process.env.MAX_FILE_SIZE || "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || "10mb" }));
 
-app.use("/uploads", require("express").static(path.join(__dirname, "uploads")));
+app.use("/uploads", require("express").static(path.join(__dirname, process.env.UPLOAD_DIR || "uploads")));
 
 // Health check
 app.use("/api/health", (req, res) => {
@@ -172,36 +176,23 @@ app.use("*", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
-// SSL certificate paths - try multiple possible locations
-const possibleCertPaths = [
-  path.join(__dirname, '..', 'localhost+2.pem'),
-  path.join(__dirname, '..', 'localhost+1.pem'),
-  path.join(__dirname, '..', 'localhost.pem'),
-  path.join(__dirname, 'localhost+2.pem'),
-  path.join(__dirname, 'localhost+1.pem'),
-  path.join(__dirname, 'localhost.pem')
-];
-
-const possibleKeyPaths = [
-  path.join(__dirname, '..', 'localhost+2-key.pem'),
-  path.join(__dirname, '..', 'localhost+1-key.pem'),
-  path.join(__dirname, '..', 'localhost-key.pem'),
-  path.join(__dirname, 'localhost+2-key.pem'),
-  path.join(__dirname, 'localhost+1-key.pem'),
-  path.join(__dirname, 'localhost-key.pem')
-];
-
-// Find the first existing certificate pair
+// SSL Configuration
 let certPath = null;
 let keyPath = null;
 
-for (let i = 0; i < possibleCertPaths.length; i++) {
-  if (fs.existsSync(possibleCertPaths[i]) && fs.existsSync(possibleKeyPaths[i])) {
-    certPath = possibleCertPaths[i];
-    keyPath = possibleKeyPaths[i];
-    break;
+if (process.env.ENABLE_SSL === 'true' && process.env.SSL_CERT_PATH && process.env.SSL_KEY_PATH) {
+  const certFullPath = path.resolve(__dirname, process.env.SSL_CERT_PATH);
+  const keyFullPath = path.resolve(__dirname, process.env.SSL_KEY_PATH);
+  
+  if (fs.existsSync(certFullPath) && fs.existsSync(keyFullPath)) {
+    certPath = certFullPath;
+    keyPath = keyFullPath;
+  } else {
+    console.log(`⚠️  SSL certificates not found at specified paths:`);
+    console.log(`   Cert: ${certFullPath} - ${fs.existsSync(certFullPath) ? '✅ Exists' : '❌ Not found'}`);
+    console.log(`   Key: ${keyFullPath} - ${fs.existsSync(keyFullPath) ? '✅ Exists' : '❌ Not found'}`);
   }
 }
 
@@ -218,8 +209,8 @@ if (certPath && keyPath) {
     https.createServer(httpsOptions, app).listen(PORT, () => {
       console.log(`🚀 SkillWise Server running on HTTPS port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
-      console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
+      console.log(`🔗 Health check: https://${process.env.VITE_DEV_HOST || 'localhost'}:${PORT}/api/health`);
+      console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
       console.log(`🔑 Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set'}`);
       console.log(`🔐 SSL: Enabled with certificates`);
     });
@@ -229,10 +220,7 @@ if (certPath && keyPath) {
     startHttpServer();
   }
 } else {
-  console.log(`⚠️  No SSL certificates found. Available paths checked:`);
-  possibleCertPaths.forEach((path, index) => {
-    console.log(`   ${index + 1}. ${path} - ${fs.existsSync(path) ? '✅ Exists' : '❌ Not found'}`);
-  });
+  console.log(`⚠️  No SSL certificates found or SSL disabled.`);
   console.log(`🔄 Starting HTTP server...`);
   startHttpServer();
 }
@@ -241,8 +229,8 @@ function startHttpServer() {
   app.listen(PORT, () => {
     console.log(`🚀 SkillWise Server running on HTTP port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
+    console.log(`🔗 Health check: http://${process.env.VITE_DEV_HOST || 'localhost'}:${PORT}/api/health`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
     console.log(`🔑 Google Client ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set'}`);
     console.log(`⚠️  SSL: Disabled - running on HTTP`);
   });

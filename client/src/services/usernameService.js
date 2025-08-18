@@ -1,5 +1,7 @@
 import axios from 'axios'
-const API = import.meta.env?.VITE_API_BASE || '/api'
+import API_CONFIG from '../config/api.js';
+
+const API = API_CONFIG.BASE_URL
 
 export async function checkUsernameAvailable(u) {
   const { data } = await axios.get(`${API}/public/username-available`, { params: { u } })

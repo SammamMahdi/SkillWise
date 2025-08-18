@@ -1,6 +1,7 @@
 import axios from 'axios';
+import API_CONFIG from '../config/api.js';
 
-const API = import.meta.env?.VITE_API_BASE || 'https://localhost:5000/api';
+const API = API_CONFIG.BASE_URL;
 
 // ---------- reads ----------
 export async function listCourses(params = {}) {
