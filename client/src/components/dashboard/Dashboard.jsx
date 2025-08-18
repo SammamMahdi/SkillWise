@@ -9,6 +9,7 @@ import ProfileBanner from './ProfileBanner'
 import DashboardContent from './DashboardContent'
 import { fmtDate } from '../../utils/dateUtils'
 import { getLearningDashboard } from '../../services/learningService'
+import { skillsService } from '../../services/skillsService'
 
 const Dashboard = () => {
   const { user, logout } = useAuth()
@@ -18,6 +19,7 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [skillOfMonth, setSkillOfMonth] = useState('General Learning')
   const userMenuRef = useRef(null)
   const actionsMenuRef = useRef(null)
 
@@ -27,9 +29,18 @@ const Dashboard = () => {
       try {
         setLoading(true)
         setError(null)
-        const data = await getLearningDashboard()
-        console.log('Learning dashboard data:', data) // Debug log
-        setDashboardData(data)
+        
+        // Fetch dashboard data and skill of month in parallel
+        const [dashboardResponse, skillOfMonthResponse] = await Promise.all([
+          getLearningDashboard(),
+          skillsService.getSkillOfMonth(user.id).catch(() => ({ data: { skill: 'General Learning' } }))
+        ])
+        
+        console.log('Learning dashboard data:', dashboardResponse) // Debug log
+        console.log('Skill of month:', skillOfMonthResponse) // Debug log
+        
+        setDashboardData(dashboardResponse)
+        setSkillOfMonth(skillOfMonthResponse.data.skill)
       } catch (err) {
         setError(err.message)
         console.error('Error fetching learning dashboard:', err)
@@ -63,7 +74,7 @@ const Dashboard = () => {
   if (user?.requiresParentalApproval && !user?.parentConfirmed) return <BlockedAccount user={user} />
 
   const profile = {
-    spotlightSkill: { month: 'July', title: 'Java Programming' },
+    spotlightSkill: { month: 'Current', title: skillOfMonth },
     rankPercentile: 2,
     concentration: 'Backend engineering',
     topSkills: ['College Level Math', 'Java', 'Microeconomics'],

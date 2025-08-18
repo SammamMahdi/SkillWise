@@ -42,6 +42,15 @@ import SetUsername from './components/auth/SetUsername'
 // Payment components
 import SkillPayWallet from './components/payment/SkillPayWallet'
 
+// Skills components
+import SkillsWall from './components/skills/SkillsWall'
+
+// Messages components
+import Messages from './components/messages/Messages'
+
+// Common components
+import NotificationContainer from './components/common/NotificationContainer'
+
 const queryClient = new QueryClient()
 
 // Component that has access to auth context
@@ -70,6 +79,8 @@ function AppRoutes() {
       <Route path="/courses/:id/admin" element={<CourseDetail />} />
       <Route path="/courses/:id/edit" element={<EditCourseForm />} />
       <Route path="/courses/:id/add-lecture" element={<AddLectureForm />} />
+      <Route path="/skills" element={<SkillsWall />} />
+      <Route path="/messages" element={<Messages />} />
       <Route path="/friends" element={<FriendsPage />} />
       <Route path="/profile/:handle" element={<PublicProfile />} />
       <Route path="/test/friends" element={<FriendSystemTest />} />
@@ -103,6 +114,7 @@ function App() {
           <Router>
             <div className="App">
               <AppRoutes />
+              <NotificationContainer />
               <Toaster
                 position="top-right"
                 toastOptions={{

@@ -19,7 +19,10 @@ const protect = (req, res, next) => {
     // many code paths expect req.userId
     req.userId = decoded.id || decoded._id || decoded.userId;
     // some code assumes req.user exists (can be a stub)
-    req.user = { _id: req.userId };
+    req.user = { 
+      _id: req.userId,
+      id: req.userId  // Add both _id and id for compatibility
+    };
 
     if (!req.userId) {
       return res.status(401).json({ success: false, message: 'Invalid token: no id' });

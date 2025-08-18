@@ -71,6 +71,12 @@ const TopBar = ({
               Courses
             </Link>
             <Link
+              to="/skills"
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 ${glow} text-foreground/80 hover:text-foreground font-semibold text-sm sm:text-base`}
+            >
+              Skills Wall
+            </Link>
+            <Link
               to="/learning"
               className={`px-3 sm:px-4 py-2 sm:py-2.5 ${glow} text-foreground/80 hover:text-foreground font-semibold text-sm sm:text-base`}
             >
@@ -108,11 +114,23 @@ const TopBar = ({
                       <div className="font-medium text-sm sm:text-base">Browse Courses</div>
                       <div className="text-xs sm:text-sm text-foreground/60">Find your next course</div>
                     </Link>
+                    <Link to="/skills" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                      <div className="font-medium text-sm sm:text-base">Skills Wall</div>
+                      <div className="text-xs sm:text-sm text-foreground/60">Share and discover skills</div>
+                    </Link>
+                    <Link to="/messages" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                      <div className="font-medium text-sm sm:text-base">Messages</div>
+                      <div className="text-xs sm:text-sm text-foreground/60">View your conversations</div>
+                    </Link>
                   </div>
                   
                   <Link to="/friends" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                     <div className="font-medium text-sm sm:text-base">Friends</div>
                     <div className="text-xs sm:text-sm text-foreground/60">Connect with other students</div>
+                  </Link>
+                  <Link to="/messages" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                    <div className="font-medium text-sm sm:text-base">Messages</div>
+                    <div className="text-xs sm:text-sm text-foreground/60">View your skill conversations</div>
                   </Link>
                   <Link to="/exams" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                     <div className="font-medium text-sm sm:text-base">Exams</div>
