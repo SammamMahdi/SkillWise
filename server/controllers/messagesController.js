@@ -17,7 +17,7 @@ const sendMessage = async (req, res) => {
     }
 
     const { recipientId, skillPostId, content } = req.body;
-    const senderId = req.user.id || req.user._id;
+    const senderId = req.userId;
 
     // Validate that sender and recipient are different
     if (senderId === recipientId) {
@@ -77,7 +77,7 @@ const sendMessage = async (req, res) => {
 // Get conversations for a user
 const getConversations = async (req, res) => {
   try {
-    const userId = req.user.id || req.user._id;
+    const userId = req.userId;
     const { page = 1, limit = 20 } = req.query;
 
     console.log('Getting conversations for user:', userId);
@@ -145,7 +145,7 @@ const getConversations = async (req, res) => {
 const getMessages = async (req, res) => {
   try {
     const { otherUserId, skillPostId } = req.params;
-    const userId = req.user.id || req.user._id;
+    const userId = req.userId;
     const { page = 1, limit = 50 } = req.query;
 
     const messages = await Message.find({

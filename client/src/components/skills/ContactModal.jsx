@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { messagesService } from '../../services/messagesService';
 import { notificationService } from '../../services/notificationService';
 
 const ContactModal = ({ isOpen, onClose, recipientUser, skillPost }) => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
@@ -28,6 +30,11 @@ const ContactModal = ({ isOpen, onClose, recipientUser, skillPost }) => {
         notificationService.success(`Message sent to ${recipientUser.name}!`);
         setMessage('');
         onClose();
+        
+        // Navigate to messages page to continue the conversation
+        setTimeout(() => {
+          navigate('/messages');
+        }, 1000);
       }
     } catch (error) {
       console.error('Error sending message:', error);

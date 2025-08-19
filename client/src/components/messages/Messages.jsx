@@ -3,11 +3,14 @@ import { MessageCircle, Clock, User, AlertTriangle } from 'lucide-react';
 import { messagesService } from '../../services/messagesService';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardButton from '../common/DashboardButton';
+import ChatBox from './ChatBox';
 
 const Messages = () => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [chatBoxOpen, setChatBoxOpen] = useState(false);
 
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
@@ -33,6 +36,27 @@ const Messages = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openChat = (conversation) => {
+    const { lastMessage } = conversation;
+    const otherUser = lastMessage.sender._id === currentUserId 
+      ? lastMessage.recipient 
+      : lastMessage.sender;
+    
+    setSelectedConversation({
+      conversation,
+      otherUser,
+      skillPost: lastMessage.skillPost
+    });
+    setChatBoxOpen(true);
+  };
+
+  const closeChat = () => {
+    setChatBoxOpen(false);
+    setSelectedConversation(null);
+    // Refresh conversations to update unread counts
+    fetchConversations();
   };
 
   const formatTimeAgo = (date) => {
@@ -125,8 +149,7 @@ const Messages = () => {
                   key={`${conversation._id.participants.join('-')}-${conversation._id.skillPost}`}
                   className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.01]"
                   onClick={() => {
-                    // Future: Navigate to conversation detail view
-                    console.log('Open conversation:', conversation);
+                    openChat(conversation);
                   }}
                 >
                   <div className="flex items-start space-x-4">
@@ -184,6 +207,17 @@ const Messages = () => {
               );
             })}
           </div>
+        )}
+
+        {/* Chat Box Modal */}
+        {selectedConversation && (
+          <ChatBox
+            isOpen={chatBoxOpen}
+            onClose={closeChat}
+            conversation={selectedConversation.conversation}
+            otherUser={selectedConversation.otherUser}
+            skillPost={selectedConversation.skillPost}
+          />
         )}
       </div>
     </div>
