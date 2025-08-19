@@ -89,7 +89,7 @@ const PublicProfile = () => {
             <span>Back to Friends</span>
           </Link>
           
-          {!profile.isOwnProfile && !profile.areFriends && profile.role === 'Student' && (
+          {!profile.isOwnProfile && !profile.areFriends && (
             <button
               onClick={sendFriendRequest}
               className="flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
@@ -237,7 +237,7 @@ const PublicProfile = () => {
             <p className="text-foreground/60 mb-4">
               You need to be friends with {profile.name} to view their learning progress.
             </p>
-            {!profile.isOwnProfile && profile.role === 'Student' && (
+            {!profile.isOwnProfile && (
               <button
                 onClick={sendFriendRequest}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"

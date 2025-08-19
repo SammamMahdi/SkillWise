@@ -692,11 +692,10 @@ const searchUsers = async (req, res) => {
 
     const searchTerm = q.trim().toLowerCase();
 
-    // Search by username, handle, or name (only students)
+    // Search by username, handle, or name (all users)
     const users = await User.find({
       $and: [
         { _id: { $ne: searcherId } }, // Exclude searcher
-        { role: 'Student' }, // Only students
         {
           $or: [
             { username: { $regex: searchTerm, $options: 'i' } },

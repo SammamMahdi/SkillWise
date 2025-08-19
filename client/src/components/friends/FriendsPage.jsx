@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Check, X, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Search, Check, X, Trash2, MessageCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import friendService from '../../services/friendService';
 import { getProfilePicture } from '../../utils/profilePictureUtils';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../common/ThemeToggle';
 import DashboardButton from '../common/DashboardButton';
+import FriendChatBox from './FriendChatBox';
 
 const FriendsPage = () => {
   const [activeTab, setActiveTab] = useState('friends');
@@ -15,6 +16,8 @@ const FriendsPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [chatBoxOpen, setChatBoxOpen] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -118,6 +121,16 @@ const FriendsPage = () => {
     }
   };
 
+  const openChat = (friend) => {
+    setSelectedFriend(friend);
+    setChatBoxOpen(true);
+  };
+
+  const closeChat = () => {
+    setChatBoxOpen(false);
+    setSelectedFriend(null);
+  };
+
   const UserCard = ({ user, type = 'friend', onAction }) => (
     <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-3">
@@ -169,12 +182,22 @@ const FriendsPage = () => {
             </>
           )}
           {type === 'friend' && (
-            <button
-              onClick={() => onAction(user._id)}
-              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <>
+              <button
+                onClick={() => openChat(user)}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                title="Start encrypted chat"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onAction(user._id)}
+                className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+                title="Remove friend"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -188,11 +211,18 @@ const FriendsPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Friends</h1>
-              <p className="text-foreground/60">Connect with other students and share your learning journey</p>
+              <p className="text-foreground/60">Connect with other users and share your learning journey</p>
             </div>
             
             {/* Action buttons */}
             <div className="flex items-center gap-3">
+              <Link
+                to="/friend-chat"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Friend Chats</span>
+              </Link>
               <DashboardButton />
               <ThemeToggle size="md" />
             </div>
@@ -241,7 +271,7 @@ const FriendsPage = () => {
               ) : friends.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="w-12 h-12 text-foreground/40 mx-auto mb-4" />
-                  <p className="text-foreground/60">No friends yet. Start by searching for other students!</p>
+                  <p className="text-foreground/60">No friends yet. Start by searching for other users!</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
@@ -365,6 +395,13 @@ const FriendsPage = () => {
             </div>
           )}
         </div>
+
+        {/* Friend Chat Box */}
+        <FriendChatBox
+          isOpen={chatBoxOpen}
+          onClose={closeChat}
+          friend={selectedFriend}
+        />
       </div>
     </div>
   );

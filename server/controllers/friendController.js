@@ -4,7 +4,7 @@ const { validationResult } = require('express-validator');
 
 // @desc    Send friend request
 // @route   POST /api/friends/request
-// @access  Private (Student only)
+// @access  Private
 const sendFriendRequest = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -20,10 +20,10 @@ const sendFriendRequest = async (req, res) => {
 
     // Get sender
     const sender = await User.findById(senderId);
-    if (!sender || sender.role !== 'Student') {
+    if (!sender) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can send friend requests'
+        message: 'User not found'
       });
     }
 
@@ -39,13 +39,6 @@ const sendFriendRequest = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'User not found'
-      });
-    }
-
-    if (target.role !== 'Student') {
-      return res.status(400).json({
-        success: false,
-        message: 'Friend requests can only be sent to other students'
       });
     }
 
@@ -118,7 +111,7 @@ const sendFriendRequest = async (req, res) => {
 
 // @desc    Accept friend request
 // @route   PUT /api/friends/accept/:requesterId
-// @access  Private (Student only)
+// @access  Private
 const acceptFriendRequest = async (req, res) => {
   try {
     const recipientId = req.userId;
@@ -126,19 +119,19 @@ const acceptFriendRequest = async (req, res) => {
 
     // Get recipient
     const recipient = await User.findById(recipientId);
-    if (!recipient || recipient.role !== 'Student') {
+    if (!recipient) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can accept friend requests'
+        message: 'User not found'
       });
     }
 
     // Get requester
     const requester = await User.findById(requesterId);
-    if (!requester || requester.role !== 'Student') {
+    if (!requester) {
       return res.status(404).json({
         success: false,
-        message: 'Requester not found or not a student'
+        message: 'Requester not found'
       });
     }
 
@@ -195,7 +188,7 @@ const acceptFriendRequest = async (req, res) => {
 
 // @desc    Reject friend request
 // @route   PUT /api/friends/reject/:requesterId
-// @access  Private (Student only)
+// @access  Private
 const rejectFriendRequest = async (req, res) => {
   try {
     const recipientId = req.userId;
@@ -203,10 +196,10 @@ const rejectFriendRequest = async (req, res) => {
 
     // Get recipient
     const recipient = await User.findById(recipientId);
-    if (!recipient || recipient.role !== 'Student') {
+    if (!recipient) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can reject friend requests'
+        message: 'User not found'
       });
     }
 
@@ -268,7 +261,7 @@ const rejectFriendRequest = async (req, res) => {
 
 // @desc    Get friends list
 // @route   GET /api/friends
-// @access  Private (Student only)
+// @access  Private
 const getFriends = async (req, res) => {
   try {
     const userId = req.userId;
@@ -277,10 +270,10 @@ const getFriends = async (req, res) => {
       .populate('friends', 'name handle username profilePhoto avatarUrl xp badges role')
       .select('friends role');
 
-    if (!user || user.role !== 'Student') {
+    if (!user) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can view friends'
+        message: 'User not found'
       });
     }
 
@@ -300,7 +293,7 @@ const getFriends = async (req, res) => {
 
 // @desc    Get pending friend requests
 // @route   GET /api/friends/requests
-// @access  Private (Student only)
+// @access  Private
 const getPendingRequests = async (req, res) => {
   try {
     const userId = req.userId;
@@ -310,10 +303,10 @@ const getPendingRequests = async (req, res) => {
       .populate('sentFriendRequests', 'name handle username profilePhoto avatarUrl xp badges')
       .select('receivedFriendRequests sentFriendRequests role');
 
-    if (!user || user.role !== 'Student') {
+    if (!user) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can view friend requests'
+        message: 'User not found'
       });
     }
 
@@ -336,7 +329,7 @@ const getPendingRequests = async (req, res) => {
 
 // @desc    Remove friend
 // @route   DELETE /api/friends/:friendId
-// @access  Private (Student only)
+// @access  Private
 const removeFriend = async (req, res) => {
   try {
     const userId = req.userId;
@@ -345,10 +338,10 @@ const removeFriend = async (req, res) => {
     const user = await User.findById(userId);
     const friend = await User.findById(friendId);
 
-    if (!user || user.role !== 'Student') {
+    if (!user) {
       return res.status(403).json({
         success: false,
-        message: 'Only students can remove friends'
+        message: 'User not found'
       });
     }
 

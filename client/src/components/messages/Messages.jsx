@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Clock, User, AlertTriangle } from 'lucide-react';
+import { MessageCircle, Clock, User, AlertTriangle, Shield } from 'lucide-react';
 import { messagesService } from '../../services/messagesService';
 import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import DashboardButton from '../common/DashboardButton';
 import ChatBox from './ChatBox';
 
@@ -126,7 +127,17 @@ const Messages = () => {
                 </div>
               </div>
             </div>
-            <DashboardButton />
+            <div className="flex items-center space-x-3">
+              <Link
+                to="/friend-chat"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                title="Encrypted friend chats"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Friend Chats</span>
+              </Link>
+              <DashboardButton />
+            </div>
           </div>
         </div>
 

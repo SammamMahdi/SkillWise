@@ -21,6 +21,7 @@ import CourseDetail from './components/courses/CourseDetail'
 import StudentCourseView from './components/courses/StudentCourseView'
 import Dashboard from './components/dashboard/Dashboard'
 import FriendsPage from './components/friends/FriendsPage'
+import FriendChatList from './components/friends/FriendChatList'
 import PublicProfile from './components/profile/PublicProfile'
 import FriendSystemTest from './components/test/FriendSystemTest'
 
@@ -203,6 +204,11 @@ function AppRoutes() {
       <Route path="/friends" element={
         <AgeVerificationWrapper>
           <FriendsPage />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/friend-chat" element={
+        <AgeVerificationWrapper>
+          <FriendChatList />
         </AgeVerificationWrapper>
       } />
       <Route path="/profile/:handle" element={
