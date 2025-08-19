@@ -1,6 +1,19 @@
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
+// Setup email transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+});
 
 // @desc    Send parent request to child
 // @route   POST /api/parent/request-child
@@ -948,6 +961,183 @@ const getPendingChildApprovals = async (req, res) => {
   }
 };
 
+// Send parent approval request for under-13 users
+const requestParentApproval = async (req, res) => {
+  try {
+    const { parentEmail, parentName } = req.body;
+    const childUserId = req.userId;
+
+    // Validate input
+    if (!parentEmail || !parentName) {
+      return res.status(400).json({ error: 'Parent email and name are required' });
+    }
+
+    // Get the child user
+    const childUser = await User.findById(childUserId);
+    if (!childUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if child is actually under 13
+    if (childUser.age >= 13) {
+      return res.status(400).json({ error: 'Parental approval not required for users 13 and older' });
+    }
+
+    // Check if parent request already sent
+    if (childUser.pendingParentRequests && childUser.pendingParentRequests.length > 0) {
+      return res.status(400).json({ error: 'Parent request already sent' });
+    }
+
+    // Check if parent is already confirmed
+    if (childUser.parentConfirmed) {
+      return res.status(400).json({ error: 'Parent already confirmed' });
+    }
+
+    // Check if parent already exists in system
+    let parentUser = await User.findOne({ email: parentEmail.toLowerCase() });
+    
+    if (parentUser) {
+      // Parent exists, add child to their pending requests
+      if (!parentUser.pendingChildRequests) {
+        parentUser.pendingChildRequests = [];
+      }
+      
+      if (!parentUser.pendingChildRequests.includes(childUserId)) {
+        parentUser.pendingChildRequests.push(childUserId);
+        await parentUser.save();
+      }
+
+      // Add parent to child's pending requests
+      childUser.pendingParentRequests = [parentUser._id];
+      await childUser.save();
+
+      // Send notification email to existing parent
+      try {
+        const emailContent = `
+          <h2>SkillWise - Child Account Approval Request</h2>
+          <p>Hello ${parentUser.name},</p>
+          <p>Your child <strong>${childUser.name}</strong> (${childUser.email}) has requested to join SkillWise and needs your approval.</p>
+          <p>Please log in to your SkillWise parent account to approve this request:</p>
+          <p><a href="${process.env.FRONTEND_URL}/parent/dashboard" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Review Request</a></p>
+          <p>Best regards,<br>SkillWise Team</p>
+        `;
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: parentEmail,
+          subject: 'SkillWise - Child Account Approval Request',
+          html: emailContent
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // Continue without failing the request
+      }
+
+    } else {
+      // Parent doesn't exist, create invitation
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+      
+      // Create placeholder parent user with invitation token
+      parentUser = new User({
+        name: parentName.trim(),
+        email: parentEmail.toLowerCase(),
+        role: 'Parent',
+        password: crypto.randomBytes(20).toString('hex'), // Temporary password
+        roleConfirmed: false,
+        invitationToken,
+        invitationExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        pendingChildRequests: [childUserId]
+      });
+      
+      await parentUser.save();
+
+      // Add parent to child's pending requests
+      childUser.pendingParentRequests = [parentUser._id];
+      await childUser.save();
+
+      // Send invitation email to new parent
+      try {
+        const invitationLink = `${process.env.FRONTEND_URL}/auth/parent-invitation?token=${invitationToken}`;
+        const emailContent = `
+          <h2>SkillWise - Parent Account Invitation</h2>
+          <p>Hello ${parentName},</p>
+          <p>Your child <strong>${childUser.name}</strong> (${childUser.email}) wants to join SkillWise, an educational platform.</p>
+          <p>Since they are under 13, we need your approval and for you to create a parent account to supervise their learning.</p>
+          <p>Please click the link below to create your parent account and approve your child's access:</p>
+          <p><a href="${invitationLink}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Create Parent Account & Approve</a></p>
+          <p>This invitation will expire in 7 days.</p>
+          <p>Best regards,<br>SkillWise Team</p>
+        `;
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: parentEmail,
+          subject: 'SkillWise - Parent Account Invitation',
+          html: emailContent
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // Continue without failing the request
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Parent approval request sent successfully',
+      parentExists: !!parentUser.roleConfirmed
+    });
+
+  } catch (error) {
+    console.error('Error sending parent request:', error);
+    res.status(500).json({ error: 'Failed to send parent request' });
+  }
+};
+
+// Get parent approval status for under-13 users
+const getParentApprovalStatus = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId)
+      .populate('parent', 'name email')
+      .populate('pendingParentRequests', 'name email');
+
+    res.json({
+      requiresParentalApproval: user.requiresParentalApproval,
+      parentConfirmed: user.parentConfirmed,
+      parent: user.parent,
+      pendingRequests: user.pendingParentRequests || []
+    });
+
+  } catch (error) {
+    console.error('Error getting parent approval status:', error);
+    res.status(500).json({ error: 'Failed to get parent approval status' });
+  }
+};
+
+// Get children for parent dashboard
+const getChildren = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const parentUser = await User.findById(userId).populate('children', 'username email parentConfirmed requiresParentalApproval age');
+
+    if (!parentUser) {
+      return res.status(404).json({ error: 'Parent not found' });
+    }
+
+    if (parentUser.role !== 'Parent') {
+      return res.status(403).json({ error: 'Access denied - not a parent account' });
+    }
+
+    res.json({
+      children: parentUser.children || []
+    });
+  } catch (error) {
+    console.error('Error getting children:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   requestChildConnection,
   requestChildByEmail,
@@ -961,5 +1151,9 @@ module.exports = {
   removeChildConnection,
   getChildProgress,
   approveChildAccount,
-  getPendingChildApprovals
+  getPendingChildApprovals,
+  // New functions for under-13 parental approval
+  requestParentApproval,
+  getParentApprovalStatus,
+  getChildren
 }; 

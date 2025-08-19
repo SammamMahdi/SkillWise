@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { hasTeacherPermissions } from './utils/permissions'
 import AuthPage from './components/auth/AuthPage'
 import ProfileSettings from './components/profile/ProfileSettings'
 import ProfileVisuals from './components/profile/ProfileVisuals'
@@ -39,6 +40,18 @@ import TeacherReAttemptRequests from './components/teacher/TeacherReAttemptReque
 // NEW: Set Username page (same background/glass as login)
 import SetUsername from './components/auth/SetUsername'
 
+// NEW: Parental Approval page for users under 13
+import ParentalApproval from './components/auth/ParentalApproval'
+
+// NEW: Parent Invitation page
+import ParentInvitation from './components/auth/ParentInvitation'
+
+// NEW: Styled Profile Setup page  
+import StyledProfileSetup from './components/profile/StyledProfileSetup'
+
+// NEW: Age verification wrapper
+import AgeVerificationWrapper from './components/auth/AgeVerificationWrapper'
+
 // Payment components
 import SkillPayWallet from './components/payment/SkillPayWallet'
 
@@ -47,6 +60,16 @@ import SkillsWall from './components/skills/SkillsWall'
 
 // Messages components
 import Messages from './components/messages/Messages'
+
+// SuperUser components
+import SuperUserRoleManagement from './components/superuser/SuperUserRoleManagement'
+
+// Teacher Application components
+import TeacherApplicationForm from './components/teacher/TeacherApplicationForm'
+import ApproveTeacherPage from './components/admin/ApproveTeacherPage'
+
+// Test components
+import SuperUserAccessTest from './components/test/SuperUserAccessTest'
 
 // Common components
 import NotificationContainer from './components/common/NotificationContainer'
@@ -66,28 +89,116 @@ function AppRoutes() {
       {/* NEW: Set Username route */}
       <Route path="/auth/set-username" element={<SetUsername />} />
 
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/learning" element={<LearningDashboard />} />
-      <Route path="/profile" element={<ProfileSettings />} />
-      <Route path="/profile/visuals" element={<ProfileVisuals />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/admin/payment-codes" element={<PaymentCodeManager />} />
-      <Route path="/parent" element={<ParentDashboard />} />
-      <Route path="/courses" element={<CourseGrid />} />
-      <Route path="/create-course" element={<CreateCourseForm />} />
-      <Route path="/courses/:id" element={<StudentCourseView />} />
-      <Route path="/courses/:id/admin" element={<CourseDetail />} />
-      <Route path="/courses/:id/edit" element={<EditCourseForm />} />
-      <Route path="/courses/:id/add-lecture" element={<AddLectureForm />} />
-      <Route path="/skills" element={<SkillsWall />} />
-      <Route path="/messages" element={<Messages />} />
-      <Route path="/friends" element={<FriendsPage />} />
-      <Route path="/profile/:handle" element={<PublicProfile />} />
-      <Route path="/test/friends" element={<FriendSystemTest />} />
+      {/* NEW: Parental Approval route for users under 13 */}
+      <Route path="/auth/parental-approval" element={<ParentalApproval />} />
+
+      {/* NEW: Parent Invitation route */}
+      <Route path="/auth/parent-invitation" element={<ParentInvitation />} />
+
+      <Route path="/dashboard" element={
+        <AgeVerificationWrapper>
+          <Dashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/learning" element={
+        <AgeVerificationWrapper>
+          <LearningDashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/profile" element={
+        <AgeVerificationWrapper>
+          <StyledProfileSetup />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/profile/settings" element={
+        <AgeVerificationWrapper>
+          <ProfileSettings />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/profile/visuals" element={
+        <AgeVerificationWrapper>
+          <ProfileVisuals />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/admin" element={
+        <AgeVerificationWrapper>
+          <AdminDashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/admin/payment-codes" element={
+        <AgeVerificationWrapper>
+          <PaymentCodeManager />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/parent" element={
+        <AgeVerificationWrapper>
+          <ParentDashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/parent/dashboard" element={
+        <AgeVerificationWrapper>
+          <ParentDashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses" element={
+        <AgeVerificationWrapper>
+          <CourseGrid />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/create-course" element={
+        <AgeVerificationWrapper>
+          <CreateCourseForm />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses/:id" element={
+        <AgeVerificationWrapper>
+          <StudentCourseView />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses/:id/admin" element={
+        <AgeVerificationWrapper>
+          <CourseDetail />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses/:id/edit" element={
+        <AgeVerificationWrapper>
+          <EditCourseForm />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses/:id/add-lecture" element={
+        <AgeVerificationWrapper>
+          <AddLectureForm />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/skills" element={
+        <AgeVerificationWrapper>
+          <SkillsWall />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/messages" element={
+        <AgeVerificationWrapper>
+          <Messages />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/friends" element={
+        <AgeVerificationWrapper>
+          <FriendsPage />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/profile/:handle" element={
+        <AgeVerificationWrapper>
+          <PublicProfile />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/test/friends" element={
+        <AgeVerificationWrapper>
+          <FriendSystemTest />
+        </AgeVerificationWrapper>
+      } />
 
       {/* Exam routes */}
       <Route path="/exams" element={
-        (user?.role === 'Teacher' || user?.role === 'Admin') ? <TeacherExamDashboard /> : <StudentExamList />
+        hasTeacherPermissions(user) ? <TeacherExamDashboard /> : <StudentExamList />
       } />
       <Route path="/courses/:courseId/create-exam" element={<CreateExamForm />} />
       <Route path="/exams/take/:attemptId" element={<ExamInterface />} />
@@ -102,6 +213,14 @@ function AppRoutes() {
 
       {/* Payment routes */}
       <Route path="/skillpay" element={<SkillPayWallet />} />
+      
+      {/* SuperUser routes */}
+      <Route path="/superuser/roles" element={<SuperUserRoleManagement />} />
+      <Route path="/test/superuser" element={<SuperUserAccessTest />} />
+      
+      {/* Teacher Application routes */}
+      <Route path="/apply-teacher" element={<TeacherApplicationForm />} />
+      <Route path="/admin/approve-teachers" element={<ApproveTeacherPage />} />
     </Routes>
   )
 }

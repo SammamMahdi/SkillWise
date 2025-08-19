@@ -29,7 +29,9 @@ const getProfile = async (req, res) => {
         data: { 
           user: {
             ...user.toObject(),
-            roleConfirmed: user.roleConfirmed
+            roleConfirmed: user.roleConfirmed,
+            isFirstTimeUser: user.isFirstTimeUser,
+            isSuperUser: user.isSuperUser
           }
         }
       });
@@ -58,11 +60,14 @@ const updateProfile = async (req, res) => {
 
     const {
       name,
+      username,
+      dateOfBirth,
       preferredLanguage,
       interests,
       accessibility,
       profilePhoto,
-      role
+      role,
+      isFirstTimeUser
     } = req.body;
 
     const user = await User.findById(req.userId);
@@ -75,6 +80,21 @@ const updateProfile = async (req, res) => {
 
     // Update fields if provided
     if (name) user.name = name;
+    if (username) {
+      // Check if username is already taken by another user
+      const existingUser = await User.findOne({ 
+        username: username,
+        _id: { $ne: req.userId }
+      });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username is already taken'
+        });
+      }
+      user.username = username;
+    }
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
     if (preferredLanguage) user.preferredLanguage = preferredLanguage;
     if (interests) user.interests = interests;
     if (accessibility) {
@@ -82,6 +102,11 @@ const updateProfile = async (req, res) => {
       if (accessibility.accentColor) user.accessibility.accentColor = accessibility.accentColor;
     }
     if (profilePhoto) user.profilePhoto = profilePhoto;
+    
+    // Handle first-time user flag
+    if (typeof isFirstTimeUser === 'boolean') {
+      user.isFirstTimeUser = isFirstTimeUser;
+    }
     
     // Only allow role updates for admins
     if (role && user.role === 'Admin') {

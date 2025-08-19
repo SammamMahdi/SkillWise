@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
 import NotificationCenter from '../notifications/NotificationCenter'
 import ThemeToggle from '../common/ThemeToggle'
+import { hasTeacherPermissions, hasAdminPermissions, hasParentPermissions, isSuperUser } from '../../utils/permissions'
 
 const TopBar = ({ 
   user, 
@@ -135,7 +136,7 @@ const TopBar = ({
                   <Link to="/exams" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                     <div className="font-medium text-sm sm:text-base">Exams</div>
                     <div className="text-xs sm:text-sm text-foreground/60">
-                      {(user?.role === 'Teacher' || user?.role === 'Admin') ? 'Manage your exams' : 'Take available exams'}
+                      {hasTeacherPermissions(user) ? 'Manage your exams' : 'Take available exams'}
                     </div>
                   </Link>
                   <Link to="/skillpay" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
@@ -150,13 +151,20 @@ const TopBar = ({
                     <div className="font-medium text-sm sm:text-base">Explore Skills</div>
                     <div className="text-xs sm:text-sm text-foreground/60">Discover new skills</div>
                   </Link>
-                  {user?.role === 'Teacher' && (
+                  {/* Teacher Application for Students */}
+                  {user?.role === 'Student' && (
+                    <Link to="/apply-teacher" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                      <div className="font-medium text-sm sm:text-base">Become a Teacher</div>
+                      <div className="text-xs sm:text-sm text-foreground/60">Apply to teach on SkillWise</div>
+                    </Link>
+                  )}
+                  {(user?.role === 'Teacher' || isSuperUser(user)) && (
                     <Link to="/teacher" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                       <div className="font-medium text-sm sm:text-base">Teacher Dashboard</div>
                       <div className="text-xs sm:text-sm text-foreground/60">Review submissions & manage courses</div>
                     </Link>
                   )}
-                  {(user?.role === 'Teacher' || user?.role === 'Admin') && (
+                  {hasTeacherPermissions(user) && (
                     <Link to="/courses/create" className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                       <div className="font-medium text-sm sm:text-base">Create Course</div>
                       <div className="text-xs sm:text-sm text-foreground/60">Build a new course</div>
@@ -272,7 +280,7 @@ const TopBar = ({
 
                   {!user?.username && (
                     <Link 
-                      to="/auth/set-username" 
+                      to="/profile" 
                       className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" 
                       onClick={() => setOpenUser(false)} 
                       role="menuitem"
@@ -282,7 +290,7 @@ const TopBar = ({
                     </Link>
                   )}
 
-                  {user?.role === 'Admin' && (
+                  {hasAdminPermissions(user) && (
                     <Link 
                       to="/admin" 
                       className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" 
@@ -294,7 +302,7 @@ const TopBar = ({
                     </Link>
                   )}
                   
-                  {user?.role === 'Parent' && (
+                  {hasParentPermissions(user) && (
                     <Link 
                       to="/parent" 
                       className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" 
@@ -303,6 +311,21 @@ const TopBar = ({
                     >
                       <div className="font-medium text-sm sm:text-base">Parent Dashboard</div>
                       <div className="text-xs sm:text-sm text-foreground/60">Monitor learning progress</div>
+                    </Link>
+                  )}
+
+                  {isSuperUser(user) && (
+                    <Link 
+                      to="/superuser/roles" 
+                      className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-yellow-50 hover:bg-opacity-50 text-yellow-700 transition-colors duration-200 rounded-lg border border-yellow-200/50" 
+                      onClick={() => setOpenUser(false)} 
+                      role="menuitem"
+                    >
+                      <div className="font-medium text-sm sm:text-base flex items-center gap-2">
+                        <span className="text-yellow-500">👑</span>
+                        SuperUser Control
+                      </div>
+                      <div className="text-xs sm:text-sm text-yellow-600">Manage user roles</div>
                     </Link>
                   )}
 

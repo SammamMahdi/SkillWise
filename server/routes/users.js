@@ -22,6 +22,15 @@ router.put('/profile', [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Name must be between 2 and 50 characters'),
+  body('username')
+    .optional()
+    .trim()
+    .matches(/^[a-z0-9_.]{3,20}$/)
+    .withMessage('Username must be 3-20 characters, only lowercase letters, numbers, dots, and underscores'),
+  body('dateOfBirth')
+    .optional()
+    .isISO8601()
+    .withMessage('Date of birth must be a valid date'),
   body('preferredLanguage')
     .optional()
     .isLength({ min: 2, max: 10 })
@@ -50,7 +59,11 @@ router.put('/profile', [
   body('profilePhoto')
     .optional()
     .isURL()
-    .withMessage('Profile photo must be a valid URL')
+    .withMessage('Profile photo must be a valid URL'),
+  body('isFirstTimeUser')
+    .optional()
+    .isBoolean()
+    .withMessage('isFirstTimeUser must be a boolean')
 ], userController.updateProfile);
 
 // Update accessibility settings

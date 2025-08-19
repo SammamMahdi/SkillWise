@@ -115,8 +115,22 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
       
       const result = await authService.register(userData);
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       
+      // If registration successful, log in the user and redirect to profile for first-time setup
+      if (result.success && result.data?.user) {
+        const userData = result.data.user;
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+        
+        // Store tokens if provided
+        if (result.data.accessToken) {
+          localStorage.setItem('token', result.data.accessToken);
+        }
+        if (result.data.refreshToken) {
+          localStorage.setItem('refreshToken', result.data.refreshToken);
+        }
+      }
+      
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       return { success: true, data: result };
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Registration failed';

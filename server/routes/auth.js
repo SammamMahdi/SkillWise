@@ -20,9 +20,6 @@ router.post('/register', [
     .withMessage('Password must be at least 12 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
     .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
-  body('role')
-    .isIn(['Admin', 'Student', 'Teacher', 'Parent'])
-    .withMessage('Invalid role selected'),
   body('age')
     .optional()
     .isInt({ min: 5, max: 120 })
@@ -105,5 +102,9 @@ router.post('/logout', authController.logout);
 
 // Verify email route
 router.get('/verify-email/:token', authController.verifyEmail);
+
+// Parent invitation routes
+router.get('/validate-invitation', authController.validateInvitation);
+router.post('/accept-parent-invitation', authController.acceptParentInvitation);
 
 module.exports = router; 

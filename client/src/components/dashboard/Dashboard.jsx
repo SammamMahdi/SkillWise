@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
+import { canManageCourses } from '../../utils/permissions'
 import BlockedAccount from '../auth/BlockedAccount'
 import NotificationCenter from '../notifications/NotificationCenter'
 import TopBar from './TopBar'
@@ -128,7 +129,7 @@ const Dashboard = () => {
   }, [dashboardData])
 
   const firstName = useMemo(() => (user?.name || '').split(' ')[0] || 'You', [user])
-  const isCourseCreator = user?.role === 'Teacher' || user?.role === 'Admin'
+  const isCourseCreator = canManageCourses(user)
   const displayHandle = user?.username || user?.handle
 
   if (loading) {

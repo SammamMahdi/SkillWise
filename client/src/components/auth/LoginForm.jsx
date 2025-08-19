@@ -68,7 +68,8 @@ const LoginForm = ({ onSwitchToSignup, onShowForgotPassword }) => {
               const result = await googleLogin(response.credential);
 
               if (result.success) {
-                window.location.href = '/dashboard';
+                // Redirect will be handled by AuthContext based on isFirstTimeUser
+                console.log('Google login successful!');
               } else if (result.requiresRoleSelection) {
                 window.location.href = '/profile';
               } else {

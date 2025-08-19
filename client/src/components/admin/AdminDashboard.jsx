@@ -316,6 +316,13 @@ const AdminDashboard = () => {
               <BookOpen className="w-4 h-4" />
               <span>My Courses</span>
             </a>
+            <a
+              href="/admin/approve-teachers"
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Approve Teachers</span>
+            </a>
             {currentUser?.email === 'husnainfarhan@gmail.com' && (
               <a
                 href="/admin/payment-codes"

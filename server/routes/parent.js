@@ -73,4 +73,21 @@ router.post('/approve-child/:childId', parentController.approveChildAccount);
 // Get pending child approval requests for parent
 router.get('/pending-approvals', parentController.getPendingChildApprovals);
 
+// NEW: Routes for under-13 parental approval
+// Send parent approval request (by under-13 user)
+router.post('/request', [
+  body('parentEmail')
+    .isEmail()
+    .withMessage('Please provide a valid parent email address'),
+  body('parentName')
+    .notEmpty()
+    .withMessage('Please provide a parent name')
+], parentController.requestParentApproval);
+
+// Get parent approval status (by under-13 user)
+router.get('/approval-status', parentController.getParentApprovalStatus);
+
+// Get children for parent dashboard
+router.get('/children', parentController.getChildren);
+
 module.exports = router; 

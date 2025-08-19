@@ -152,6 +152,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/admin", require("./routes/admin"));
 app.use("/api/parent", require("./routes/parent"));
+app.use("/api/superuser", require("./routes/superuser"));
 app.use("/api/skills", require("./routes/skills"));
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/notifications", require("./routes/notifications"));
@@ -160,6 +161,7 @@ app.use("/api/courses", require("./routes/courses"));
 app.use("/api/friends", require("./routes/friends"));
 app.use("/api/exams", require("./routes/exams"));
 app.use("/api/payments", require("./routes/payments"));
+app.use("/api/teacher-applications", require("./routes/teacherApplication"));
 // app.use('/api/modules', require('./routes/modules'));
 
 // ---- Username routes (public availability + set username) ----

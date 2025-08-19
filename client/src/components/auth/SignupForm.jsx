@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Check, X, Shield, Mail, User, Lock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { validatePasswordStrength, getPasswordRequirements, getPasswordStrengthColor, getPasswordStrengthWidth, getPasswordStrengthBgColor, generateSecurePassword } from '../../utils/passwordUtils';
-import GoogleRoleSelectionModal from './GoogleRoleSelectionModal';
 import GoogleSignInDebug from '../../utils/googleSignInDebug';
 
 const SignupForm = ({ onSwitchToLogin }) => {
@@ -19,8 +18,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
     special: false,
   });
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [googleUserData, setGoogleUserData] = useState(null);
   const [googleIdToken, setGoogleIdToken] = useState(null);
   const [googleScriptLoaded, setGoogleScriptLoaded] = useState(false);
   const [googleError, setGoogleError] = useState(null);
@@ -38,7 +35,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const watchedPassword = watch('password', '');
   const watchedConfirmPassword = watch('confirmPassword', '');
   const watchedDateOfBirth = watch('dateOfBirth', '');
-  const watchedRole = watch('role', '');
   const watchedParentEmail = watch('parentEmail', '');
   const watchedAge = watch('age', '');
 
@@ -59,14 +55,14 @@ const SignupForm = ({ onSwitchToLogin }) => {
       const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
       setValue('age', calculatedAge);
 
-      // Only set requiresParentalApproval for students under 13
-      if (calculatedAge < 13 && watchedRole === 'Student') {
+      // Set requiresParentalApproval for students under 13 (all new users are students)
+      if (calculatedAge < 13) {
         setValue('requiresParentalApproval', true);
       } else {
         setValue('requiresParentalApproval', false);
       }
     }
-  }, [watchedDateOfBirth, watchedRole, setValue]);
+  }, [watchedDateOfBirth, setValue]);
 
   // Load Google Identity Services script
   useEffect(() => {
@@ -128,16 +124,11 @@ const SignupForm = ({ onSwitchToLogin }) => {
                 profilePhoto: payload.picture
               };
 
-              // Try Google auth - if new user, they'll be redirected to profile page
+              // Try Google auth - new users default to Student role
               const result = await googleLogin(response.credential);
               if (result.success) {
                 console.log('Google signup successful!');
-                // Redirect to dashboard or profile page
-                window.location.href = '/dashboard';
-              } else if (result.requiresRoleSelection) {
-                console.log('New user - redirecting to profile page for role selection');
-                // Redirect to profile page for role selection
-                window.location.href = '/profile';
+                // User will be redirected automatically in AuthContext if first-time user
               } else {
                 console.error('Google signup failed:', result.error);
                 setGoogleError({
@@ -221,8 +212,8 @@ const SignupForm = ({ onSwitchToLogin }) => {
       }
     }
 
-    // Only require parental approval for students under 13
-    const requiresParentalApproval = (finalAge < 13 && data.role === 'Student') ? true : false;
+    // Only require parental approval for students under 13 (all new users are students by default)
+    const requiresParentalApproval = finalAge < 13 ? true : false;
 
     // Validate parent email for students under 13
     if (requiresParentalApproval && !data.parentEmail) {
@@ -234,35 +225,16 @@ const SignupForm = ({ onSwitchToLogin }) => {
       name: data.name,
       email: data.email,
       password: data.password,
-      role: data.role,
-      dateOfBirth: data.dateOfBirth || null, // Make dateOfBirth optional
+      dateOfBirth: data.dateOfBirth || null,
       age: finalAge,
       requiresParentalApproval: requiresParentalApproval,
-      parentEmail: data.parentEmail, // Include parent email in registration
+      parentEmail: data.parentEmail,
+      isFirstTimeUser: true, // Mark as first-time user for profile setup
     });
 
     if (result.success) {
-      // Registration successful, show success message or redirect
+      // Registration successful, redirect to profile for first-time setup
       console.log('Registration successful!');
-    }
-  };
-
-  const handleRoleSelection = async (selectedRole) => {
-    try {
-      setIsGoogleLoading(true);
-      const result = await googleLogin(googleIdToken, selectedRole);
-      
-      if (result.success) {
-        console.log('Google signup with role successful!');
-        setShowRoleModal(false);
-        // Redirect to dashboard or show success message
-      } else {
-        console.error('Google signup failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Role selection error:', error);
-    } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -359,36 +331,16 @@ const SignupForm = ({ onSwitchToLogin }) => {
             )}
           </div>
 
-          {/* Role Selection */}
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-foreground mb-2">
-              I am a
-            </label>
-            <select
-              {...register('role', { required: 'Please select your role' })}
-              id="role"
-              className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
-            >
-              <option value="">Select your role</option>
-              <option value="Student">Student</option>
-              <option value="Teacher">Teacher</option>
-              <option value="Parent">Parent</option>
-              <option value="Admin">Admin</option>
-            </select>
-            {errors.role && (
-              <p className="mt-1 text-sm text-red-400">{errors.role.message}</p>
-            )}
-          </div>
-
           {/* Date of Birth Field */}
           <div>
             <label htmlFor="dateOfBirth" className="block text-sm font-medium text-foreground mb-2">
-              Date of Birth (Optional)
+              Date of Birth
             </label>
             <input
               {...register('dateOfBirth', {
+                required: 'Date of birth is required',
                 validate: (value) => {
-                  if (!value) return true; // Optional field
+                  if (!value) return 'Date of birth is required';
                   const birthDate = new Date(value);
                   const today = new Date();
                   const age = today.getFullYear() - birthDate.getFullYear();
@@ -562,7 +514,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
           </div>
 
           {/* Parental Approval Section */}
-          {watchedRole === 'Student' && (() => {
+          {(() => {
             let calculatedAge = null;
             
             // Calculate age from date of birth if available
@@ -628,7 +580,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
           })()}
 
           {/* Parent Email Field (for students under 13) */}
-          {watchedRole === 'Student' && (() => {
+          {(() => {
             let calculatedAge = null;
             
             // Calculate age from date of birth if available
@@ -736,13 +688,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
         </div>
       </div>
 
-      {/* Google Role Selection Modal */}
-      <GoogleRoleSelectionModal
-        isOpen={showRoleModal}
-        onClose={() => setShowRoleModal(false)}
-        onRoleSelect={handleRoleSelection}
-        userData={googleUserData}
-      />
     </div>
   );
 };

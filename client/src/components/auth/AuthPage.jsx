@@ -8,12 +8,17 @@ import ThemeToggle from '../common/ThemeToggle';
 import bg from './evening-b2g.jpg';
 
 const AuthPage = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { theme } = useTheme();
   const [currentForm, setCurrentForm] = useState('login'); // 'login' | 'signup' | 'forgot-password'
 
   if (isAuthenticated) {
-    window.location.href = '/dashboard';
+    // Check if user is first-time user and redirect accordingly
+    if (user?.isFirstTimeUser) {
+      window.location.href = '/profile';
+    } else {
+      window.location.href = '/dashboard';
+    }
     return null;
   }
 

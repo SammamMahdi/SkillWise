@@ -36,8 +36,10 @@ const userSchema = new mongoose.Schema({
     type: String, 
     required: function() { return !this.googleId; }
   },
-  role: { type: String, enum: ['Admin','Student','Teacher','Parent',null], default: null },
-  roleConfirmed: { type: Boolean, default: false },
+  role: { type: String, enum: ['Admin','Student','Teacher','Parent'], default: 'Student' },
+  roleConfirmed: { type: Boolean, default: true },
+  isFirstTimeUser: { type: Boolean, default: false }, // Flag for first-time setup
+  isSuperUser: { type: Boolean, default: false }, // Flag for superuser access
   age: Number,
   dateOfBirth: Date,
   requiresParentalApproval: { type: Boolean, default: false },
@@ -46,6 +48,13 @@ const userSchema = new mongoose.Schema({
   childAccounts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   pendingParentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   pendingChildRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  
+  // Parent invitation system for under-13 users
+  parentName: String,
+  parentEmail: String,
+  parentInvitationToken: String,
+  parentInvitationExpires: Date,
+  children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   isAccountBlocked: { type: Boolean, default: false },
   blockedReason: String,
   profilePhoto: String,

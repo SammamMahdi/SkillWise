@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { User, Mail, Globe, Palette, Save, Loader2, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Globe, Palette, Save, Loader2, ArrowLeft, Lock, Eye, EyeOff, Calendar, AtSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import AccentColorPicker from './AccentColorPicker';
 import ThemeToggle from '../common/ThemeToggle';
+import { checkUsernameAvailable, setMyUsername } from '../../services/usernameService';
 import toast from 'react-hot-toast';
 
 const ProfileSettings = () => {
@@ -14,8 +15,10 @@ const ProfileSettings = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [tempGoogleToken, setTempGoogleToken] = useState(null);
+  
+  // Username validation states
+  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken', 'invalid'
+  const [usernameDebounceTimer, setUsernameDebounceTimer] = useState(null);
 
   const {
     register,
@@ -29,21 +32,25 @@ const ProfileSettings = () => {
     if (user) {
       setValue('name', user.name || '');
       setValue('email', user.email || '');
+      setValue('username', user.username || '');
       setValue('preferredLanguage', user.preferredLanguage || 'en');
+      
+      // Set date of birth if available
+      if (user.dateOfBirth) {
+        const date = new Date(user.dateOfBirth);
+        const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        setValue('dateOfBirth', formattedDate);
+      }
+      
       setAccentColor(user.accessibility?.accentColor || '#7C3AED');
     }
   }, [user, setValue]);
 
-  // Check for temp Google token for new users (only if user exists)
+  // Check for first-time user setup (instead of temp Google token)
   useEffect(() => {
-    if (user) {
-      const token = localStorage.getItem('tempGoogleToken');
-      console.log('Checking temp token:', token, 'User role:', user?.role, 'Role confirmed:', user?.roleConfirmed);
-      if (token && (!user?.roleConfirmed)) {
-        console.log('Setting up role selection for existing user');
-        setTempGoogleToken(token);
-        setShowRoleSelection(true);
-      }
+    if (user && user.isFirstTimeUser) {
+      console.log('First-time user detected, showing initial setup');
+      // The first-time setup UI will be shown automatically based on showFirstTimeSetup
     }
   }, [user]);
 
@@ -88,9 +95,69 @@ const ProfileSettings = () => {
     return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
   };
 
+  // Username validation function
+  const validateUsername = async (username) => {
+    if (!username || username === user?.username) {
+      setUsernameStatus('');
+      return;
+    }
+
+    // Basic validation
+    const USERNAME_REGEX = /^[a-z0-9_.]{3,20}$/;
+    if (!USERNAME_REGEX.test(username)) {
+      setUsernameStatus('invalid');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    
+    try {
+      const result = await checkUsernameAvailable(username);
+      setUsernameStatus(result.available ? 'available' : 'taken');
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameStatus('');
+    }
+  };
+
+  // Debounced username validation
+  const handleUsernameChange = (e) => {
+    const value = e.target.value.toLowerCase();
+    
+    if (usernameDebounceTimer) {
+      clearTimeout(usernameDebounceTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      validateUsername(value);
+    }, 500);
+    
+    setUsernameDebounceTimer(timer);
+  };
+
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
+      // Handle username update separately if changed
+      if (data.username && data.username !== user?.username) {
+        if (usernameStatus !== 'available') {
+          toast.error('Please choose a valid and available username');
+          setIsLoading(false);
+          return;
+        }
+        
+        try {
+          const token = localStorage.getItem('token');
+          await setMyUsername(data.username, token);
+          toast.success('Username updated successfully!');
+        } catch (error) {
+          toast.error('Failed to update username');
+          console.error('Username update error:', error);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const profileData = {
         name: data.name,
         preferredLanguage: data.preferredLanguage,
@@ -98,6 +165,11 @@ const ProfileSettings = () => {
           accentColor: accentColor,
         }
       };
+
+      // Add date of birth if provided
+      if (data.dateOfBirth) {
+        profileData.dateOfBirth = data.dateOfBirth;
+      }
 
       // Include role if user is admin
       if (user.role === 'Admin' && data.role) {
@@ -124,40 +196,36 @@ const ProfileSettings = () => {
     setAccentColor(color);
   };
 
-  const handleRoleSelection = async (selectedRole) => {
-    const token = localStorage.getItem('tempGoogleToken');
-    if (!token) {
-      console.log('No temp token available');
-      toast.error('No authentication token found. Please try logging in again.');
-      return;
-    }
-    
-    console.log('Handling role selection for:', selectedRole);
+  const handleFirstTimeSetup = async (data) => {
     setIsLoading(true);
     try {
-      const result = await googleLogin(token, selectedRole);
-      console.log('Role selection result:', result);
+      const profileData = {
+        username: data.username,
+        dateOfBirth: data.dateOfBirth,
+        isFirstTimeUser: false // Mark as no longer first-time user
+      };
+
+      const result = await updateProfile(profileData);
       if (result.success) {
-        localStorage.removeItem('tempGoogleToken');
-        toast.success('Role selected successfully!');
-        // Redirect to dashboard
+        toast.success('Profile setup completed successfully!');
+        // Redirect to dashboard after setup
         window.location.href = '/dashboard';
       } else {
-        toast.error('Failed to set role. Please try again.');
+        toast.error(result.error || 'Profile setup failed');
       }
     } catch (error) {
-      console.error('Role selection error:', error);
-      toast.error('Failed to set role. Please try again.');
+      console.error('Profile setup error:', error);
+      toast.error('Profile setup failed');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Check if we have a temp token for new Google users
-  const tempToken = localStorage.getItem('tempGoogleToken');
+  // Check if we need to show first-time setup
+  const showFirstTimeSetup = user && user.isFirstTimeUser;
   
-  // If no user and no temp token, show loading
-  if (!user && !tempToken) {
+  // If no user, show loading
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -168,48 +236,95 @@ const ProfileSettings = () => {
     );
   }
 
-  // If we have a temp token but no user, show role selection
-  if (tempToken && !user) {
+  // If first-time user, show initial setup
+  if (showFirstTimeSetup) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Complete Your Registration</h1>
-              <p className="text-foreground/80">Please select your role to continue</p>
+            <div className="mb-8 text-center">
+              <h1 className="text-3xl font-bold text-foreground mb-2">Welcome to SkillWise!</h1>
+              <p className="text-foreground/80">Let's complete your profile setup</p>
             </div>
 
-            {/* Role Selection */}
-            <div className="bg-card rounded-lg p-6 border border-border">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">Choose Your Role</h2>
-                <p className="text-foreground/80">This will determine your experience on the platform</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {[
-                  { value: 'Student', label: 'Student', description: 'I want to learn and develop new skills' },
-                  { value: 'Teacher', label: 'Teacher', description: 'I want to create and share educational content' },
-                  { value: 'Parent', label: 'Parent', description: 'I want to monitor and support my child\'s learning' },
-                  { value: 'Admin', label: 'Administrator', description: 'I want to manage the platform and users' }
-                ].map((role) => (
+            {/* Setup Form */}
+            <div className="bg-card rounded-lg p-6 border border-border max-w-2xl mx-auto">
+              <form onSubmit={handleSubmit(handleFirstTimeSetup)} className="space-y-6">
+                {/* Username Field */}
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">
+                    Choose a Username <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    {...register('username', {
+                      required: 'Username is required',
+                      pattern: {
+                        value: /^[a-z0-9_.]{3,20}$/,
+                        message: 'Username must be 3-20 characters, only lowercase letters, numbers, dots, and underscores'
+                      }
+                    })}
+                    type="text"
+                    id="username"
+                    className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
+                    placeholder="Enter your username"
+                  />
+                  {errors.username && (
+                    <p className="mt-1 text-sm text-red-400">{errors.username.message}</p>
+                  )}
+                  <p className="mt-1 text-xs text-foreground/60">
+                    This will be your unique identifier on SkillWise
+                  </p>
+                </div>
+
+                {/* Birthday Field */}
+                <div>
+                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-foreground mb-2">
+                    Date of Birth <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    {...register('dateOfBirth', {
+                      required: 'Date of birth is required',
+                      validate: (value) => {
+                        if (!value) return 'Date of birth is required';
+                        const birthDate = new Date(value);
+                        const today = new Date();
+                        const age = today.getFullYear() - birthDate.getFullYear();
+                        const monthDiff = today.getMonth() - birthDate.getMonth();
+                        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
+                        
+                        if (actualAge < 5) return 'You must be at least 5 years old';
+                        if (actualAge > 120) return 'Please enter a valid date of birth';
+                        return true;
+                      }
+                    })}
+                    type="date"
+                    id="dateOfBirth"
+                    className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+                  />
+                  {errors.dateOfBirth && (
+                    <p className="mt-1 text-sm text-red-400">{errors.dateOfBirth.message}</p>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-center pt-6">
                   <button
-                    key={role.value}
-                    type="button"
-                    onClick={() => handleRoleSelection(role.value)}
+                    type="submit"
                     disabled={isLoading}
-                    className="p-4 border-2 border-border rounded-lg hover:border-primary transition-colors text-left disabled:opacity-50"
+                    className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    <h3 className="font-medium text-foreground">{role.label}</h3>
-                    <p className="text-sm text-foreground/80 mt-1">{role.description}</p>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Setting up...
+                      </>
+                    ) : (
+                      'Complete Setup'
+                    )}
                   </button>
-                ))}
-              </div>
-              
-              <p className="text-sm text-foreground/60 text-center">
-                You can change this later in your profile settings
-              </p>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -281,6 +396,65 @@ const ProfileSettings = () => {
                   </div>
                   <p className="text-xs text-foreground/60 mt-1">
                     Email cannot be changed
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60" />
+                    <input
+                      type="text"
+                      {...register('username', {
+                        pattern: {
+                          value: /^[a-z0-9_.]{3,20}$/,
+                          message: 'Username must be 3-20 characters, lowercase letters, numbers, dots, and underscores only'
+                        }
+                      })}
+                      onChange={handleUsernameChange}
+                      className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+                      placeholder={user.username || 'Choose a username'}
+                    />
+                    {usernameStatus === 'checking' && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-foreground/60" />
+                    )}
+                    {usernameStatus === 'available' && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-500" />
+                    )}
+                    {usernameStatus === 'taken' && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-red-500" />
+                    )}
+                  </div>
+                  {errors.username && (
+                    <p className="text-red-400 text-sm mt-1">{errors.username.message}</p>
+                  )}
+                  {usernameStatus === 'taken' && (
+                    <p className="text-red-400 text-sm mt-1">Username is already taken</p>
+                  )}
+                  {usernameStatus === 'invalid' && (
+                    <p className="text-red-400 text-sm mt-1">Username must be 3-20 characters, lowercase letters, numbers, dots, and underscores only</p>
+                  )}
+                  {usernameStatus === 'available' && (
+                    <p className="text-green-400 text-sm mt-1">Username is available</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Date of Birth
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/60" />
+                    <input
+                      type="date"
+                      {...register('dateOfBirth')}
+                      className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
+                    />
+                  </div>
+                  <p className="text-xs text-foreground/60 mt-1">
+                    Used for age verification and age-appropriate content
                   </p>
                 </div>
 

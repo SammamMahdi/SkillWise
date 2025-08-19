@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { listCourses, enroll, checkEnrollment } from '../../services/courseService';
+import { canSeeInternal, hasTeacherPermissions } from '../../utils/permissions';
 import ThemeToggle from '../common/ThemeToggle';
-
-const canSeeInternal = (user) => user?.role === 'Teacher' || user?.role === 'Admin';
 
 // Debounce hook for search
 const useDebounce = (value, delay) => {
@@ -456,7 +455,7 @@ export default function CourseGrid() {
                               </button>
                             )
                           )}
-                          {(user?.role === 'Teacher' || user?.role === 'Admin') && (
+                          {hasTeacherPermissions(user) && (
                             <button
                               onClick={() => navigate(`/courses/${c._id}/admin`)}
                               className="flex-1 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all duration-200 font-medium"

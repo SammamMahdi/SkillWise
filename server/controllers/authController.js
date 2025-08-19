@@ -83,7 +83,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, password, role, age, dateOfBirth, requiresParentalApproval, parentEmail } = req.body;
+    const { name, email, password, age, dateOfBirth, requiresParentalApproval, parentEmail } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -121,12 +121,12 @@ const register = async (req, res) => {
       }
     }
 
-    // Check if user is under 13 and requires parental approval
+    // Check if user is under 13 and requires parental approval (all new users are Students by default)
     const isUnder13 = calculatedAge && calculatedAge < 13;
-    const needsParentalApproval = isUnder13 && role === 'Student' && requiresParentalApproval;
+    const needsParentalApproval = isUnder13 && requiresParentalApproval;
     
     // For under-13 students, parental approval is mandatory
-    if (isUnder13 && role === 'Student' && !requiresParentalApproval) {
+    if (isUnder13 && !requiresParentalApproval) {
       return res.status(400).json({
         success: false,
         message: 'Parental approval is mandatory for students under 13 years old'
@@ -141,19 +141,19 @@ const register = async (req, res) => {
       });
     }
 
-    // Create user
+    // Create user (role defaults to 'Student' in the model)
     const user = new User({
       name,
       email,
       password: hashedPassword,
-      role,
       age: calculatedAge,
       dateOfBirth,
       requiresParentalApproval: needsParentalApproval,
       isAccountBlocked: needsParentalApproval,
       blockedReason: needsParentalApproval ? 'Account requires parental approval' : undefined,
       emailVerificationToken,
-      emailVerified: false
+      emailVerified: false,
+      isFirstTimeUser: true // Flag to indicate this user needs to complete setup
     });
 
     await user.save();
@@ -244,7 +244,8 @@ const register = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          emailVerified: user.emailVerified
+          emailVerified: user.emailVerified,
+          isFirstTimeUser: user.isFirstTimeUser
         },
         accessToken,
         refreshToken
@@ -337,7 +338,9 @@ const login = async (req, res) => {
           badges: user.badges,
           avatarsUnlocked: user.avatarsUnlocked,
           googleId: user.googleId,
-          profilePhoto: user.profilePhoto
+          profilePhoto: user.profilePhoto,
+          isFirstTimeUser: user.isFirstTimeUser,
+          isSuperUser: user.isSuperUser
         },
         accessToken,
         refreshToken
@@ -412,57 +415,24 @@ const googleAuth = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      // For new users, always require role selection
-      if (!role) {
-        // Create user without role and return requires role selection
-        user = new User({
-          name: name || 'Google User', // Use Google's name or fallback
-          email,
-          profilePhoto: picture,
-          emailVerified: true,
-          googleId: payload.sub,
-          role: null, // No role initially
-          preferredLanguage: 'en' // Default language
-        });
-        await user.save();
-
-        return res.status(200).json({
-          success: false,
-          message: 'Role selection is required for new users',
-          requiresRoleSelection: true,
-          userData: {
-            name: name || 'Google User',
-            email,
-            profilePhoto: picture,
-            googleId: payload.sub
-          }
-        });
-      } else {
-        // Create user with provided role
-        user = new User({
-          name: name || 'Google User', // Use Google's name or fallback
-          email,
-          profilePhoto: picture,
-          emailVerified: true,
-          googleId: payload.sub,
-          role: role, // Use provided role
-          roleConfirmed: true, // Mark as explicitly chosen
-          preferredLanguage: 'en' // Default language
-        });
-        await user.save();
-      }
+      // Create new Google user with default Student role
+      user = new User({
+        name: name || 'Google User', // Use Google's name or fallback
+        email,
+        profilePhoto: picture,
+        emailVerified: true,
+        googleId: payload.sub,
+        role: 'Student', // Default to Student role
+        roleConfirmed: true,
+        preferredLanguage: 'en', // Default language
+        isFirstTimeUser: true // Flag for first-time setup
+      });
+      await user.save();
     } else {
       // Update existing user's Google info
       user.googleId = payload.sub;
       user.profilePhoto = picture;
       user.lastLogin = new Date();
-      
-      // If role is provided, update it
-      if (role) {
-        user.role = role;
-        user.roleConfirmed = true; // Mark as explicitly chosen
-      }
-      
       await user.save();
     }
 
@@ -488,7 +458,9 @@ const googleAuth = async (req, res) => {
           badges: user.badges,
           avatarsUnlocked: user.avatarsUnlocked,
           googleId: user.googleId,
-          profilePhoto: user.profilePhoto
+          profilePhoto: user.profilePhoto,
+          isFirstTimeUser: user.isFirstTimeUser,
+          isSuperUser: user.isSuperUser
         },
         accessToken,
         refreshToken
@@ -807,6 +779,167 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+// Validate parent invitation token
+const validateInvitation = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+
+    // Find user with this parent invitation token
+    const user = await User.findOne({
+      parentInvitationToken: token,
+      parentInvitationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired invitation token' });
+    }
+
+    res.json({
+      childName: user.username,
+      parentName: user.parentName,
+      parentEmail: user.parentEmail,
+      valid: true
+    });
+  } catch (error) {
+    console.error('Error validating invitation:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Accept parent invitation and create parent account
+const acceptParentInvitation = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        field: 'password',
+        error: 'Password must be at least 8 characters long' 
+      });
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      return res.status(400).json({ 
+        field: 'password',
+        error: 'Password must contain uppercase, lowercase, and number' 
+      });
+    }
+
+    // Find child user with this invitation token
+    const childUser = await User.findOne({
+      parentInvitationToken: token,
+      parentInvitationExpires: { $gt: Date.now() }
+    });
+
+    if (!childUser) {
+      return res.status(400).json({ error: 'Invalid or expired invitation token' });
+    }
+
+    // Check if parent email is already registered
+    const existingParent = await User.findOne({ 
+      email: childUser.parentEmail,
+      role: 'parent'
+    });
+
+    let parentUser;
+
+    if (existingParent) {
+      // Parent already exists, just link to child
+      parentUser = existingParent;
+      
+      // Add child to parent's children array if not already there
+      if (!parentUser.children.includes(childUser._id)) {
+        parentUser.children.push(childUser._id);
+        await parentUser.save();
+      }
+    } else {
+      // Create new parent account
+      const hashedPassword = await hashPassword(password);
+      
+      parentUser = new User({
+        username: childUser.parentName.toLowerCase().replace(/\s+/g, '_'),
+        email: childUser.parentEmail,
+        password: hashedPassword,
+        role: 'parent',
+        parentName: childUser.parentName,
+        children: [childUser._id],
+        emailVerified: true // Auto-verify since they came from invitation email
+      });
+
+      await parentUser.save();
+    }
+
+    // Update child user - approve and link to parent
+    childUser.parentConfirmed = true;
+    childUser.requiresParentalApproval = false;
+    childUser.parent = parentUser._id;
+    childUser.parentInvitationToken = undefined;
+    childUser.parentInvitationExpires = undefined;
+    await childUser.save();
+
+    // Generate JWT token for parent
+    const accessToken = generateToken({
+      userId: parentUser._id,
+      role: parentUser.role
+    });
+
+    // Send notification to child that they've been approved
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: childUser.email,
+        subject: 'Account Approved - Welcome to SkillWise!',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10B981; text-align: center;">🎉 Your Account Has Been Approved!</h2>
+            <p>Hi ${childUser.username},</p>
+            <p>Great news! Your parent has approved your SkillWise account. You can now log in and start your learning journey!</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.CLIENT_URL}/auth/login" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">Login to SkillWise</a>
+            </div>
+            <p>Welcome to the SkillWise community! We're excited to have you on board.</p>
+            <hr style="margin: 20px 0; border: 1px solid #eee;">
+            <p style="color: #888; font-size: 12px; text-align: center;">SkillWise Learning Platform</p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Error sending approval notification:', emailError);
+      // Don't fail the whole process if email fails
+    }
+
+    res.json({
+      message: 'Parent account created and child approved successfully',
+      accessToken,
+      user: {
+        id: parentUser._id,
+        username: parentUser.username,
+        email: parentUser.email,
+        role: parentUser.role,
+        children: [
+          {
+            id: childUser._id,
+            username: childUser.username,
+            email: childUser.email
+          }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Error accepting parent invitation:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -817,5 +950,7 @@ module.exports = {
   changePassword,
   refreshToken,
   logout,
-  verifyEmail
+  verifyEmail,
+  validateInvitation,
+  acceptParentInvitation
 }; 

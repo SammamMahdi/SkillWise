@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, User, Tag, DollarSign, Clock, ArrowLeft, Play, Lock, Copy, Plus, FileText, CheckCircle, XCircle, MessageSquare, Edit, ChevronDown, ChevronRight, Video, File, Eye, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCourse, checkEnrollment, enroll, unenroll } from '../../services/courseService';
+import { canSeeInternal, canEditCourse, isOwner } from '../../utils/permissions';
 import examService from '../../services/examService';
 import toast from 'react-hot-toast';
 import ContactCreatorModal from '../exams/ContactCreatorModal';
 import ExamWarningModal from '../exams/ExamWarningModal';
 
-const canSeeInternal = (user) => user?.role === 'Teacher' || user?.role === 'Admin';
 const isCourseOwner = (user, course) => {
   // Check multiple possible field names for user ID
   const userId = user?._id || user?.id;
@@ -18,10 +18,10 @@ const isCourseOwner = (user, course) => {
     userId,
     teacherId,
     userRole: user?.role,
-    isOwner: userId === teacherId || user?.role === 'Admin'
+    isOwner: isOwner(user, teacherId)
   });
   
-  return userId === teacherId || user?.role === 'Admin';
+  return isOwner(user, teacherId);
 };
 
 export default function CourseDetail() {
@@ -138,8 +138,7 @@ export default function CourseDetail() {
   };
 
   const canCreateExam = () => {
-    return (user?.role === 'Teacher' || user?.role === 'Admin') &&
-           course?.teacher?._id === user?._id;
+    return canEditCourse(user, course?.teacher?._id);
   };
 
   const handleCreateExam = () => {
