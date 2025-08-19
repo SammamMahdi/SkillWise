@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { authLimiter } = require('../middleware/rateLimiter');
+const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -106,5 +107,34 @@ router.get('/verify-email/:token', authController.verifyEmail);
 // Parent invitation routes
 router.get('/validate-invitation', authController.validateInvitation);
 router.post('/accept-parent-invitation', authController.acceptParentInvitation);
+
+// Submit parent email for under-13 users
+router.post('/submit-parent-email', [
+  body('parentEmail')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid parent email')
+], protect, authController.submitParentEmail);
+
+// Update user age (requires authentication)
+router.put('/update-age', [
+  body('age')
+    .optional()
+    .isInt({ min: 5, max: 120 })
+    .withMessage('Age must be between 5 and 120'),
+  body('dateOfBirth')
+    .optional()
+    .isISO8601()
+    .withMessage('Date of birth must be a valid date')
+], protect, authController.updateUserAge);
+
+// Request parent role (requires authentication and age 25+)
+router.post('/request-parent-role', [
+  body('phoneNumber')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .isLength({ min: 5, max: 20 })
+    .withMessage('Phone number must be 5-20 characters long')
+], protect, authController.requestParentRole);
 
 module.exports = router; 

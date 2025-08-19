@@ -90,4 +90,13 @@ router.get('/approval-status', parentController.getParentApprovalStatus);
 // Get children for parent dashboard
 router.get('/children', parentController.getChildren);
 
+// Request parent role - new simple endpoint
+router.post('/request-role', [
+  body('phoneNumber')
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .isLength({ min: 10 })
+    .withMessage('Phone number must be at least 10 digits')
+], require('../controllers/parentRoleController').requestParentRole);
+
 module.exports = router; 

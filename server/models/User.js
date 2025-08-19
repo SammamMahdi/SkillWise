@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema({
     type: String, 
     required: function() { return !this.googleId; }
   },
+  phoneNumber: { type: String, sparse: true }, // Phone number for parent role requests
   role: { type: String, enum: ['Admin','Student','Teacher','Parent'], default: 'Student' },
   roleConfirmed: { type: Boolean, default: true },
   isFirstTimeUser: { type: Boolean, default: false }, // Flag for first-time setup
@@ -56,6 +57,7 @@ const userSchema = new mongoose.Schema({
   parentInvitationExpires: Date,
   children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   isAccountBlocked: { type: Boolean, default: false },
+  status: { type: String, enum: ['active', 'inactive', 'pending', 'suspended'], default: 'active' },
   blockedReason: String,
   profilePhoto: String,
   preferredLanguage: String,
@@ -185,6 +187,27 @@ userSchema.pre('validate', function(next) {
     const idStr = (this._id || new mongoose.Types.ObjectId()).toString();
     this.handle = makeHandleFromObjectId(idStr);
   }
+  next();
+});
+
+// Auto-set status for under-13 users
+userSchema.pre('save', function(next) {
+  // Check if age is under 13 and set status accordingly
+  if (this.age && this.age < 13) {
+    this.status = 'inactive';
+    this.isAccountBlocked = true;
+    this.requiresParentalApproval = true;
+    this.blockedReason = 'Account requires parental approval for users under 13';
+    console.log(`Setting user ${this.email} to inactive status (age: ${this.age})`);
+  } else if (this.age && this.age >= 13 && this.status === 'inactive' && this.blockedReason === 'Account requires parental approval for users under 13') {
+    // If user is 13 or older and was previously blocked for being under 13, unblock them
+    this.status = 'active';
+    this.isAccountBlocked = false;
+    this.requiresParentalApproval = false;
+    this.blockedReason = undefined;
+    console.log(`Setting user ${this.email} to active status (age: ${this.age})`);
+  }
+  
   next();
 });
 

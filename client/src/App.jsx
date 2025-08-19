@@ -11,6 +11,7 @@ import ProfileVisuals from './components/profile/ProfileVisuals'
 import AdminDashboard from './components/admin/AdminDashboard'
 import PaymentCodeManager from './components/admin/PaymentCodeManager'
 import ParentDashboard from './components/parent/ParentDashboard'
+import BecomeParentPage from './components/parent/BecomeParentPage'
 import LearningDashboard from './components/dashboard/LearningDashboard'
 import CourseGrid from './components/courses/CourseGrid'
 import CreateCourseForm from './components/courses/CreateCourseForm'
@@ -42,6 +43,12 @@ import SetUsername from './components/auth/SetUsername'
 
 // NEW: Parental Approval page for users under 13
 import ParentalApproval from './components/auth/ParentalApproval'
+
+// NEW: Parent Email Required page for under-13 users
+import ParentEmailRequired from './components/auth/ParentEmailRequired'
+
+// NEW: Blocked Account page
+import BlockedAccount from './components/auth/BlockedAccount'
 
 // NEW: Parent Invitation page
 import ParentInvitation from './components/auth/ParentInvitation'
@@ -92,8 +99,21 @@ function AppRoutes() {
       {/* NEW: Parental Approval route for users under 13 */}
       <Route path="/auth/parental-approval" element={<ParentalApproval />} />
 
+      {/* NEW: Parent Email Required route for under-13 users */}
+      <Route path="/auth/parent-email-required" element={<ParentEmailRequired />} />
+
+      {/* NEW: Blocked Account route */}
+      <Route path="/auth/blocked-account" element={<BlockedAccount />} />
+
       {/* NEW: Parent Invitation route */}
       <Route path="/auth/parent-invitation" element={<ParentInvitation />} />
+
+      {/* NEW: Become Parent route */}
+      <Route path="/become-parent" element={
+        <AgeVerificationWrapper>
+          <BecomeParentPage />
+        </AgeVerificationWrapper>
+      } />
 
       <Route path="/dashboard" element={
         <AgeVerificationWrapper>

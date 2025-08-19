@@ -60,7 +60,7 @@ api.interceptors.response.use(
   }
 );
 
-export const authService = {
+const authService = {
   // Register new user
   async register(userData) {
     const response = await api.post('/auth/register', userData);
@@ -69,35 +69,60 @@ export const authService = {
 
   // Login user
   async login(credentials) {
-    // Clear any existing tokens before login
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    
-    const response = await api.post('/auth/login', credentials);
-    const { data } = response.data;
-    
-    console.log('Login response:', response.data);
-    
-    // Check if account is blocked
-    if (response.data.isAccountBlocked) {
-      // Store tokens but mark user as blocked
+    try {
+      // Clear any existing tokens before login
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      
+      const response = await api.post('/auth/login', credentials);
+      const { data } = response.data;
+      
+      console.log('Login response:', response.data);
+      
+      // Store tokens
       localStorage.setItem('token', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       
-      return { 
-        user: { 
-          ...data.user, 
-          isAccountBlocked: true,
-          blockedReason: response.data.blockedReason || response.data.message 
-        } 
-      };
+      return { user: data.user };
+    } catch (error) {
+      // Handle 403 errors (blocked accounts)
+      if (error.response?.status === 403) {
+        const errorData = error.response.data;
+        
+        // If it's an under-13 user needing parental approval
+        if (errorData.isUnder13 && errorData.requiresParentalApproval) {
+          // Store temporary token and user data
+          if (errorData.tempToken) {
+            localStorage.setItem('tempToken', errorData.tempToken);
+          }
+          if (errorData.userData) {
+            localStorage.setItem('tempUserData', JSON.stringify(errorData.userData));
+          }
+          
+          // Throw a specific error for under-13 users
+          const under13Error = new Error('UNDER_13_PARENT_APPROVAL_REQUIRED');
+          under13Error.userData = errorData.userData || {
+            requiresParentalApproval: true,
+            isUnder13: true,
+            blockedReason: errorData.blockedReason || errorData.message
+          };
+          throw under13Error;
+        }
+        
+        // Handle other blocked account cases
+        if (errorData.isAccountBlocked) {
+          const blockedError = new Error('ACCOUNT_BLOCKED');
+          blockedError.userData = {
+            isAccountBlocked: true,
+            blockedReason: errorData.blockedReason || errorData.message,
+            requiresParentalApproval: errorData.requiresParentalApproval
+          };
+          throw blockedError;
+        }
+      }
+      
+      throw error;
     }
-    
-    // Store tokens
-    localStorage.setItem('token', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    
-    return { user: data.user };
   },
 
   // Google OAuth login
@@ -128,12 +153,6 @@ export const authService = {
       return { user: data.user };
     } catch (error) {
       console.log('Google auth API error:', error.response?.data || error.message);
-      
-      // If it's a role selection error, throw it as a specific error
-      if (error.response?.data?.requiresRoleSelection) {
-        throw new Error('ROLE_SELECTION_REQUIRED');
-      }
-      
       throw error;
     }
   },
@@ -215,6 +234,57 @@ export const authService = {
   storeUser(user) {
     localStorage.setItem('user', JSON.stringify(user));
   },
+
+  // Update user age
+  async updateAge(ageData) {
+    try {
+      const response = await api.put('/auth/update-age', ageData);
+      return response.data;
+    } catch (error) {
+      console.error('Update age error:', error);
+      
+      // Handle under-13 error response
+      if (error.response?.status === 403 && error.response?.data?.isUnder13) {
+        const errorData = error.response.data;
+        
+        // Store temporary token if provided
+        if (errorData.tempToken) {
+          localStorage.setItem('tempToken', errorData.tempToken);
+          localStorage.setItem('under13UserData', JSON.stringify(errorData.userData));
+        }
+        
+        // Throw a specific error for under-13 users
+        const under13Error = new Error('UNDER_13_PARENT_APPROVAL_REQUIRED');
+        under13Error.userData = errorData.userData || {
+          requiresParentalApproval: true,
+          isUnder13: true,
+          blockedReason: errorData.blockedReason || errorData.message
+        };
+        throw under13Error;
+      }
+      
+      if (error.response?.data) {
+        throw error.response.data;
+      }
+      throw { message: 'Failed to update age' };
+    }
+  },
+
+  // Request parent role (for users 25+) - Updated to use new endpoint
+  async requestParentRole(phoneNumber) {
+    try {
+      console.log('🟢 Requesting parent role with phone:', phoneNumber);
+      const response = await api.post('/parent/request-role', { phoneNumber });
+      console.log('✅ Parent role request response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Request parent role error:', error);
+      if (error.response?.data) {
+        throw error.response.data;
+      }
+      throw { message: 'Failed to request parent role' };
+    }
+  },
 };
 
-export default authService; 
+export default authService;

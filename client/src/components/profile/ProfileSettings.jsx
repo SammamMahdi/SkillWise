@@ -534,6 +534,23 @@ const ProfileSettings = () => {
                   <p className="text-sm text-foreground/60">Avatars</p>
                 </div>
               </div>
+
+              {/* Become Parent Button */}
+              {user.role !== 'Parent' && user.age >= 25 && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Become a Parent</h3>
+                  <p className="text-foreground/70 text-sm mb-4">
+                    You're eligible to become a parent user and manage child accounts.
+                  </p>
+                  <a
+                    href="/become-parent"
+                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-200"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Become a Parent
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Appearance Settings */}

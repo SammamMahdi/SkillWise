@@ -109,6 +109,35 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      // Handle under-13 user needing parental approval
+      if (error.message === 'UNDER_13_PARENT_APPROVAL_REQUIRED') {
+        // Store user data but don't set as authenticated
+        const userData = { 
+          ...error.userData,
+          email: credentials.email, // Store email for parent request
+          name: credentials.name || 'User' // Store name if available
+        };
+        
+        // Store in localStorage temporarily for the parent email page
+        localStorage.setItem('tempUserData', JSON.stringify(userData));
+        
+        // Redirect to parent email collection page
+        window.location.href = '/auth/parent-email-required';
+        return { success: false, requiresParentEmail: true };
+      }
+      
+      // Handle other blocked account cases
+      if (error.message === 'ACCOUNT_BLOCKED') {
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: { 
+          ...error.userData,
+          email: credentials.email
+        }});
+        
+        // Redirect to blocked account page
+        window.location.href = '/auth/blocked-account';
+        return { success: false, isBlocked: true };
+      }
+      
       const errorMessage = error.response?.data?.message || 'Login failed';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
       return { success: false, error: errorMessage };
@@ -253,6 +282,32 @@ export const AuthProvider = ({ children }) => {
       
       return result;
     } catch (error) {
+      // Handle under-13 user detection after profile update
+      if (error.response?.status === 403 && error.response?.data?.isUnder13) {
+        const errorData = error.response.data;
+        
+        // Store temporary token if provided
+        if (errorData.tempToken) {
+          localStorage.setItem('tempToken', errorData.tempToken);
+          localStorage.setItem('under13UserData', JSON.stringify(errorData.userData));
+        }
+        
+        // Store user data but don't set as authenticated
+        const userData = { 
+          ...errorData.userData,
+          requiresParentalApproval: true,
+          isUnder13: true,
+          blockedReason: errorData.blockedReason
+        };
+        
+        // Store in localStorage temporarily for the parent email page
+        localStorage.setItem('tempUserData', JSON.stringify(userData));
+        
+        // Redirect to parent email collection page
+        window.location.href = '/auth/parent-email-required';
+        return { success: false, requiresParentEmail: true, error: errorData.message };
+      }
+      
       const errorMessage = error.response?.data?.message || 'Profile update failed';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
       return { success: false, error: errorMessage };
@@ -262,6 +317,27 @@ export const AuthProvider = ({ children }) => {
   // Clear error
   const clearError = () => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
+  };
+
+  // Request parent role
+  const requestParentRole = async (phoneNumber) => {
+    try {
+      dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
+      const result = await authService.requestParentRole(phoneNumber);
+      
+      if (result.success) {
+        // Update local state with the new user data
+        const updatedUser = { ...state.user, ...result.data.user };
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: updatedUser });
+        authService.storeUser(updatedUser);
+      }
+      
+      return result;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to request parent role';
+      dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
+      return { success: false, error: errorMessage };
+    }
   };
 
   // Set user function for direct user updates
@@ -279,6 +355,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     changePassword,
     updateProfile,
+    requestParentRole,
     clearError,
     setUser,
   };

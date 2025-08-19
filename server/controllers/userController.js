@@ -22,7 +22,14 @@ const getProfile = async (req, res) => {
       });
     }
 
-    console.log('User found:', { id: user._id, name: user.name, email: user.email });
+    console.log('User found:', { 
+      id: user._id, 
+      name: user.name, 
+      email: user.email,
+      age: user.age,
+      role: user.role,
+      hasPhoneNumber: !!user.phoneNumber
+    });
 
           res.json({
         success: true,
@@ -94,7 +101,19 @@ const updateProfile = async (req, res) => {
       }
       user.username = username;
     }
-    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+    if (dateOfBirth) {
+      user.dateOfBirth = dateOfBirth;
+      // Calculate age from date of birth
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      user.age = calculatedAge;
+      console.log('Updated age from date of birth:', calculatedAge, 'for user:', user.email);
+    }
     if (preferredLanguage) user.preferredLanguage = preferredLanguage;
     if (interests) user.interests = interests;
     if (accessibility) {
@@ -114,6 +133,36 @@ const updateProfile = async (req, res) => {
     }
 
     await user.save();
+
+    // Check if user is now under 13 after profile update
+    const isUnder13 = user.age && user.age < 13;
+    if (isUnder13 && user.status === 'active') {
+      console.log('User became under-13 after profile update, requires parental approval:', user.email);
+      
+      // Generate a temporary token for the user to submit parent email
+      const jwt = require('jsonwebtoken');
+      const tempToken = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      
+      return res.status(403).json({
+        success: false,
+        message: 'Account requires parental approval',
+        requiresParentalApproval: true,
+        isAccountBlocked: true,
+        isUnder13: true,
+        status: user.status,
+        blockedReason: 'Account requires parental approval for users under 13',
+        tempToken: tempToken,
+        userData: {
+          name: user.name,
+          email: user.email,
+          age: user.age
+        }
+      });
+    }
 
     // Return the updated user without sensitive fields
     const updatedUser = await User.findById(req.userId)

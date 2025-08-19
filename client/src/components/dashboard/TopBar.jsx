@@ -259,7 +259,7 @@ const TopBar = ({
                   
                   {/* Always show Profile Settings */}
                   <Link 
-                    to="/profile" 
+                    to="/profile/settings" 
                     className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" 
                     onClick={() => setOpenUser(false)} 
                     role="menuitem"
