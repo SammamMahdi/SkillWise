@@ -29,17 +29,30 @@ const ChatBox = ({
   const [sending, setSending] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [lastMessageId, setLastMessageId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const textareaRef = useRef(null);
+  const refreshIntervalRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && otherUser && skillPost) {
       fetchMessages();
+      // Start auto-refresh interval
+      startAutoRefresh();
     }
+    
+    return () => {
+      // Cleanup interval on unmount or when chat closes
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
   }, [isOpen, otherUser, skillPost]);
 
   useEffect(() => {
@@ -53,6 +66,48 @@ const ChatBox = ({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [newMessage]);
+
+  const startAutoRefresh = () => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    // Start new interval for refreshing messages every 1 second
+    refreshIntervalRef.current = setInterval(() => {
+      refreshMessages();
+    }, 1000);
+  };
+
+  const refreshMessages = async () => {
+    if (!otherUser || !skillPost || loading || sending || isTyping) return;
+
+    try {
+      setIsRefreshing(true);
+      const response = await messagesService.getMessages(
+        otherUser._id, 
+        skillPost._id, 
+        1, 
+        50
+      );
+
+      if (response.success && response.data.length > 0) {
+        const newMessages = response.data;
+        const latestMessageId = newMessages[newMessages.length - 1]?._id;
+        
+        // Only update if we have new messages
+        if (latestMessageId !== lastMessageId) {
+          setMessages(newMessages);
+          setLastMessageId(latestMessageId);
+        }
+      }
+    } catch (error) {
+      // Silently fail for auto-refresh to avoid spam
+      console.log('Auto-refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const fetchMessages = async (pageNum = 1) => {
     if (!otherUser || !skillPost) return;
@@ -70,6 +125,10 @@ const ChatBox = ({
       if (response.success) {
         if (pageNum === 1) {
           setMessages(response.data);
+          // Set the last message ID for auto-refresh comparison
+          if (response.data.length > 0) {
+            setLastMessageId(response.data[response.data.length - 1]._id);
+          }
         } else {
           setMessages(prev => [...response.data, ...prev]);
         }
@@ -92,6 +151,7 @@ const ChatBox = ({
 
     const messageContent = newMessage.trim();
     setNewMessage('');
+    setIsTyping(false);
 
     try {
       setSending(true);
@@ -105,6 +165,7 @@ const ChatBox = ({
       if (response.success) {
         // Add the new message to the list
         setMessages(prev => [...prev, response.data]);
+        setLastMessageId(response.data._id);
         
         // Reset textarea height
         if (textareaRef.current) {
@@ -123,8 +184,14 @@ const ChatBox = ({
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      setIsTyping(false);
       handleSendMessage(e);
     }
+  };
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value);
+    setIsTyping(e.target.value.length > 0);
   };
 
   const scrollToBottom = () => {
@@ -226,6 +293,14 @@ const ChatBox = ({
               <p className="text-sm text-foreground/60 truncate">
                 Re: {skillPost?.title}
               </p>
+              <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
+                isRefreshing ? 'text-green-500 opacity-100' : 'text-foreground/40 opacity-60'
+              }`}>
+                <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  isRefreshing ? 'bg-green-500 animate-pulse' : 'bg-foreground/30'
+                }`}></div>
+                <span className="transition-all duration-300">Live</span>
+              </div>
             </div>
           </div>
           
@@ -375,8 +450,10 @@ const ChatBox = ({
               <textarea
                 ref={textareaRef}
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
+                onFocus={() => setIsTyping(newMessage.length > 0)}
+                onBlur={() => setIsTyping(false)}
                 placeholder="Type a message..."
                 className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground resize-none placeholder:text-foreground/40 transition-all duration-200 max-h-32"
                 rows={1}

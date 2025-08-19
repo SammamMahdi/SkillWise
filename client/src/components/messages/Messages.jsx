@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Clock, User, AlertTriangle } from 'lucide-react';
 import { messagesService } from '../../services/messagesService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,30 +11,55 @@ const Messages = () => {
   const [error, setError] = useState('');
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [chatBoxOpen, setChatBoxOpen] = useState(false);
+  const refreshIntervalRef = useRef(null);
 
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
 
   useEffect(() => {
     fetchConversations();
-  }, []);
+    
+    // Start auto-refresh for conversations list
+    refreshIntervalRef.current = setInterval(() => {
+      if (!chatBoxOpen) { // Only refresh if chat is not open to avoid interference
+        fetchConversations(true); // Silent refresh
+      }
+    }, 2000); // Refresh every 2 seconds
+    
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [chatBoxOpen]);
 
-  const fetchConversations = async () => {
+  const fetchConversations = async (silent = false) => {
     try {
-      setLoading(true);
-      setError('');
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       
       const response = await messagesService.getConversations();
       if (response.success) {
         setConversations(response.data);
+        if (!silent) {
+          setError('');
+        }
       } else {
-        setError(response.message || 'Failed to load conversations');
+        if (!silent) {
+          setError(response.message || 'Failed to load conversations');
+        }
       }
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      setError(error.message || 'Failed to load conversations. Please try again.');
+      if (!silent) {
+        setError(error.message || 'Failed to load conversations. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -56,7 +81,7 @@ const Messages = () => {
     setChatBoxOpen(false);
     setSelectedConversation(null);
     // Refresh conversations to update unread counts
-    fetchConversations();
+    fetchConversations(true); // Silent refresh
   };
 
   const formatTimeAgo = (date) => {
@@ -89,7 +114,17 @@ const Messages = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
-              <p className="text-foreground/60">Your skill-related conversations</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-foreground/60">Your skill-related conversations</p>
+                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
+                  !chatBoxOpen ? 'text-green-500 opacity-100' : 'text-foreground/40 opacity-60'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    !chatBoxOpen ? 'bg-green-500 animate-pulse' : 'bg-foreground/30'
+                  }`}></div>
+                  <span className="transition-all duration-300">Live updates</span>
+                </div>
+              </div>
             </div>
             <DashboardButton />
           </div>
