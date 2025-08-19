@@ -32,6 +32,8 @@ const ChatBox = ({
   const [lastMessageId, setLastMessageId] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
   
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
@@ -45,6 +47,12 @@ const ChatBox = ({
       fetchMessages();
       // Start auto-refresh interval
       startAutoRefresh();
+      
+      // Add scroll event listener
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.addEventListener('scroll', checkScrollPosition);
+      }
     }
     
     return () => {
@@ -52,12 +60,21 @@ const ChatBox = ({
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
       }
+      
+      // Remove scroll event listener
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.removeEventListener('scroll', checkScrollPosition);
+      }
     };
   }, [isOpen, otherUser, skillPost]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only auto-scroll if user hasn't scrolled up or if it's a new message from current user
+    if (shouldAutoScroll && !userScrolledUp) {
+      scrollToBottom();
+    }
+  }, [messages, shouldAutoScroll, userScrolledUp]);
 
   useEffect(() => {
     // Auto-resize textarea
@@ -66,6 +83,16 @@ const ChatBox = ({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [newMessage]);
+
+  // Check if user is near bottom of messages
+  const checkScrollPosition = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
+      setUserScrolledUp(!isNearBottom);
+      setShouldAutoScroll(isNearBottom);
+    }
+  };
 
   const startAutoRefresh = () => {
     // Clear any existing interval
@@ -152,6 +179,8 @@ const ChatBox = ({
     const messageContent = newMessage.trim();
     setNewMessage('');
     setIsTyping(false);
+    setShouldAutoScroll(true); // Always scroll after sending
+    setUserScrolledUp(false);
 
     try {
       setSending(true);
@@ -167,15 +196,23 @@ const ChatBox = ({
         setMessages(prev => [...prev, response.data]);
         setLastMessageId(response.data._id);
         
-        // Reset textarea height
+        // Reset textarea height and refocus
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
+          // Refocus the textarea after a brief delay
+          setTimeout(() => {
+            textareaRef.current?.focus();
+          }, 100);
         }
       }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error(error.message || 'Failed to send message');
       setNewMessage(messageContent); // Restore message on error
+      // Refocus on error too
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
     } finally {
       setSending(false);
     }
@@ -326,6 +363,7 @@ const ChatBox = ({
         <div 
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto p-4 space-y-4"
+          onScroll={checkScrollPosition}
         >
           {loading && messages.length === 0 ? (
             <div className="flex items-center justify-center py-8">
@@ -442,6 +480,22 @@ const ChatBox = ({
           
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Scroll to Bottom Button */}
+        {userScrolledUp && (
+          <div className="absolute bottom-20 right-6 z-10">
+            <button
+              onClick={() => {
+                setShouldAutoScroll(true);
+                setUserScrolledUp(false);
+                scrollToBottom();
+              }}
+              className="bg-primary text-white p-2 rounded-full shadow-lg hover:bg-primary/90 transition-all duration-200 flex items-center space-x-1"
+            >
+              <ArrowLeft className="w-4 h-4 rotate-90" />
+            </button>
+          </div>
+        )}
 
         {/* Input Area */}
         <div className="border-t border-border p-4">
