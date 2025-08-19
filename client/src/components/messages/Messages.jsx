@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Clock, User, AlertTriangle } from 'lucide-react';
 import { messagesService } from '../../services/messagesService';
 import { useAuth } from '../../contexts/AuthContext';
+import DashboardButton from '../common/DashboardButton';
 
 const Messages = () => {
   const [conversations, setConversations] = useState([]);
@@ -61,8 +62,13 @@ const Messages = () => {
     <div className="min-h-screen bg-background p-6 transition-colors">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
-          <p className="text-foreground/60">Your skill-related conversations</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
+              <p className="text-foreground/60">Your skill-related conversations</p>
+            </div>
+            <DashboardButton />
+          </div>
         </div>
 
         {/* Monitoring Notice */}

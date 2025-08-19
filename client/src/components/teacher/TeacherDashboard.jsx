@@ -19,6 +19,7 @@ import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import examService from '../../services/examService';
 import { useAuth } from '../../contexts/AuthContext';
+import DashboardButton from '../common/DashboardButton';
 
 const TeacherDashboard = () => {
   const { user } = useAuth();
@@ -151,10 +152,15 @@ const TeacherDashboard = () => {
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Teacher Dashboard</h1>
-          <p className="text-foreground/60">
-            Welcome back, {user?.name}! Manage your courses, exams, and review student submissions.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Teacher Dashboard</h1>
+              <p className="text-foreground/60">
+                Welcome back, {user?.name}! Manage your courses, exams, and review student submissions.
+              </p>
+            </div>
+            <DashboardButton />
+          </div>
         </div>
 
         {/* Stats Cards */}

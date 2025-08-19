@@ -15,6 +15,7 @@ import paymentService from '../../services/paymentService';
 import RedeemCodeModal from './RedeemCodeModal';
 import TransactionHistory from './TransactionHistory';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 const SkillPayWallet = () => {
   const [wallet, setWallet] = useState(null);
@@ -160,7 +161,8 @@ const SkillPayWallet = () => {
               Wallet Activated
             </div>
             
-            {/* Theme Toggle */}
+            {/* Action buttons */}
+            <DashboardButton />
             <ThemeToggle size="md" />
           </div>
         </div>

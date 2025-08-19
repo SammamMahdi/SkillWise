@@ -17,6 +17,7 @@ import {
 import { skillsService } from '../../services/skillsService';
 import CreateSkillPost from './CreateSkillPost';
 import SkillPostCard from './SkillPostCard';
+import DashboardButton from '../common/DashboardButton';
 
 const SkillsWall = () => {
   const [skillPosts, setSkillPosts] = useState([]);
@@ -100,13 +101,16 @@ const SkillsWall = () => {
                 Share your skills, find collaborators, and build your expertise
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Create Post</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <DashboardButton />
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Create Post</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

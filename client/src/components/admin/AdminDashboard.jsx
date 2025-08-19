@@ -20,6 +20,7 @@ import {
   Book
 } from 'lucide-react';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
@@ -269,8 +270,11 @@ const AdminDashboard = () => {
               <p className="text-foreground/80">Manage users, roles, and platform settings</p>
             </div>
             
-            {/* Theme Toggle */}
-            <ThemeToggle size="md" />
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <DashboardButton />
+              <ThemeToggle size="md" />
+            </div>
           </div>
         </div>
 

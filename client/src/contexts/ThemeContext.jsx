@@ -27,6 +27,19 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('skillwise-theme', theme)
   }, [theme])
 
+  useEffect(() => {
+    // Listen for theme changes from auth events
+    const handleThemeChange = (event) => {
+      setTheme(event.detail)
+    }
+
+    window.addEventListener('themeChanged', handleThemeChange)
+    
+    return () => {
+      window.removeEventListener('themeChanged', handleThemeChange)
+    }
+  }, [])
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark')
   }

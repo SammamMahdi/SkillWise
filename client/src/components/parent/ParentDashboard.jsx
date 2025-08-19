@@ -16,6 +16,7 @@ import {
   Lock
 } from 'lucide-react';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 const ParentDashboard = () => {
   const [children, setChildren] = useState([]);
@@ -256,8 +257,11 @@ const ParentDashboard = () => {
               <p className="text-foreground/80">Monitor your children's learning progress</p>
             </div>
             
-            {/* Theme Toggle */}
-            <ThemeToggle size="md" />
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <DashboardButton />
+              <ThemeToggle size="md" />
+            </div>
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { User, Mail, Globe, Palette, Save, Loader2, ArrowLeft, Lock, Eye, EyeOff
 import { useAuth } from '../../contexts/AuthContext';
 import AccentColorPicker from './AccentColorPicker';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 import { checkUsernameAvailable, setMyUsername } from '../../services/usernameService';
 import toast from 'react-hot-toast';
 
@@ -344,14 +345,8 @@ const ProfileSettings = () => {
             </div>
             <div className="flex items-center space-x-3">
               {/* Theme Toggle */}
+              <DashboardButton />
               <ThemeToggle size="md" />
-              <a
-                href="/dashboard"
-                className="flex items-center space-x-2 px-4 py-2 bg-background border border-border text-foreground rounded-lg hover:bg-card transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dashboard</span>
-              </a>
             </div>
           </div>
 

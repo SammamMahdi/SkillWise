@@ -6,6 +6,7 @@ import examService from '../../services/examService';
 import ContactCreatorModal from './ContactCreatorModal';
 import ExamWarningModal from './ExamWarningModal';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 const StudentExamList = () => {
   const navigate = useNavigate();
@@ -265,8 +266,11 @@ const StudentExamList = () => {
               <p className="text-foreground/60">Take exams for your enrolled courses</p>
             </div>
             
-            {/* Theme Toggle */}
-            <ThemeToggle size="md" />
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <DashboardButton />
+              <ThemeToggle size="md" />
+            </div>
           </div>
         </div>
 

@@ -13,6 +13,7 @@ import { getEnrolledCourseDetails, updateCourseProgress } from '../../services/l
 import examService from '../../services/examService';
 import toast from 'react-hot-toast';
 import ExamWarningModal from '../exams/ExamWarningModal';
+import DashboardButton from '../common/DashboardButton';
 
 export default function StudentCourseView() {
   const { id } = useParams();
@@ -608,13 +609,16 @@ export default function StudentCourseView() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => navigate('/courses')}
-            className="flex items-center gap-2 text-foreground/60 hover:text-foreground mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Courses
-          </button>
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => navigate('/courses')}
+              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Courses
+            </button>
+            <DashboardButton />
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Course Info */}

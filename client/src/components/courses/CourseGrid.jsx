@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { listCourses, enroll, checkEnrollment } from '../../services/courseService';
 import { canSeeInternal, hasTeacherPermissions } from '../../utils/permissions';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 // Debounce hook for search
 const useDebounce = (value, delay) => {
@@ -213,18 +214,10 @@ export default function CourseGrid() {
 
       <div className="relative z-10 p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header Section with Back Button */}
+          {/* Header Section with Dashboard and Theme buttons */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg text-foreground/80 hover:text-foreground hover:bg-card hover:border-primary/50 transition-all duration-200 hover:shadow-lg group"
-              >
-                <svg className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Dashboard
-              </button>
+              <DashboardButton variant="secondary" />
               
               {/* Theme Toggle */}
               <ThemeToggle size="md" />

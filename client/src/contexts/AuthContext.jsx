@@ -100,6 +100,13 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
       authService.storeUser(user);
       
+      // Auto-switch to dark mode after successful login
+      localStorage.setItem('skillwise-theme', 'dark');
+      document.documentElement.classList.add('dark');
+      
+      // Dispatch custom event to update theme context
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: 'dark' }));
+      
       return { success: true };
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed';
@@ -128,6 +135,13 @@ export const AuthProvider = ({ children }) => {
         if (result.data.refreshToken) {
           localStorage.setItem('refreshToken', result.data.refreshToken);
         }
+        
+        // Auto-switch to dark mode after successful registration
+        localStorage.setItem('skillwise-theme', 'dark');
+        document.documentElement.classList.add('dark');
+        
+        // Dispatch custom event to update theme context
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: 'dark' }));
       }
       
       dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
@@ -148,6 +162,13 @@ export const AuthProvider = ({ children }) => {
       const { user } = await authService.googleAuth(tokenId, role);
       dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
       authService.storeUser(user);
+      
+      // Auto-switch to dark mode after successful login
+      localStorage.setItem('skillwise-theme', 'dark');
+      document.documentElement.classList.add('dark');
+      
+      // Dispatch custom event to update theme context
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: 'dark' }));
       
       return { success: true };
     } catch (error) {

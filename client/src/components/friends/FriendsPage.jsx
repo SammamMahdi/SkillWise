@@ -5,6 +5,7 @@ import friendService from '../../services/friendService';
 import { getProfilePicture } from '../../utils/profilePictureUtils';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../common/ThemeToggle';
+import DashboardButton from '../common/DashboardButton';
 
 const FriendsPage = () => {
   const [activeTab, setActiveTab] = useState('friends');
@@ -190,8 +191,11 @@ const FriendsPage = () => {
               <p className="text-foreground/60">Connect with other students and share your learning journey</p>
             </div>
             
-            {/* Theme Toggle */}
-            <ThemeToggle size="md" />
+            {/* Action buttons */}
+            <div className="flex items-center gap-3">
+              <DashboardButton />
+              <ThemeToggle size="md" />
+            </div>
           </div>
         </div>
 
