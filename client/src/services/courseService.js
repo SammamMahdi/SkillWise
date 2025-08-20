@@ -38,10 +38,11 @@ export async function checkEnrollment(courseId, token) {
   return status === 200;
 }
 
-export async function enroll(courseId, token) {
+export async function enroll(courseId, token, childLockPassword = null) {
+  const body = childLockPassword ? { childLockPassword } : {};
   const { data } = await axios.post(
     `${API}/learning/courses/${courseId}/enroll`,
-    {},
+    body,
     { headers: token ? { Authorization: `Bearer ${token}` } : {} }
   );
   return data;

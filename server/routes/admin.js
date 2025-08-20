@@ -16,8 +16,8 @@ router.get('/users', adminController.getAllUsers);
 // Update user role (Admin only)
 router.put('/users/:userId/role', [
   body('role')
-    .isIn(['Admin', 'Student', 'Teacher', 'Parent'])
-    .withMessage('Role must be one of: Admin, Student, Teacher, Parent')
+    .isIn(['Admin', 'Student', 'Teacher', 'Child'])
+    .withMessage('Role must be one of: Admin, Student, Teacher, Child')
 ], adminController.updateUserRole);
 
 // Block/Unblock user account (Admin only)

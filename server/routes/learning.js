@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const learningController = require('../controllers/learningController');
 const { verifyToken } = require('../config/auth');
 const { apiLimiter } = require('../middleware/rateLimiter');
+const { checkChildRestrictions } = require('../middleware/childRestrictions');
 
 const router = express.Router();
 
@@ -10,12 +11,12 @@ const router = express.Router();
 router.use(verifyToken);
 router.use(apiLimiter);
 
-// Get learning dashboard data
+// Get learning dashboard data (allow for all users)
 router.get('/dashboard', learningController.getLearningDashboard);
 
-// Course enrollment
-router.post('/courses/:courseId/enroll', learningController.enrollInCourse);
-router.delete('/courses/:courseId/enroll', learningController.unenrollFromCourse);
+// Course enrollment (child accounts need childlock password)
+router.post('/courses/:courseId/enroll', checkChildRestrictions('course_enrollment'), learningController.enrollInCourse);
+router.delete('/courses/:courseId/enroll', checkChildRestrictions('course_enrollment'), learningController.unenrollFromCourse);
 
 // Get enrolled course details
 router.get('/courses/:courseId', learningController.getEnrolledCourseDetails);

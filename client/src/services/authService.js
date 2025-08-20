@@ -270,19 +270,19 @@ const authService = {
     }
   },
 
-  // Request parent role (for users 25+) - Updated to use new endpoint
-  async requestParentRole(phoneNumber) {
+  // Convert to child role (for users 25+)
+  async convertToChildRole(childLockPassword, phoneNumber) {
     try {
-      console.log('🟢 Requesting parent role with phone:', phoneNumber);
-      const response = await api.post('/parent/request-role', { phoneNumber });
-      console.log('✅ Parent role request response:', response.data);
+      console.log('🟢 Converting to child role with phone:', phoneNumber);
+      const response = await api.post('/auth/convert-to-child', { childLockPassword, phoneNumber });
+      console.log('✅ Child role conversion response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Request parent role error:', error);
+      console.error('❌ Convert to child role error:', error);
       if (error.response?.data) {
         throw error.response.data;
       }
-      throw { message: 'Failed to request parent role' };
+      throw { message: 'Failed to convert to child account' };
     }
   },
 };

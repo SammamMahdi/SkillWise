@@ -2,51 +2,25 @@ import React, { useState } from 'react';
 import { 
   AlertTriangle, 
   Shield, 
-  Mail, 
   User, 
-  Lock,
-  CheckCircle,
-  XCircle,
+  LogOut,
   RefreshCw
 } from 'lucide-react';
 
 const BlockedAccount = ({ user, onParentApproved }) => {
-  const [parentEmail, setParentEmail] = useState('');
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
-  const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
-  const handleParentRequest = async (e) => {
-    e.preventDefault();
-    if (!parentEmail) return;
-
-    try {
-      setIsRequesting(true);
-      setError('');
-      
-      const response = await fetch('/api/parent/request-child', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ childEmail: user.email })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setRequestSent(true);
-      } else {
-        setError(data.message || 'Failed to send parent request');
-      }
-    } catch (error) {
-      console.error('Error requesting parent approval:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setIsRequesting(false);
-    }
+  const handleSignOut = () => {
+    // Clear all authentication data
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('tempToken');
+    localStorage.removeItem('tempUserData');
+    localStorage.removeItem('under13UserData');
+    
+    // Redirect to login page
+    window.location.href = '/login';
   };
 
   const handleRefresh = () => {
@@ -108,120 +82,52 @@ const BlockedAccount = ({ user, onParentApproved }) => {
             </div>
           </div>
 
-          {/* Parent Request Form */}
-          {!requestSent ? (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Request Parental Approval</h3>
-                <p className="text-sm text-foreground/80 mb-4">
-                  Enter your parent's email address to send them a connection request. They will need to approve your account to unlock access.
-                </p>
-              </div>
-
-              {error && (
-                <div className="bg-red-50/10 border border-red-200/20 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <XCircle className="w-5 h-5 text-red-600" />
-                    <span className="text-sm text-red-600">{error}</span>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleParentRequest} className="space-y-4">
-                <div>
-                  <label htmlFor="parentEmail" className="block text-sm font-medium text-foreground mb-2">
-                    Parent's Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground/40" />
-                    <input
-                      type="email"
-                      id="parentEmail"
-                      value={parentEmail}
-                      onChange={(e) => setParentEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
-                      placeholder="parent@example.com"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isRequesting || !parentEmail}
-                  className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isRequesting ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 animate-spin" />
-                      <span>Sending Request...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-5 h-5" />
-                      <span>Send Parent Request</span>
-                    </>
-                  )}
-                </button>
-              </form>
+          {/* Parent Request Message */}
+          <div className="space-y-4">
+            <div className="bg-blue-50/10 border border-blue-200/20 rounded-lg p-6 text-center">
+              <h3 className="text-lg font-semibold text-foreground mb-3">Need Account Access?</h3>
+              <p className="text-foreground/80 mb-4">
+                Ask your parent to open an account for you on SkillWise. They can create a parent account and approve your access to the platform.
+              </p>
+              <p className="text-sm text-foreground/60">
+                Once your parent creates an account and approves you, your access will be automatically unlocked.
+              </p>
             </div>
-          ) : (
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">Request Sent Successfully</h3>
-                <p className="text-sm text-foreground/80">
-                  A connection request has been sent to your parent's email address. They will need to:
-                </p>
-                <ul className="text-sm text-foreground/80 mt-3 space-y-1">
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span>Create a Parent account (if they don't have one)</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span>Accept the connection request</span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span>Approve your account access</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="bg-blue-50/10 border border-blue-200/20 rounded-lg p-4">
-                <p className="text-sm text-foreground/80">
-                  <strong>Note:</strong> You will receive a notification once your parent approves your account. 
-                  You can also ask your parent to check their email for the connection request.
-                </p>
-              </div>
-              
+
+            <div className="flex space-x-3">
               <button
                 onClick={handleRefresh}
-                className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center justify-center space-x-2"
+                className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="w-5 h-5" />
                 <span>Check if Approved</span>
               </button>
+              
+              <button
+                onClick={handleSignOut}
+                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center justify-center space-x-2"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Sign Out</span>
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Additional Information */}
           <div className="mt-8 pt-6 border-t border-border">
-            <h4 className="text-sm font-medium text-foreground mb-3">What happens next?</h4>
+            <h4 className="text-sm font-medium text-foreground mb-3">What your parent needs to do:</h4>
             <div className="space-y-3 text-sm text-foreground/80">
               <div className="flex items-start space-x-2">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                <p>Your parent will receive an email with instructions to connect to your account</p>
+                <p>Visit SkillWise and create an account</p>
               </div>
               <div className="flex items-start space-x-2">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                <p>Once connected, your parent can monitor your learning progress</p>
+                <p>Connect to your account and approve your access</p>
               </div>
               <div className="flex items-start space-x-2">
                 <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                <p>Your account will be automatically unlocked once approved</p>
+                <p>Your account will be automatically unlocked</p>
               </div>
             </div>
           </div>

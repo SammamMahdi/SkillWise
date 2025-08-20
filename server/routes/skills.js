@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const { protect } = require('../middleware/auth');
+const { checkChildRestrictions, blockChildAccounts } = require('../middleware/childRestrictions');
 const upload = require('../middleware/upload');
 const {
   getSkillPosts,
@@ -16,12 +17,13 @@ const {
 // Get all skill posts with filtering
 router.get('/', getSkillPosts);
 
-// Get user's skill posts
+// Get user's skill posts (allow viewing for all users including child accounts)
 router.get('/my-posts', protect, getMySkillPosts);
 
-// Create new skill post
+// Create new skill post (require child lock password for child accounts)
 router.post('/', 
   protect,
+  checkChildRestrictions('skill_posts'),
   upload.array('images', 5), // Allow up to 5 images
   [
     body('title')
@@ -102,15 +104,16 @@ router.post('/',
   createSkillPost
 );
 
-// Update skill post
-router.put('/:id', protect, updateSkillPost);
+// Update skill post (require child lock password for child accounts)
+router.put('/:id', protect, checkChildRestrictions('skill_posts'), updateSkillPost);
 
-// Delete skill post
-router.delete('/:id', protect, deleteSkillPost);
+// Delete skill post (require child lock password for child accounts)  
+router.delete('/:id', protect, checkChildRestrictions('skill_posts'), deleteSkillPost);
 
-// Add review to skill post
+// Add review to skill post (require child lock password for child accounts)
 router.post('/:id/review', 
   protect,
+  checkChildRestrictions('skill_posts'),
   [
     body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
     body('comment').optional().trim().isLength({ max: 500 }).withMessage('Comment must be less than 500 characters')

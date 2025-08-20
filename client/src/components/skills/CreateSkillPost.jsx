@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { skillsService } from '../../services/skillsService';
 
-const CreateSkillPost = ({ onClose, onPostCreated }) => {
+const CreateSkillPost = ({ onClose, onPostCreated, childLockPassword }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -126,10 +126,16 @@ const CreateSkillPost = ({ onClose, onPostCreated }) => {
         submitData.append('images', image);
       });
 
+      // Add childlock password if provided (for Child accounts)
+      if (childLockPassword) {
+        submitData.append('childLockPassword', childLockPassword);
+      }
+
       console.log('Submitting skill post with data:', {
         formData,
         imageCount: images.length,
-        skillTags: formData.skillTags
+        skillTags: formData.skillTags,
+        hasChildLockPassword: !!childLockPassword
       });
 
       const response = await skillsService.createSkillPost(submitData);

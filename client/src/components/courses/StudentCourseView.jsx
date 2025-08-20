@@ -13,6 +13,7 @@ import { getEnrolledCourseDetails, updateCourseProgress } from '../../services/l
 import examService from '../../services/examService';
 import toast from 'react-hot-toast';
 import ExamWarningModal from '../exams/ExamWarningModal';
+import ChildLockModal from '../common/ChildLockModal';
 import DashboardButton from '../common/DashboardButton';
 
 export default function StudentCourseView() {
@@ -29,6 +30,7 @@ export default function StudentCourseView() {
   const [selectedContent, setSelectedContent] = useState(null);
   const [showContentModal, setShowContentModal] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const [showChildLockModal, setShowChildLockModal] = useState(false);
   const [selectedExam, setSelectedExam] = useState(null);
   const [lectureProgress, setLectureProgress] = useState({});
   const [courseExams, setCourseExams] = useState([]);
@@ -143,6 +145,13 @@ export default function StudentCourseView() {
   };
 
   const handleEnroll = async () => {
+    // Check if user is a child account
+    if (user?.role === 'Child') {
+      setShowChildLockModal(true);
+      return;
+    }
+
+    // Regular enrollment for non-child accounts
     try {
       setEnrolling(true);
       await enroll(id, localStorage.getItem('token'));
@@ -154,6 +163,24 @@ export default function StudentCourseView() {
       toast.success('Successfully enrolled in course!');
     } catch (err) {
       toast.error(err?.response?.data?.error || err.message || 'Failed to enroll');
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const handleChildLockVerify = async (childLockPassword) => {
+    try {
+      setEnrolling(true);
+      await enroll(id, localStorage.getItem('token'), childLockPassword);
+      
+      // Reload enrollment data
+      const enrollmentData = await getEnrolledCourseDetails(id);
+      setEnrollment(enrollmentData);
+      
+      toast.success('Successfully enrolled in course!');
+    } catch (err) {
+      const errorMessage = err?.response?.data?.message || err.message || 'Failed to enroll';
+      throw new Error(errorMessage);
     } finally {
       setEnrolling(false);
     }
@@ -886,6 +913,14 @@ export default function StudentCourseView() {
           }}
         />
       )}
+
+      {/* Child Lock Modal */}
+      <ChildLockModal
+        isOpen={showChildLockModal}
+        onClose={() => setShowChildLockModal(false)}
+        onVerify={handleChildLockVerify}
+        feature="course_enrollment"
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const friendController = require('../controllers/friendController');
 const { verifyToken } = require('../config/auth');
 const { apiLimiter } = require('../middleware/rateLimiter');
+const { checkChildRestrictions } = require('../middleware/childRestrictions');
 
 const router = express.Router();
 
@@ -10,25 +11,25 @@ const router = express.Router();
 router.use(verifyToken);
 router.use(apiLimiter);
 
-// Send friend request
+// Send friend request (requires child lock for child accounts)
 router.post('/request', [
   body('targetHandle')
     .notEmpty()
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Target handle is required and must be between 1 and 50 characters')
-], friendController.sendFriendRequest);
+], checkChildRestrictions('friend_requests'), friendController.sendFriendRequest);
 
-// Accept friend request
-router.put('/accept/:requesterId', friendController.acceptFriendRequest);
+// Accept friend request (requires child lock for child accounts)
+router.put('/accept/:requesterId', checkChildRestrictions('friend_requests'), friendController.acceptFriendRequest);
 
-// Reject friend request
-router.put('/reject/:requesterId', friendController.rejectFriendRequest);
+// Reject friend request (requires child lock for child accounts)
+router.put('/reject/:requesterId', checkChildRestrictions('friend_requests'), friendController.rejectFriendRequest);
 
-// Get friends list
+// Get friends list (no childlock required for viewing)
 router.get('/', friendController.getFriends);
 
-// Get pending friend requests
+// Get pending friend requests (no childlock required for viewing)
 router.get('/requests', friendController.getPendingRequests);
 
 // Remove friend

@@ -151,6 +151,7 @@ app.use((req, res, next) => {
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/child", require("./routes/child"));
 app.use("/api/parent", require("./routes/parent"));
 app.use("/api/superuser", require("./routes/superuser"));
 app.use("/api/skills", require("./routes/skills"));

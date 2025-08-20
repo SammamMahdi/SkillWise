@@ -18,11 +18,16 @@ import { skillsService } from '../../services/skillsService';
 import CreateSkillPost from './CreateSkillPost';
 import SkillPostCard from './SkillPostCard';
 import DashboardButton from '../common/DashboardButton';
+import ChildLockModal from '../common/ChildLockModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const SkillsWall = () => {
+  const { user } = useAuth();
   const [skillPosts, setSkillPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showChildLockModal, setShowChildLockModal] = useState(false);
+  const [childLockPassword, setChildLockPassword] = useState(null);
   const [filters, setFilters] = useState({
     type: '',
     pricing: '',
@@ -80,9 +85,27 @@ const SkillsWall = () => {
     setCurrentPage(1);
   };
 
+  const handleCreateClick = () => {
+    // For Child accounts, show childlock modal first
+    if (user?.role === 'Child') {
+      setShowChildLockModal(true);
+    } else {
+      // For normal users, directly show create modal
+      setShowCreateModal(true);
+    }
+  };
+
+  const handleChildLockVerify = async (password) => {
+    // Store the password and proceed to show create modal
+    setChildLockPassword(password);
+    setShowChildLockModal(false);
+    setShowCreateModal(true);
+  };
+
   const handlePostCreated = (newPost) => {
     setSkillPosts(prev => [newPost, ...prev]);
     setShowCreateModal(false);
+    setChildLockPassword(null); // Clear the password after use
   };
 
   const handlePostDeleted = (deletedPostId) => {
@@ -104,7 +127,7 @@ const SkillsWall = () => {
             <div className="flex items-center gap-3">
               <DashboardButton />
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={handleCreateClick}
                 className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
               >
                 <Plus className="w-5 h-5" />
@@ -219,7 +242,7 @@ const SkillsWall = () => {
                   Be the first to share a skill or adjust your filters
                 </p>
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={handleCreateClick}
                   className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Create Your First Post
@@ -254,8 +277,22 @@ const SkillsWall = () => {
       {/* Create Post Modal */}
       {showCreateModal && (
         <CreateSkillPost
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => {
+            setShowCreateModal(false);
+            setChildLockPassword(null);
+          }}
           onPostCreated={handlePostCreated}
+          childLockPassword={childLockPassword}
+        />
+      )}
+
+      {/* Child Lock Modal */}
+      {showChildLockModal && (
+        <ChildLockModal
+          isOpen={showChildLockModal}
+          onClose={() => setShowChildLockModal(false)}
+          onVerify={handleChildLockVerify}
+          feature="Create Skill Post"
         />
       )}
     </div>

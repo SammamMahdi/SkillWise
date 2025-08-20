@@ -47,11 +47,11 @@ const SuperUserAccessTest = () => {
       ]
     },
     {
-      category: 'Parent Access',
+      category: 'Child Access',
       icon: <UserCheck className="w-5 h-5" />,
       tests: [
-        { name: 'Parent Dashboard', status: permissions.hasParentAccess, description: 'Can access parent dashboard' },
-        { name: 'Child Monitoring', status: permissions.canMonitorChildren, description: 'Can monitor children\'s progress' }
+        { name: 'Child Account Detection', status: permissions.isChildAccount, description: 'Can detect child accounts' },
+        { name: 'Child Restrictions', status: !permissions.canAccessSkillPosts, description: 'Has child account restrictions' }
       ]
     },
     {
@@ -164,7 +164,7 @@ const SuperUserAccessTest = () => {
 
         <div className="mt-8 text-center">
           <p className="text-foreground/70 text-sm">
-            SuperUser has comprehensive access to all features across Admin, Teacher, Parent, and Student roles.
+            SuperUser has comprehensive access to all features across Admin, Teacher, Child, and Student roles.
           </p>
         </div>
       </div>

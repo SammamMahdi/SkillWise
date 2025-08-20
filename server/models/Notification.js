@@ -14,7 +14,6 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
-      'parent_request', 'child_request', 'parent_approval', 'child_approval',
       'account_blocked', 'account_unblocked', 'friend_request', 'friend_accepted',
       'friend_rejected', 'exam_review_request', 'exam_approved', 'exam_rejected',
       'exam_published', 'exam_graded', 'exam_submission_review', 'exam_score_published',

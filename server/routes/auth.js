@@ -24,11 +24,7 @@ router.post('/register', [
   body('age')
     .optional()
     .isInt({ min: 5, max: 120 })
-    .withMessage('Age must be between 5 and 120'),
-  body('requiresParentalApproval')
-    .optional()
-    .isBoolean()
-    .withMessage('Parental approval must be a boolean value')
+    .withMessage('Age must be between 5 and 120')
 ], authLimiter, authController.register);
 
 // Login route
@@ -104,37 +100,19 @@ router.post('/logout', authController.logout);
 // Verify email route
 router.get('/verify-email/:token', authController.verifyEmail);
 
-// Parent invitation routes
+// Basic invitation token validation (can be kept for future use)
 router.get('/validate-invitation', authController.validateInvitation);
-router.post('/accept-parent-invitation', authController.acceptParentInvitation);
 
-// Submit parent email for under-13 users
-router.post('/submit-parent-email', [
-  body('parentEmail')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid parent email')
-], protect, authController.submitParentEmail);
-
-// Update user age (requires authentication)
-router.put('/update-age', [
-  body('age')
-    .optional()
-    .isInt({ min: 5, max: 120 })
-    .withMessage('Age must be between 5 and 120'),
-  body('dateOfBirth')
-    .optional()
-    .isISO8601()
-    .withMessage('Date of birth must be a valid date')
-], protect, authController.updateUserAge);
-
-// Request parent role (requires authentication and age 25+)
-router.post('/request-parent-role', [
+// Convert to child role (requires authentication and age 25+)
+router.post('/convert-to-child', [
+  body('childLockPassword')
+    .isLength({ min: 6 })
+    .withMessage('Child lock password must be at least 6 characters long'),
   body('phoneNumber')
     .notEmpty()
     .withMessage('Phone number is required')
-    .isLength({ min: 5, max: 20 })
-    .withMessage('Phone number must be 5-20 characters long')
-], protect, authController.requestParentRole);
+    .isLength({ min: 10 })
+    .withMessage('Phone number must be at least 10 digits')
+], protect, authController.convertToChildRole);
 
 module.exports = router; 

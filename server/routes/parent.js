@@ -96,7 +96,12 @@ router.post('/request-role', [
     .notEmpty()
     .withMessage('Phone number is required')
     .isLength({ min: 10 })
-    .withMessage('Phone number must be at least 10 digits')
+    .withMessage('Phone number must be at least 10 digits'),
+  body('childLockPassword')
+    .notEmpty()
+    .withMessage('Child lock password is required')
+    .isLength({ min: 6 })
+    .withMessage('Child lock password must be at least 6 characters')
 ], require('../controllers/parentRoleController').requestParentRole);
 
 module.exports = router; 

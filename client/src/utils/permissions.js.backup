@@ -52,24 +52,28 @@ export const canAccessSkillPosts = (user) => {
 };
 
 export const canEnrollInCourses = (user) => {
-  // Child accounts can enroll with childlock password verification
-  return true;
+  return !isChildAccount(user);
 };
 
 export const canSendFriendRequests = (user) => {
-  // Child accounts can send friend requests with childlock password verification
-  return true;
+  return !isChildAccount(user);
 };
 
-export const isOwner = (user, targetUserId) => {
-  return user?.id === targetUserId;
+export const isOwner = (user, teacherId) => {
+  if (isSuperUser(user)) return true;
+  if (hasAdminPermissions(user)) return true;
+  return user?.id === teacherId;
 };
 
+// Get display role for SuperUsers
 export const getDisplayRole = (user) => {
-  if (isSuperUser(user)) return 'SuperUser';
+  if (isSuperUser(user)) {
+    return 'SuperUser';
+  }
   return user?.role || 'Student';
 };
 
+// Get all available permissions for a user
 export const getUserPermissions = (user) => {
   const permissions = {
     isSuperUser: isSuperUser(user),

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
 import NotificationCenter from '../notifications/NotificationCenter'
 import ThemeToggle from '../common/ThemeToggle'
-import { hasTeacherPermissions, hasAdminPermissions, hasParentPermissions, isSuperUser } from '../../utils/permissions'
+import { hasTeacherPermissions, hasAdminPermissions, isChildAccount, isSuperUser } from '../../utils/permissions'
 
 const TopBar = ({ 
   user, 
@@ -302,15 +302,15 @@ const TopBar = ({
                     </Link>
                   )}
                   
-                  {hasParentPermissions(user) && (
+                  {isChildAccount(user) && (
                     <Link 
-                      to="/parent" 
-                      className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-primary/10 transition-colors duration-200 rounded-lg" 
+                      to="/become-child" 
+                      className="block px-3 sm:px-4 py-2 sm:py-3 hover:bg-green-50 hover:bg-opacity-50 text-green-700 transition-colors duration-200 rounded-lg border border-green-200/50" 
                       onClick={() => setOpenUser(false)} 
                       role="menuitem"
                     >
-                      <div className="font-medium text-sm sm:text-base">Parent Dashboard</div>
-                      <div className="text-xs sm:text-sm text-foreground/60">Monitor learning progress</div>
+                      <div className="font-medium text-sm sm:text-base">Child Settings</div>
+                      <div className="text-xs sm:text-sm text-foreground/60">Manage child account settings</div>
                     </Link>
                   )}
 

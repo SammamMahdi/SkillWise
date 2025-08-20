@@ -34,7 +34,7 @@ const Dashboard = () => {
         // Fetch dashboard data and skill of month in parallel
         const [dashboardResponse, skillOfMonthResponse] = await Promise.all([
           getLearningDashboard(),
-          skillsService.getSkillOfMonth(user.id).catch(() => ({ data: { skill: 'General Learning' } }))
+          skillsService.getSkillOfMonth(user._id || user.id).catch(() => ({ data: { skill: 'General Learning' } }))
         ])
         
         console.log('Learning dashboard data:', dashboardResponse) // Debug log

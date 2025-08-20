@@ -27,9 +27,13 @@ api.interceptors.request.use(
 
 class FriendService {
   // Send friend request
-  async sendFriendRequest(targetHandle) {
+  async sendFriendRequest(targetHandle, childLockPassword = null) {
     try {
-      const response = await api.post('/friends/request', { targetHandle });
+      const body = { targetHandle };
+      if (childLockPassword) {
+        body.childLockPassword = childLockPassword;
+      }
+      const response = await api.post('/friends/request', body);
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to send friend request' };
@@ -37,9 +41,10 @@ class FriendService {
   }
 
   // Accept friend request
-  async acceptFriendRequest(requesterId) {
+  async acceptFriendRequest(requesterId, childLockPassword = null) {
     try {
-      const response = await api.put(`/friends/accept/${requesterId}`);
+      const body = childLockPassword ? { childLockPassword } : {};
+      const response = await api.put(`/friends/accept/${requesterId}`, body);
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to accept friend request' };

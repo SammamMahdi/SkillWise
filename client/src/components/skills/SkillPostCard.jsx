@@ -24,8 +24,7 @@ const SkillPostCard = ({ post, onDeleted }) => {
 
   const { user, isAuthenticated } = useAuth();
   const currentUserId = user?.id || user?._id;
-  const isOwner = post.user._id === currentUserId;
-
+  
   const formatTimeAgo = (date) => {
     const now = new Date();
     const postDate = new Date(date);
@@ -35,6 +34,32 @@ const SkillPostCard = ({ post, onDeleted }) => {
     if (diffInHours < 24) return `${diffInHours}h ago`;
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
+  
+  // Handle posts with null/undefined user (deleted users)
+  if (!post.user) {
+    return (
+      <div className="bg-card border border-border rounded-lg overflow-hidden opacity-50">
+        <div className="p-4">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-gray-400" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-500">Deleted User</h4>
+              <div className="flex items-center space-x-2 text-sm text-gray-400">
+                <Clock className="w-3 h-3" />
+                <span>{formatTimeAgo(post.createdAt)}</span>
+              </div>
+            </div>
+          </div>
+          <h3 className="text-lg font-bold text-gray-500 mb-2">{post.title}</h3>
+          <p className="text-gray-400 text-sm">This post is from a deleted user account.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const isOwner = post.user._id === currentUserId;
 
   const getPricingColor = (pricing) => {
     switch (pricing) {

@@ -43,7 +43,8 @@ const getSkillPosts = async (req, res) => {
 // Get user's skill posts
 const getMySkillPosts = async (req, res) => {
   try {
-    const skillPosts = await SkillPost.find({ user: req.user.id })
+    const userId = req.userId || req.user?._id || req.user?.id;
+    const skillPosts = await SkillPost.find({ user: userId })
       .populate('user', 'name avatarUrl email')
       .sort({ createdAt: -1 });
 
@@ -71,7 +72,8 @@ const createSkillPost = async (req, res) => {
     });
 
     // Check if user is authenticated
-    if (!req.user || (!req.user.id && !req.user._id)) {
+    const userId = req.userId || req.user?._id || req.user?.id;
+    if (!userId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please log in again.',
@@ -159,7 +161,6 @@ const createSkillPost = async (req, res) => {
       });
     }
 
-    const userId = req.user.id || req.user._id;
     const skillPost = new SkillPost({
       user: userId,
       title: title.trim(),
@@ -232,7 +233,8 @@ const updateSkillPost = async (req, res) => {
     }
 
     // Check if user owns the post
-    if (skillPost.user.toString() !== req.user.id) {
+    const userId = req.userId || req.user?._id || req.user?.id;
+    if (skillPost.user.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this post'
@@ -270,7 +272,8 @@ const deleteSkillPost = async (req, res) => {
     }
 
     // Check if user owns the post
-    if (skillPost.user.toString() !== req.user.id) {
+    const userId = req.userId || req.user?._id || req.user?.id;
+    if (skillPost.user.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this post'
@@ -314,8 +317,9 @@ const addReview = async (req, res) => {
     }
 
     // Check if user already reviewed this post
+    const userId = req.userId || req.user?._id || req.user?.id;
     const existingReview = skillPost.reviews.find(
-      review => review.reviewer.toString() === req.user.id
+      review => review.reviewer.toString() === userId.toString()
     );
 
     if (existingReview) {
@@ -328,7 +332,7 @@ const addReview = async (req, res) => {
     const { rating, comment } = req.body;
 
     skillPost.reviews.push({
-      reviewer: req.user.id,
+      reviewer: userId,
       rating,
       comment
     });

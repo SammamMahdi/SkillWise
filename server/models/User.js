@@ -36,26 +36,17 @@ const userSchema = new mongoose.Schema({
     type: String, 
     required: function() { return !this.googleId; }
   },
-  phoneNumber: { type: String, sparse: true }, // Phone number for parent role requests
-  role: { type: String, enum: ['Admin','Student','Teacher','Parent'], default: 'Student' },
+  phoneNumber: { type: String, sparse: true }, // Phone number for child role requests
+  role: { type: String, enum: ['Admin','Student','Teacher','Child'], default: 'Student' },
   roleConfirmed: { type: Boolean, default: true },
   isFirstTimeUser: { type: Boolean, default: false }, // Flag for first-time setup
   isSuperUser: { type: Boolean, default: false }, // Flag for superuser access
   age: Number,
   dateOfBirth: Date,
-  requiresParentalApproval: { type: Boolean, default: false },
-  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  parentConfirmed: { type: Boolean, default: false },
-  childAccounts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  pendingParentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  pendingChildRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   
-  // Parent invitation system for under-13 users
-  parentName: String,
-  parentEmail: String,
-  parentInvitationToken: String,
-  parentInvitationExpires: Date,
-  children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  // Child role system - replaces parent system
+  childLockPassword: String, // Password for child account access to restricted features
+  childLockPhoneNumber: String, // Phone number for child account verification
   isAccountBlocked: { type: Boolean, default: false },
   status: { type: String, enum: ['active', 'inactive', 'pending', 'suspended'], default: 'active' },
   blockedReason: String,
@@ -190,22 +181,20 @@ userSchema.pre('validate', function(next) {
   next();
 });
 
-// Auto-set status for under-13 users
+// Auto-set status for under-13 users - block them completely
 userSchema.pre('save', function(next) {
-  // Check if age is under 13 and set status accordingly
+  // Block users under 13 completely - they need parent to create account
   if (this.age && this.age < 13) {
     this.status = 'inactive';
     this.isAccountBlocked = true;
-    this.requiresParentalApproval = true;
-    this.blockedReason = 'Account requires parental approval for users under 13';
-    console.log(`Setting user ${this.email} to inactive status (age: ${this.age})`);
-  } else if (this.age && this.age >= 13 && this.status === 'inactive' && this.blockedReason === 'Account requires parental approval for users under 13') {
+    this.blockedReason = 'Users under 13 are not allowed. Please ask your parent to create an account for you.';
+    console.log(`Blocking user ${this.email} - under 13 years old (age: ${this.age})`);
+  } else if (this.age && this.age >= 13 && this.status === 'inactive' && this.blockedReason?.includes('under 13')) {
     // If user is 13 or older and was previously blocked for being under 13, unblock them
     this.status = 'active';
     this.isAccountBlocked = false;
-    this.requiresParentalApproval = false;
     this.blockedReason = undefined;
-    console.log(`Setting user ${this.email} to active status (age: ${this.age})`);
+    console.log(`Unblocking user ${this.email} - now 13 or older (age: ${this.age})`);
   }
   
   next();

@@ -7,23 +7,49 @@ const Notification = require('../models/Notification');
 // @access  Private (Admin)
 const getAllUsers = async (req, res) => {
   try {
-    // Check if current user is admin
+    // Check if current user is admin or superuser
     const currentUser = await User.findById(req.userId);
-    if (!currentUser || currentUser.role !== 'Admin') {
+    if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'SuperUser')) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
       });
     }
 
-    const users = await User.find({})
+    // Get pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 25;
+    const skip = (page - 1) * limit;
+
+    // Search functionality
+    const search = req.query.search || '';
+    const searchQuery = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { username: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+
+    const users = await User.find(searchQuery)
       .select('-password -resetPasswordToken -resetPasswordExpires -emailVerificationToken')
-      .populate('parent', 'name email')
-      .populate('childAccounts', 'name email age dateOfBirth');
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    const totalUsers = await User.countDocuments(searchQuery);
 
     res.json({
       success: true,
-      data: { users }
+      data: { 
+        users,
+        pagination: {
+          page,
+          limit,
+          total: totalUsers,
+          pages: Math.ceil(totalUsers / limit)
+        }
+      }
     });
 
   } catch (error) {
@@ -48,9 +74,9 @@ const updateUserRole = async (req, res) => {
       });
     }
 
-    // Check if current user is admin
+    // Check if current user is admin or superuser
     const currentUser = await User.findById(req.userId);
-    if (!currentUser || currentUser.role !== 'Admin') {
+    if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'SuperUser')) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -59,6 +85,14 @@ const updateUserRole = async (req, res) => {
 
     const { userId } = req.params;
     const { role } = req.body;
+
+    // Only SuperUser can assign Admin role
+    if (role === 'Admin' && currentUser.role !== 'SuperUser') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only SuperUser can create Admin accounts.'
+      });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
@@ -117,7 +151,7 @@ const toggleUserBlock = async (req, res) => {
       });
     }
 
-    if (currentUser.role !== 'Admin') {
+    if (currentUser.role !== 'Admin' && currentUser.role !== 'SuperUser') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -198,9 +232,9 @@ const toggleUserBlock = async (req, res) => {
 // @access  Private (Admin)
 const getAdminStats = async (req, res) => {
   try {
-    // Check if current user is admin
+    // Check if current user is admin or superuser
     const currentUser = await User.findById(req.userId);
-    if (!currentUser || currentUser.role !== 'Admin') {
+    if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'SuperUser')) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -211,7 +245,7 @@ const getAdminStats = async (req, res) => {
     const totalUsers = await User.countDocuments();
     const students = await User.countDocuments({ role: 'Student' });
     const teachers = await User.countDocuments({ role: 'Teacher' });
-    const parents = await User.countDocuments({ role: 'Parent' });
+    const children = await User.countDocuments({ role: 'Child' });
     const admins = await User.countDocuments({ role: 'Admin' });
     const blockedUsers = await User.countDocuments({ isAccountBlocked: true });
     const pendingApprovals = await User.countDocuments({ 
@@ -229,7 +263,7 @@ const getAdminStats = async (req, res) => {
       totalUsers,
       students,
       teachers,
-      parents,
+      children,
       admins,
       blockedUsers,
       pendingApprovals,
@@ -255,9 +289,9 @@ const getAdminStats = async (req, res) => {
 // @access  Private (Admin)
 const getPendingApprovals = async (req, res) => {
   try {
-    // Check if current user is admin
+    // Check if current user is admin or superuser
     const currentUser = await User.findById(req.userId);
-    if (!currentUser || currentUser.role !== 'Admin') {
+    if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'SuperUser')) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -268,7 +302,6 @@ const getPendingApprovals = async (req, res) => {
       requiresParentalApproval: true,
       parentConfirmed: false
     })
-    .populate('parent', 'name email')
     .select('-password -resetPasswordToken -resetPasswordExpires -emailVerificationToken');
 
     res.json({

@@ -345,6 +345,24 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
   };
 
+  // Refresh user data from server
+  const refreshUser = async () => {
+    try {
+      if (authService.isAuthenticated()) {
+        console.log('Refreshing user data...');
+        const user = await authService.getCurrentUser();
+        console.log('Refreshed user data:', user);
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
+        authService.storeUser(user);
+        return user;
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      // If refresh fails, user might need to re-authenticate
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    }
+  };
+
   const value = {
     ...state,
     login,
@@ -358,6 +376,7 @@ export const AuthProvider = ({ children }) => {
     requestParentRole,
     clearError,
     setUser,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

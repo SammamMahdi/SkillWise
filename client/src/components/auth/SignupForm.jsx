@@ -35,7 +35,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const watchedPassword = watch('password', '');
   const watchedConfirmPassword = watch('confirmPassword', '');
   const watchedDateOfBirth = watch('dateOfBirth', '');
-  const watchedParentEmail = watch('parentEmail', '');
   const watchedAge = watch('age', '');
 
   // Update password strength when password changes
@@ -54,13 +53,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
       const monthDiff = today.getMonth() - birthDate.getMonth();
       const calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
       setValue('age', calculatedAge);
-
-      // Set requiresParentalApproval for students under 13 (all new users are students)
-      if (calculatedAge < 13) {
-        setValue('requiresParentalApproval', true);
-      } else {
-        setValue('requiresParentalApproval', false);
-      }
     }
   }, [watchedDateOfBirth, setValue]);
 
@@ -212,12 +204,9 @@ const SignupForm = ({ onSwitchToLogin }) => {
       }
     }
 
-    // Only require parental approval for students under 13 (all new users are students by default)
-    const requiresParentalApproval = finalAge < 13 ? true : false;
-
-    // Validate parent email for students under 13
-    if (requiresParentalApproval && !data.parentEmail) {
-      setError('parentEmail', { type: 'manual', message: 'Parent email address is required for students under 13' });
+    // Block users under 13 completely
+    if (finalAge < 13) {
+      setError('age', { type: 'manual', message: 'You must be 13 or older to create an account. Please ask your parent to create an account for you.' });
       return;
     }
 
@@ -227,8 +216,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
       password: data.password,
       dateOfBirth: data.dateOfBirth || null,
       age: finalAge,
-      requiresParentalApproval: requiresParentalApproval,
-      parentEmail: data.parentEmail,
       isFirstTimeUser: true, // Mark as first-time user for profile setup
     });
 
@@ -512,118 +499,6 @@ const SignupForm = ({ onSwitchToLogin }) => {
               <p className="mt-1 text-sm text-red-400">{errors.confirmPassword.message}</p>
             )}
           </div>
-
-          {/* Parental Approval Section */}
-          {(() => {
-            let calculatedAge = null;
-            
-            // Calculate age from date of birth if available
-            if (watchedDateOfBirth) {
-              const birthDate = new Date(watchedDateOfBirth);
-              const today = new Date();
-              const age = today.getFullYear() - birthDate.getFullYear();
-              const monthDiff = today.getMonth() - birthDate.getMonth();
-              calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
-            } else if (watchedAge) {
-              // Use age from form if date of birth is not provided
-              calculatedAge = parseInt(watchedAge);
-            }
-            
-            if (calculatedAge === null) return null;
-            
-            const isUnder13 = calculatedAge < 13;
-            
-            return (
-              <div className={`p-4 rounded-lg border ${isUnder13 ? 'bg-yellow-50/10 border-yellow-200/20' : 'bg-green-50/10 border-green-200/20'}`}>
-                <div className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-lg ${isUnder13 ? 'bg-yellow-100' : 'bg-green-100'}`}>
-                    {isUnder13 ? (
-                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                    ) : (
-                      <Check className="w-5 h-5 text-green-600" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`text-sm font-medium ${isUnder13 ? 'text-yellow-800' : 'text-green-800'}`}>
-                      {isUnder13 ? 'Parental Approval Required' : 'Age Verification Complete'}
-                    </h3>
-                    <p className="text-sm text-foreground/80 mt-1">
-                      {isUnder13 
-                        ? `You are ${calculatedAge} years old. Students under 13 require parental approval to access the platform. Please provide your parent's email address below.`
-                        : `You are ${calculatedAge} years old. No parental approval required for students.`
-                      }
-                    </p>
-                    {isUnder13 && (
-                      <div className="mt-3">
-                        <div className="flex items-center">
-                          <input
-                            {...register('requiresParentalApproval')}
-                            type="checkbox"
-                            id="requiresParentalApproval"
-                            checked={true}
-                            disabled={true}
-                            className="w-4 h-4 text-primary border-border rounded focus:ring-primary bg-background"
-                          />
-                          <label htmlFor="requiresParentalApproval" className="ml-2 text-sm text-foreground/80">
-                            Parental approval required (mandatory for students under 13)
-                          </label>
-                        </div>
-                        <p className="text-xs text-foreground/60 mt-2">
-                          After registration, we'll automatically send a request to your parent for approval.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Parent Email Field (for students under 13) */}
-          {(() => {
-            let calculatedAge = null;
-            
-            // Calculate age from date of birth if available
-            if (watchedDateOfBirth) {
-              const birthDate = new Date(watchedDateOfBirth);
-              const today = new Date();
-              const age = today.getFullYear() - birthDate.getFullYear();
-              const monthDiff = today.getMonth() - birthDate.getMonth();
-              calculatedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
-            } else if (watchedAge) {
-              // Use age from form if date of birth is not provided
-              calculatedAge = parseInt(watchedAge);
-            }
-            
-            if (!calculatedAge || calculatedAge >= 13) return null;
-            
-            return (
-              <div className="mt-4">
-                <label htmlFor="parentEmail" className="block text-sm font-medium text-foreground mb-2">
-                  Parent's Email Address <span className="text-red-500">*</span>
-                </label>
-                <p className="text-sm text-foreground/60 mb-2">
-                  We'll send a request to your parent to approve your account.
-                </p>
-                <input
-                  {...register('parentEmail', {
-                    required: 'Parent email address is required for students under 13',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address',
-                    },
-                  })}
-                  type="email"
-                  id="parentEmail"
-                  className="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-foreground/50"
-                  placeholder="parent@example.com"
-                />
-                {errors.parentEmail && (
-                  <p className="mt-1 text-sm text-red-400">{errors.parentEmail.message}</p>
-                )}
-              </div>
-            );
-          })()}
 
           {/* Submit Button */}
           <button

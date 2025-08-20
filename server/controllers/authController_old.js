@@ -890,3 +890,482 @@ module.exports = {
   validateInvitation,
   convertToChildRole
 };
+
+// Accept parent invitation and create parent account
+const acceptParentInvitation = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Token and password are required' });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        field: 'password',
+        error: 'Password must be at least 8 characters long' 
+      });
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      return res.status(400).json({ 
+        field: 'password',
+        error: 'Password must contain uppercase, lowercase, and number' 
+      });
+    }
+
+    // Find child user with this invitation token
+    const childUser = await User.findOne({
+      parentInvitationToken: token,
+      parentInvitationExpires: { $gt: Date.now() }
+    });
+
+    if (!childUser) {
+      return res.status(400).json({ error: 'Invalid or expired invitation token' });
+    }
+
+    // Check if parent email is already registered
+    const existingParent = await User.findOne({ 
+      email: childUser.parentEmail,
+      role: 'parent'
+    });
+
+    let parentUser;
+
+    if (existingParent) {
+      // Parent already exists, just link to child
+      parentUser = existingParent;
+      
+      // Add child to parent's children array if not already there
+      if (!parentUser.children.includes(childUser._id)) {
+        parentUser.children.push(childUser._id);
+        await parentUser.save();
+      }
+    } else {
+      // Create new parent account
+      const hashedPassword = await hashPassword(password);
+      
+      parentUser = new User({
+        username: childUser.parentName.toLowerCase().replace(/\s+/g, '_'),
+        email: childUser.parentEmail,
+        password: hashedPassword,
+        role: 'parent',
+        parentName: childUser.parentName,
+        children: [childUser._id],
+        emailVerified: true // Auto-verify since they came from invitation email
+      });
+
+      await parentUser.save();
+    }
+
+    // Update child user - approve and link to parent
+    childUser.parentConfirmed = true;
+    childUser.requiresParentalApproval = false;
+    childUser.parent = parentUser._id;
+    childUser.parentInvitationToken = undefined;
+    childUser.parentInvitationExpires = undefined;
+    await childUser.save();
+
+    // Generate JWT token for parent
+    const accessToken = generateToken({
+      userId: parentUser._id,
+      role: parentUser.role
+    });
+
+    // Send notification to child that they've been approved
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: childUser.email,
+        subject: 'Account Approved - Welcome to SkillWise!',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10B981; text-align: center;">🎉 Your Account Has Been Approved!</h2>
+            <p>Hi ${childUser.username},</p>
+            <p>Great news! Your parent has approved your SkillWise account. You can now log in and start your learning journey!</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.CLIENT_URL}/auth/login" style="background-color: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">Login to SkillWise</a>
+            </div>
+            <p>Welcome to the SkillWise community! We're excited to have you on board.</p>
+            <hr style="margin: 20px 0; border: 1px solid #eee;">
+            <p style="color: #888; font-size: 12px; text-align: center;">SkillWise Learning Platform</p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Error sending approval notification:', emailError);
+      // Don't fail the whole process if email fails
+    }
+
+    res.json({
+      message: 'Parent account created and child approved successfully',
+      accessToken,
+      user: {
+        id: parentUser._id,
+        username: parentUser.username,
+        email: parentUser.email,
+        role: parentUser.role,
+        children: [
+          {
+            id: childUser._id,
+            username: childUser.username,
+            email: childUser.email
+          }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Error accepting parent invitation:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// @desc    Submit parent email for under-13 users
+// @route   POST /api/auth/submit-parent-email
+// @access  Private (under-13 users only)
+const submitParentEmail = async (req, res) => {
+  try {
+    const { parentEmail } = req.body;
+    const userId = req.user.id;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user is actually under 13
+    if (!user.age || user.age >= 13) {
+      return res.status(400).json({
+        success: false,
+        message: 'This feature is only for users under 13'
+      });
+    }
+
+    // Validate parent email
+    if (!parentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parent email is required'
+      });
+    }
+
+    // Check if parent email is different from child's email
+    if (parentEmail.toLowerCase() === user.email.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parent email cannot be the same as your email'
+      });
+    }
+
+    // Generate invitation token
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Update user with parent email and invitation details
+    user.parentEmail = parentEmail;
+    user.parentInvitationToken = invitationToken;
+    user.parentInvitationExpires = expirationDate;
+    user.requiresParentalApproval = true;
+    user.isAccountBlocked = true;
+    user.blockedReason = 'Account requires parental approval for users under 13';
+    
+    await user.save();
+
+    // Send email to parent
+    const invitationLink = `${process.env.CLIENT_URL}/auth/parent-invitation?token=${invitationToken}`;
+    
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>SkillWise - Parental Approval Required</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">SkillWise</h1>
+          <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Parental Approval Request</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+          <h2 style="color: #2563eb; margin-top: 0;">Your Child Needs Your Approval</h2>
+          <p>Hello,</p>
+          <p>Your child, <strong>${user.name}</strong> (${user.email}), has registered for SkillWise and needs your approval to access the platform.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #2563eb; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1e40af;">Child's Information:</h3>
+            <ul style="list-style: none; padding: 0;">
+              <li><strong>Name:</strong> ${user.name}</li>
+              <li><strong>Email:</strong> ${user.email}</li>
+              <li><strong>Age:</strong> ${user.age} years old</li>
+              <li><strong>Registration Date:</strong> ${new Date().toLocaleDateString()}</li>
+            </ul>
+          </div>
+          
+          <p>SkillWise is an educational platform designed to help children learn and develop new skills safely. We require parental approval for users under 13 to ensure a safe learning environment.</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${invitationLink}" style="background-color: #10B981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; font-size: 16px;">Approve Your Child's Account</a>
+        </div>
+        
+        <div style="background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 25px 0;">
+          <h3 style="color: #92400e; margin-top: 0;">Important Notes:</h3>
+          <ul style="color: #92400e;">
+            <li>This approval link will expire in 7 days</li>
+            <li>You will be able to monitor your child's activity on the platform</li>
+            <li>You can revoke access at any time</li>
+            <li>If you didn't expect this request, please contact us immediately</li>
+          </ul>
+        </div>
+        
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; text-align: center; color: #6b7280; font-size: 14px;">
+          <p>If you have any questions or concerns, please contact our support team.</p>
+          <p>This email was sent automatically by SkillWise. Please do not reply to this email.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: parentEmail,
+      subject: 'SkillWise - Approve Your Child\'s Account',
+      html: emailHtml
+    });
+
+    res.json({
+      success: true,
+      message: 'Parent approval request sent successfully',
+      parentEmail: parentEmail
+    });
+
+  } catch (error) {
+    console.error('Error submitting parent email:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error. Please try again.'
+    });
+  }
+};
+
+// @desc    Update user age and check if under 13
+// @route   PUT /api/auth/update-age
+// @access  Private
+const updateUserAge = async (req, res) => {
+  try {
+    const { age, dateOfBirth } = req.body;
+    const userId = req.user._id;
+
+    // Calculate age from date of birth if provided
+    let calculatedAge = age;
+    if (dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update age
+    user.age = calculatedAge;
+    if (dateOfBirth) {
+      user.dateOfBirth = dateOfBirth;
+    }
+
+    // Check if user is under 13 and update status accordingly
+    const isUnder13 = calculatedAge && calculatedAge < 13;
+    if (isUnder13) {
+      user.status = 'inactive';
+      user.isAccountBlocked = true;
+      user.requiresParentalApproval = true;
+      user.blockedReason = 'Account requires parental approval for users under 13';
+      console.log('User is under 13, setting status to inactive:', user.email);
+    } else {
+      user.status = 'active';
+      user.isAccountBlocked = false;
+      user.requiresParentalApproval = false;
+      user.blockedReason = undefined;
+    }
+
+    await user.save();
+
+    // If user is under 13, return error response
+    if (isUnder13) {
+      const tempToken = generateToken(user._id, '1h');
+      
+      return res.status(403).json({
+        success: false,
+        message: 'Account requires parental approval',
+        requiresParentalApproval: true,
+        isAccountBlocked: true,
+        isUnder13: true,
+        status: user.status,
+        blockedReason: 'Account requires parental approval for users under 13',
+        tempToken: tempToken,
+        userData: {
+          name: user.name,
+          email: user.email,
+          age: user.age
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Age updated successfully',
+      data: {
+        user: {
+          _id: user._id,
+          age: user.age,
+          status: user.status,
+          isAccountBlocked: user.isAccountBlocked
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Update age error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update age',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Convert to child role (for users 25+)
+// @route   POST /api/auth/convert-to-child
+// @access  Private
+const convertToChildRole = async (req, res) => {
+  try {
+    console.log('Child role conversion request received:', {
+      body: req.body,
+      userId: req.userId
+    });
+
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { childLockPassword, phoneNumber } = req.body;
+    const userId = req.userId;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user is eligible (25+ and not already a child)
+    if (user.age < 25) {
+      return res.status(400).json({
+        success: false,
+        message: 'You must be at least 25 years old to convert to child account'
+      });
+    }
+
+    if (user.role === 'Child') {
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a child account'
+      });
+    }
+
+    // Validate inputs
+    if (!childLockPassword || childLockPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Child lock password must be at least 6 characters long'
+      });
+    }
+
+    if (!phoneNumber || phoneNumber.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid phone number (at least 10 digits)'
+      });
+    }
+
+    // Hash the child lock password
+    const bcrypt = require('bcryptjs');
+    const hashedChildLockPassword = await bcrypt.hash(childLockPassword, 12);
+
+    // Update user to child role
+    user.role = 'Child';
+    user.childLockPassword = hashedChildLockPassword;
+    user.childLockPhoneNumber = phoneNumber.trim();
+    await user.save();
+
+    console.log('User converted to child role:', {
+      email: user.email,
+      age: user.age,
+      phoneNumber: phoneNumber
+    });
+
+    res.json({
+      success: true,
+      message: 'Successfully converted to child account',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          age: user.age
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Convert to child role error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to convert to child account',
+      error: error.message
+    });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  googleAuth,
+  googleCallback,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  refreshToken,
+  logout,
+  verifyEmail,
+  validateInvitation,
+  acceptParentInvitation,
+  submitParentEmail,
+  updateUserAge,
+  requestParentRole
+}; 

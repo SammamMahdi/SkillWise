@@ -4,11 +4,14 @@ import { toast } from 'react-hot-toast';
 import friendService from '../../services/friendService';
 import { getProfilePicture } from '../../utils/profilePictureUtils';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import ThemeToggle from '../common/ThemeToggle';
 import DashboardButton from '../common/DashboardButton';
+import ChildLockModal from '../common/ChildLockModal';
 import FriendChatBox from './FriendChatBox';
 
 const FriendsPage = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('friends');
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState({ received: [], sent: [] });
@@ -18,6 +21,11 @@ const FriendsPage = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [chatBoxOpen, setChatBoxOpen] = useState(false);
+  
+  // Child lock modal state
+  const [showChildLockModal, setShowChildLockModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [childLockLoading, setChildLockLoading] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -74,9 +82,16 @@ const FriendsPage = () => {
     return () => clearTimeout(timeoutId);
   };
 
-  const sendFriendRequest = async (targetHandle) => {
+  const sendFriendRequest = async (targetHandle, childLockPassword = null) => {
     try {
-      await friendService.sendFriendRequest(targetHandle);
+      // Check if user is child account and needs verification
+      if (user?.role === 'Child' && !childLockPassword) {
+        setPendingAction({ type: 'sendRequest', targetHandle });
+        setShowChildLockModal(true);
+        return;
+      }
+
+      await friendService.sendFriendRequest(targetHandle, childLockPassword);
       toast.success('Friend request sent!');
       // Remove from search results or mark as sent
       setSearchResults(prev => prev.filter(user => 
@@ -88,9 +103,16 @@ const FriendsPage = () => {
     }
   };
 
-  const acceptFriendRequest = async (requesterId) => {
+  const acceptFriendRequest = async (requesterId, childLockPassword = null) => {
     try {
-      await friendService.acceptFriendRequest(requesterId);
+      // Check if user is child account and needs verification
+      if (user?.role === 'Child' && !childLockPassword) {
+        setPendingAction({ type: 'acceptRequest', requesterId });
+        setShowChildLockModal(true);
+        return;
+      }
+
+      await friendService.acceptFriendRequest(requesterId, childLockPassword);
       toast.success('Friend request accepted!');
       fetchFriends();
       fetchPendingRequests();
@@ -129,6 +151,31 @@ const FriendsPage = () => {
   const closeChat = () => {
     setChatBoxOpen(false);
     setSelectedFriend(null);
+  };
+
+  // Handle child lock verification
+  const handleChildLockVerify = async (password) => {
+    setChildLockLoading(true);
+    try {
+      if (pendingAction?.type === 'sendRequest') {
+        await sendFriendRequest(pendingAction.targetHandle, password);
+      } else if (pendingAction?.type === 'acceptRequest') {
+        await acceptFriendRequest(pendingAction.requesterId, password);
+      }
+      
+      setShowChildLockModal(false);
+      setPendingAction(null);
+    } catch (error) {
+      // Error is already handled in the respective functions
+      throw error;
+    } finally {
+      setChildLockLoading(false);
+    }
+  };
+
+  const handleChildLockCancel = () => {
+    setShowChildLockModal(false);
+    setPendingAction(null);
   };
 
   const UserCard = ({ user, type = 'friend', onAction }) => (
@@ -401,6 +448,14 @@ const FriendsPage = () => {
           isOpen={chatBoxOpen}
           onClose={closeChat}
           friend={selectedFriend}
+        />
+
+        {/* Child Lock Modal */}
+        <ChildLockModal
+          isOpen={showChildLockModal}
+          onVerify={handleChildLockVerify}
+          onCancel={handleChildLockCancel}
+          loading={childLockLoading}
         />
       </div>
     </div>

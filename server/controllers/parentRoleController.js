@@ -1,16 +1,29 @@
 const User = require('../models/User');
+const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
 
-// Simple controller to handle parent role requests
+// Controller to handle child role requests (become-parent converts to Child role)
 const parentRoleController = {
-  // Request parent role - simple version that just makes user a parent
+  // Request child role - converts user to child account with childlock protection
   async requestParentRole(req, res) {
     try {
-      console.log('🟢 Parent role request received');
+      console.log('🟢 Child role request received (become-parent conversion)');
       console.log('User ID:', req.userId);
       console.log('Request body:', req.body);
 
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        console.log('❌ Validation errors:', errors.array());
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
       const userId = req.userId;
-      const { phoneNumber } = req.body;
+      const { phoneNumber, childLockPassword } = req.body;
 
       // Find the user
       const user = await User.findById(userId);
@@ -29,20 +42,20 @@ const parentRoleController = {
         role: user.role
       });
 
-      // Check if user is eligible (25+ and not already a parent)
+      // Check if user is eligible (25+ and not already a child)
       if (user.age < 25) {
         console.log('❌ User too young');
         return res.status(400).json({
           success: false,
-          message: 'You must be at least 25 years old to become a parent'
+          message: 'You must be at least 25 years old to become a child account'
         });
       }
 
-      if (user.role === 'Parent') {
-        console.log('❌ User already a parent');
+      if (user.role === 'Child') {
+        console.log('❌ User already a child account');
         return res.status(400).json({
           success: false,
-          message: 'You are already a parent'
+          message: 'You already have a child account'
         });
       }
 
@@ -55,38 +68,51 @@ const parentRoleController = {
         });
       }
 
-      console.log('✅ User is eligible, updating to parent role...');
+      // Validate child lock password
+      if (!childLockPassword || childLockPassword.length < 6) {
+        console.log('❌ Invalid child lock password');
+        return res.status(400).json({
+          success: false,
+          message: 'Child lock password must be at least 6 characters long'
+        });
+      }
 
-      // Update user to parent role
-      user.role = 'Parent';
-      user.phoneNumber = phoneNumber.trim();
+      console.log('✅ User is eligible, converting to child role...');
+
+      // Hash the child lock password
+      const hashedChildLockPassword = await bcrypt.hash(childLockPassword, 12);
+
+      // Update user to child role
+      user.role = 'Child';
+      user.childLockPhoneNumber = phoneNumber.trim();
+      user.childLockPassword = hashedChildLockPassword;
       await user.save();
 
-      console.log('🎉 Successfully updated user to parent role');
+      console.log('🎉 Successfully converted user to child account');
       console.log('Updated user:', {
         name: user.name,
         role: user.role,
-        phoneNumber: user.phoneNumber
+        phoneNumber: user.childLockPhoneNumber
       });
 
       // Return success with updated user data
       res.json({
         success: true,
-        message: 'Successfully assigned parent role!',
+        message: 'Successfully converted to child account! You now have childlock protection.',
         data: {
           user: {
             id: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
-            phoneNumber: user.phoneNumber,
+            phoneNumber: user.childLockPhoneNumber,
             age: user.age
           }
         }
       });
 
     } catch (error) {
-      console.error('❌ Error in parent role request:', error);
+      console.error('❌ Error in child role conversion:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',

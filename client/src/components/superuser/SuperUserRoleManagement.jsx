@@ -96,7 +96,7 @@ const SuperUserRoleManagement = () => {
     switch (role) {
       case 'Admin': return 'bg-red-100 text-red-800 border-red-200';
       case 'Teacher': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Parent': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Child': return 'bg-green-100 text-green-800 border-green-200';
       case 'Student': return 'bg-gray-100 text-gray-800 border-gray-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -106,7 +106,7 @@ const SuperUserRoleManagement = () => {
     switch (role) {
       case 'Admin': return <Shield className="w-3 h-3" />;
       case 'Teacher': return <Users className="w-3 h-3" />;
-      case 'Parent': return <Crown className="w-3 h-3" />;
+      case 'Child': return <Crown className="w-3 h-3" />;
       case 'Student': return <Users className="w-3 h-3" />;
       default: return <Users className="w-3 h-3" />;
     }
@@ -251,7 +251,7 @@ const SuperUserRoleManagement = () => {
                           <span className="text-sm text-foreground/50">Cannot change own role</span>
                         ) : (
                           <div className="flex flex-wrap gap-3 justify-center">
-                            {['Admin', 'Teacher', 'Parent', 'Student'].map((role) => (
+                            {['Admin', 'Teacher', 'Child', 'Student'].map((role) => (
                               <button
                                 key={role}
                                 onClick={() => handleRoleUpdate(userData._id, role, userData.name)}
