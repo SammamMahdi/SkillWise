@@ -23,7 +23,8 @@ import { toast } from 'react-hot-toast';
 const FriendChatBox = ({ 
   isOpen, 
   onClose, 
-  friend
+  friend,
+  fullScreen = false
 }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -314,23 +315,34 @@ const FriendChatBox = ({
   if (!isOpen) return null;
 
   const modal = (
-    <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div className={fullScreen ? "flex flex-col h-full" : "fixed inset-0 z-50 flex"}>
+      {/* Backdrop - only show if not fullScreen */}
+      {!fullScreen && (
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+      )}
       
       {/* Chat Window */}
-      <div className="relative w-full max-w-2xl mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+      <div className={fullScreen 
+        ? "relative w-full h-full bg-black/20 backdrop-blur-xl border-l border-white/10 flex flex-col"
+        : "relative w-full max-w-2xl mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
+      }>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg">
+        <div className={fullScreen 
+          ? "flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+          : "flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg"
+        }>
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className="p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
+              className={fullScreen 
+                ? "p-1 hover:bg-white/10 rounded-lg transition-colors text-white"
+                : "p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
+              }
             >
-              <ArrowLeft className="w-5 h-5 text-foreground/60" />
+              <ArrowLeft className={fullScreen ? "w-5 h-5 text-white" : "w-5 h-5 text-foreground/60"} />
             </button>
             
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
@@ -346,7 +358,10 @@ const FriendChatBox = ({
             </div>
             
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-foreground truncate">
+              <h3 className={fullScreen 
+                ? "font-semibold text-white truncate"
+                : "font-semibold text-foreground truncate"
+              }>
                 {friend?.name}
               </h3>
               <div className="flex items-center space-x-2">
@@ -419,7 +434,10 @@ const FriendChatBox = ({
         {/* Messages Area */}
         <div 
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className={fullScreen 
+            ? "flex-1 overflow-y-auto p-4 space-y-4 bg-black/10"
+            : "flex-1 overflow-y-auto p-4 space-y-4"
+          }
           onScroll={checkScrollPosition}
         >
           {loading && messages.length === 0 ? (
@@ -560,7 +578,10 @@ const FriendChatBox = ({
         )}
 
         {/* Input Area */}
-        <div className="border-t border-border p-4">
+        <div className={fullScreen 
+          ? "border-t border-white/10 p-4 bg-black/20 backdrop-blur-sm"
+          : "border-t border-border p-4"
+        }>
           <form onSubmit={handleSendMessage} className="flex items-end space-x-2">
             <div className="flex-1 relative">
               <textarea
@@ -630,7 +651,7 @@ const FriendChatBox = ({
     </div>
   );
 
-  return createPortal(modal, document.body);
+  return fullScreen ? modal : createPortal(modal, document.body);
 };
 
 export default FriendChatBox;

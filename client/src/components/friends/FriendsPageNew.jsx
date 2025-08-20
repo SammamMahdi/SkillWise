@@ -192,6 +192,17 @@ const FriendsPage = () => {
         backgroundAttachment: 'fixed',
       } : {}}
     >
+      {/* Back to Dashboard button - fixed position top left */}
+      <div className="fixed top-4 left-4 z-50">
+        <Link 
+          to="/dashboard"
+          className="flex items-center gap-2 px-4 py-2 bg-black/20 hover:bg-black/30 text-white border border-white/20 rounded-xl backdrop-blur-sm transition-all duration-300 hover:scale-105"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Dashboard</span>
+        </Link>
+      </div>
+
       {/* Theme toggle - fixed position top right */}
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle size="md" />
@@ -207,26 +218,15 @@ const FriendsPage = () => {
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex">
         {/* Left Sidebar - Friends List */}
-        <div className="w-full md:w-96 lg:w-[28rem] min-h-screen bg-black/20 backdrop-blur-xl border-r border-white/10">
-          <div className="p-4 md:p-6">
+        <div className="w-80 min-h-screen bg-black/20 backdrop-blur-xl border-r border-white/10">
+          <div className="p-6">
             {/* Header */}
             <div className="mb-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Link 
-                  to="/dashboard"
-                  className="flex items-center gap-2 px-3 py-1.5 bg-black/20 hover:bg-black/30 text-white border border-white/20 rounded-lg backdrop-blur-sm transition-all duration-300 text-sm"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
-                <div className="flex-1">
-                  <h1 className={`text-xl md:text-2xl font-bold ${
-                    theme === 'dark' ? 'text-white' : 'text-slate-800'
-                  }`}>
-                    Friends
-                  </h1>
-                </div>
-              </div>
+              <h1 className={`text-2xl font-bold mb-2 ${
+                theme === 'dark' ? 'text-white' : 'text-slate-800'
+              }`}>
+                Friends
+              </h1>
               <p className={`text-sm ${
                 theme === 'dark' ? 'text-white/70' : 'text-slate-600'
               }`}>
@@ -238,7 +238,7 @@ const FriendsPage = () => {
             <div className="flex mb-6 bg-white/10 rounded-xl p-1">
               <button
                 onClick={() => setActiveTab('friends')}
-                className={`flex-1 px-2 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                   activeTab === 'friends'
                     ? 'bg-primary text-white shadow-lg'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -246,7 +246,7 @@ const FriendsPage = () => {
               >
                 <div className="flex items-center justify-center gap-2">
                   <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">Friends</span>
+                  <span>Friends</span>
                   <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full">
                     {friends.length}
                   </span>
@@ -254,7 +254,7 @@ const FriendsPage = () => {
               </button>
               <button
                 onClick={() => setActiveTab('search')}
-                className={`flex-1 px-2 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                   activeTab === 'search'
                     ? 'bg-primary text-white shadow-lg'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -262,12 +262,12 @@ const FriendsPage = () => {
               >
                 <div className="flex items-center justify-center gap-2">
                   <Search className="w-4 h-4" />
-                  <span className="hidden sm:inline">Search</span>
+                  <span>Search</span>
                 </div>
               </button>
               <button
                 onClick={() => setActiveTab('requests')}
-                className={`flex-1 px-2 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                   activeTab === 'requests'
                     ? 'bg-primary text-white shadow-lg'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -275,7 +275,7 @@ const FriendsPage = () => {
               >
                 <div className="flex items-center justify-center gap-2">
                   <UserPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Requests</span>
+                  <span>Requests</span>
                   {(pendingRequests.received.length + pendingRequests.sent.length) > 0 && (
                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                       {pendingRequests.received.length + pendingRequests.sent.length}
@@ -334,6 +334,7 @@ const FriendsPage = () => {
                               alt={friend.name}
                               className="w-12 h-12 rounded-full object-cover ring-2 ring-white/20"
                             />
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black/20"></div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-white truncate">{friend.name}</h3>
@@ -518,7 +519,7 @@ const FriendsPage = () => {
         </div>
 
         {/* Right Content Area - Chat */}
-        <div className="hidden md:flex flex-1 flex-col">
+        <div className="flex-1 flex flex-col">
           {selectedFriend && chatBoxOpen ? (
             <FriendChatBox
               isOpen={chatBoxOpen}
@@ -547,18 +548,6 @@ const FriendsPage = () => {
           )}
         </div>
       </div>
-
-      {/* Mobile Chat Modal */}
-      {selectedFriend && chatBoxOpen && (
-        <div className="md:hidden">
-          <FriendChatBox
-            isOpen={chatBoxOpen}
-            onClose={closeChat}
-            friend={selectedFriend}
-            fullScreen={false}
-          />
-        </div>
-      )}
 
       {/* Child Lock Modal */}
       <ChildLockModal

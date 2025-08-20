@@ -11,6 +11,7 @@ import DashboardContent from './DashboardContent'
 import { fmtDate } from '../../utils/dateUtils'
 import { getLearningDashboard } from '../../services/learningService'
 import { skillsService } from '../../services/skillsService'
+import bg from '../auth/evening-b2g.jpg'
 
 const Dashboard = () => {
   const { user, logout } = useAuth()
@@ -134,47 +135,128 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
-        <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
-          <div className="animate-pulse">
-            <div className="h-8 bg-card/50 rounded-lg mb-4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-card/50 rounded-2xl"></div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-64 bg-card/50 rounded-2xl"></div>
-              ))}
+      <section
+        className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+          theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+        }`}
+        style={theme === 'dark' ? {
+          backgroundImage: `url(${bg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        } : {}}
+      >
+        {/* Overlay for readability */}
+        <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+          theme === 'dark' 
+            ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+            : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+        }`} />
+        
+        <div className="relative z-10 min-h-screen">
+          <TopBar 
+            user={user}
+            openUser={openUser}
+            setOpenUser={setOpenUser}
+            openActions={openActions}
+            setOpenActions={setOpenActions}
+            userMenuRef={userMenuRef}
+            actionsMenuRef={actionsMenuRef}
+            isCourseCreator={isCourseCreator}
+            handleLogout={handleLogout}
+            displayHandle={displayHandle}
+          />
+          
+          <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
+            <div className="animate-pulse">
+              <div className="h-8 bg-card/20 backdrop-blur-sm rounded-lg mb-4 border border-white/10"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-32 bg-card/20 backdrop-blur-sm rounded-2xl border border-white/10"></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-64 bg-card/20 backdrop-blur-sm rounded-2xl border border-white/10"></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
-        <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-sm">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-            <p className="text-foreground/80">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary font-semibold rounded-xl transition-all duration-300"
-            >
-              Retry
-            </button>
+      <section
+        className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+          theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+        }`}
+        style={theme === 'dark' ? {
+          backgroundImage: `url(${bg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        } : {}}
+      >
+        {/* Overlay for readability */}
+        <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+          theme === 'dark' 
+            ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+            : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+        }`} />
+        
+        <div className="relative z-10 min-h-screen">
+          <TopBar 
+            user={user}
+            openUser={openUser}
+            setOpenUser={setOpenUser}
+            openActions={openActions}
+            setOpenActions={setOpenActions}
+            userMenuRef={userMenuRef}
+            actionsMenuRef={actionsMenuRef}
+            isCourseCreator={isCourseCreator}
+            handleLogout={handleLogout}
+            displayHandle={displayHandle}
+          />
+          
+          <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-sm">
+              <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
+              <p className="text-foreground/80">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary font-semibold rounded-xl transition-all duration-300"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
+    <section
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}
+    >
+      {/* Overlay for readability */}
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
+
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse-subtle"></div>
@@ -183,34 +265,36 @@ const Dashboard = () => {
         <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-primary/15 rounded-full animate-pulse-subtle"></div>
       </div>
 
-      <TopBar 
-        user={user}
-        openUser={openUser}
-        setOpenUser={setOpenUser}
-        openActions={openActions}
-        setOpenActions={setOpenActions}
-        userMenuRef={userMenuRef}
-        actionsMenuRef={actionsMenuRef}
-        isCourseCreator={isCourseCreator}
-        handleLogout={handleLogout}
-        displayHandle={displayHandle}
-      />
-      
-      <ProfileBanner 
-        user={user}
-        profile={profile}
-        displayHandle={displayHandle}
-        fmtDate={fmtDate}
-      />
-      
-      <DashboardContent 
-        firstName={firstName}
-        profile={profile}
-        currentCourses={currentCourses}
-        completedCourses={completedCourses}
-        fmtDate={fmtDate}
-      />
-    </div>
+      <div className="relative z-10 min-h-screen">
+        <TopBar 
+          user={user}
+          openUser={openUser}
+          setOpenUser={setOpenUser}
+          openActions={openActions}
+          setOpenActions={setOpenActions}
+          userMenuRef={userMenuRef}
+          actionsMenuRef={actionsMenuRef}
+          isCourseCreator={isCourseCreator}
+          handleLogout={handleLogout}
+          displayHandle={displayHandle}
+        />
+        
+        <ProfileBanner 
+          user={user}
+          profile={profile}
+          displayHandle={displayHandle}
+          fmtDate={fmtDate}
+        />
+        
+        <DashboardContent 
+          firstName={firstName}
+          profile={profile}
+          currentCourses={currentCourses}
+          completedCourses={completedCourses}
+          fmtDate={fmtDate}
+        />
+      </div>
+    </section>
   )
 }
 

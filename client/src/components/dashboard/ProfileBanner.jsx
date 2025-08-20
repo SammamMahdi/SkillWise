@@ -7,7 +7,7 @@ const ProfileBanner = ({ user, profile, displayHandle, fmtDate }) => {
   const userHasUploadedPicture = hasUploadedPicture(user)
 
   return (
-    <div className="relative mt-16 sm:mt-20">
+    <div className="relative">
       <div
         className="h-48 sm:h-64 md:h-72 lg:h-80 xl:h-96 w-full bg-cover bg-center relative"
         style={{
