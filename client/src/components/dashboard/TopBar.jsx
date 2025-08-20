@@ -311,10 +311,11 @@ const TopBar = ({
                       onClick={() => setOpenUser(false)} 
                       role="menuitem"
                     >
-                      <div className="font-medium text-sm sm:text-base flex items-center gap-2">
-                        <span className="text-yellow-400">👑</span>
-                        SuperUser Control
-                      </div>
+                      <div className="flex flex-col items-center text-center">
+                        <div className="font-medium text-sm sm:text-base flex items-center gap-2 justify-center">
+                          <span className="text-yellow-400">👑</span>
+                              SuperUser Control
+                              </div></div>
                       <div className="text-xs sm:text-sm text-yellow-400/80">Manage user roles</div>
                     </Link>
                   )}
