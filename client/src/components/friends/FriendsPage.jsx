@@ -548,14 +548,15 @@ const FriendsPage = () => {
         </div>
       </div>
 
-      {/* Mobile Chat Modal */}
+      {/* Mobile Chat Modal - Only show on mobile and hide desktop chat when active */}
       {selectedFriend && chatBoxOpen && (
-        <div className="md:hidden">
+        <div className="md:hidden fixed inset-0 z-50">
           <FriendChatBox
-            isOpen={chatBoxOpen}
+            isOpen={true}
             onClose={closeChat}
             friend={selectedFriend}
             fullScreen={false}
+            mobileMode={true}
           />
         </div>
       )}

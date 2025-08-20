@@ -11,7 +11,7 @@ import DashboardContent from './DashboardContent'
 import { fmtDate } from '../../utils/dateUtils'
 import { getLearningDashboard } from '../../services/learningService'
 import { skillsService } from '../../services/skillsService'
-import bg from '../auth/evening-b2g.jpg'
+import bg from '../auth/a.jpg'
 
 const Dashboard = () => {
   const { user, logout } = useAuth()

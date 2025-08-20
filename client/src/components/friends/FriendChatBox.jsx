@@ -19,12 +19,14 @@ import {
 import { friendChatService } from '../../services/friendChatService';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import bg from '../auth/evening-b2g.jpg';
 
 const FriendChatBox = ({ 
   isOpen, 
   onClose, 
   friend,
-  fullScreen = false
+  fullScreen = false,
+  mobileMode = false
 }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -33,12 +35,12 @@ const FriendChatBox = ({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [lastMessageId, setLastMessageId] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(115); // Default: header + security notice
   
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
@@ -47,11 +49,37 @@ const FriendChatBox = ({
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const refreshIntervalRef = useRef(null);
+  const headerRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && friend) {
       fetchMessages();
-      startAutoRefresh();
+      
+      // Simple auto-refresh interval - only create once
+      const interval = setInterval(() => {
+        // Only refresh if user is not actively typing and chat is visible
+        if (!isTyping && !loading && !sending && document.visibilityState === 'visible') {
+          // Simple fetch without state management in useEffect
+          friendChatService.getMessages(friend._id, 1, 50)
+            .then(response => {
+              if (response.success && response.data.length > 0) {
+                const latestMessage = response.data[response.data.length - 1];
+                setMessages(prevMessages => {
+                  const lastMsg = prevMessages[prevMessages.length - 1];
+                  // Only update if we have new messages
+                  if (!lastMsg || latestMessage._id !== lastMsg._id) {
+                    setLastMessageId(latestMessage._id);
+                    return response.data;
+                  }
+                  return prevMessages;
+                });
+              }
+            })
+            .catch(error => console.error('Auto-refresh error:', error));
+        }
+      }, 5000); // Refresh every 5 seconds
+      
+      refreshIntervalRef.current = interval;
       
       // Add scroll event listener
       const container = messagesContainerRef.current;
@@ -72,7 +100,7 @@ const FriendChatBox = ({
         container.removeEventListener('scroll', checkScrollPosition);
       }
     };
-  }, [isOpen, friend]);
+  }, [isOpen, friend]); // Minimal dependencies
 
   useEffect(() => {
     // Only auto-scroll if user hasn't scrolled up or if it's a new message from current user
@@ -89,6 +117,20 @@ const FriendChatBox = ({
     }
   }, [newMessage]);
 
+  // Calculate header height dynamically
+  useEffect(() => {
+    const calculateHeaderHeight = () => {
+      let height = 73; // Base header height
+      height += 42; // Security notice height
+      if (previewMode && selectedFile) {
+        height += selectedFile.type.startsWith('image/') ? 180 : 100; // File preview height
+      }
+      setHeaderHeight(height);
+    };
+    
+    calculateHeaderHeight();
+  }, [previewMode, selectedFile]);
+
   // Check if user is near bottom of messages
   const checkScrollPosition = () => {
     if (messagesContainerRef.current) {
@@ -96,39 +138,6 @@ const FriendChatBox = ({
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 100px threshold
       setUserScrolledUp(!isNearBottom);
       setShouldAutoScroll(isNearBottom);
-    }
-  };
-
-  const startAutoRefresh = () => {
-    if (refreshIntervalRef.current) {
-      clearInterval(refreshIntervalRef.current);
-    }
-    
-    refreshIntervalRef.current = setInterval(() => {
-      if (!isTyping && !loading && !sending) {
-        refreshMessages();
-      }
-    }, 1000); // Refresh every 1 second for friend chat too
-  };
-
-  const refreshMessages = async () => {
-    try {
-      setIsRefreshing(true);
-      const response = await friendChatService.getMessages(friend._id, 1, 50);
-      
-      if (response.success && response.data.length > 0) {
-        const latestMessage = response.data[response.data.length - 1];
-        
-        // Only update if we have new messages
-        if (!lastMessageId || latestMessage._id !== lastMessageId) {
-          setMessages(response.data);
-          setLastMessageId(latestMessage._id);
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing messages:', error);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -223,7 +232,9 @@ const FriendChatBox = ({
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
   };
 
   const loadMoreMessages = () => {
@@ -315,34 +326,60 @@ const FriendChatBox = ({
   if (!isOpen) return null;
 
   const modal = (
-    <div className={fullScreen ? "flex flex-col h-full" : "fixed inset-0 z-50 flex"}>
-      {/* Backdrop - only show if not fullScreen */}
-      {!fullScreen && (
+    <div className={fullScreen ? "flex flex-col h-full" : mobileMode ? "flex flex-col h-full" : "fixed inset-0 z-50 flex"}>
+      {/* Backdrop - only show if not fullScreen and not mobileMode */}
+      {!fullScreen && !mobileMode && (
         <div 
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
       )}
       
+      {/* Mobile Glass Background - only for mobile mode */}
+      {mobileMode && (
+        <div 
+          className="absolute inset-0 bg-black/30 backdrop-blur-xl"
+          style={{
+            backgroundImage: `url(${bg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+          }}
+        />
+      )}
+      
       {/* Chat Window */}
-      <div className={fullScreen 
-        ? "relative w-full h-full bg-black/20 backdrop-blur-xl border-l border-white/10 flex flex-col"
-        : "relative w-full max-w-2xl mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
+      <div className={
+        fullScreen 
+          ? "relative w-full h-full bg-black/20 backdrop-blur-xl border-l border-white/10 overflow-hidden"
+          : mobileMode
+          ? "relative w-full h-full bg-black/20 backdrop-blur-xl max-h-[70vh] overflow-hidden"
+          : "relative w-full max-w-lg mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl max-h-[60vh] overflow-hidden"
       }>
         {/* Header */}
-        <div className={fullScreen 
-          ? "flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
-          : "flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg"
-        }>
+        <div 
+          ref={headerRef}
+          className={
+            fullScreen 
+              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+              : mobileMode
+              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+              : "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg"
+          }>
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className={fullScreen 
-                ? "p-1 hover:bg-white/10 rounded-lg transition-colors text-white"
-                : "p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
+              className={
+                fullScreen || mobileMode
+                  ? "p-1 hover:bg-white/10 rounded-lg transition-colors text-white"
+                  : "p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
               }
             >
-              <ArrowLeft className={fullScreen ? "w-5 h-5 text-white" : "w-5 h-5 text-foreground/60"} />
+              <ArrowLeft className={
+                fullScreen || mobileMode 
+                  ? "w-5 h-5 text-white" 
+                  : "w-5 h-5 text-foreground/60"
+              } />
             </button>
             
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
@@ -358,9 +395,10 @@ const FriendChatBox = ({
             </div>
             
             <div className="min-w-0 flex-1">
-              <h3 className={fullScreen 
-                ? "font-semibold text-white truncate"
-                : "font-semibold text-foreground truncate"
+              <h3 className={
+                fullScreen || mobileMode
+                  ? "font-semibold text-white truncate"
+                  : "font-semibold text-foreground truncate"
               }>
                 {friend?.name}
               </h3>
@@ -369,12 +407,8 @@ const FriendChatBox = ({
                   <Shield className="w-3 h-3 text-green-500" />
                   <span className="text-xs text-green-500">End-to-end encrypted</span>
                 </div>
-                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
-                  isRefreshing ? 'text-green-500 opacity-100' : 'text-foreground/40 opacity-60'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    isRefreshing ? 'bg-green-500 animate-pulse' : 'bg-foreground/30'
-                  }`}></div>
+                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 text-foreground/40 opacity-60`}>
+                  <div className={`w-2 h-2 rounded-full transition-all duration-300 bg-foreground/30`}></div>
                   <span className="transition-all duration-300">Live</span>
                 </div>
               </div>
@@ -390,7 +424,7 @@ const FriendChatBox = ({
         </div>
 
         {/* Security Notice */}
-        <div className="px-4 py-2 border-b border-border bg-green-50 dark:bg-green-900/20">
+        <div className="absolute top-[73px] left-0 right-0 z-10 px-4 py-2 border-b border-border bg-green-50 dark:bg-green-900/20 backdrop-blur-sm">
           <div className="flex items-center space-x-2">
             <Shield className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
             <p className="text-xs text-green-800 dark:text-green-200">
@@ -401,7 +435,7 @@ const FriendChatBox = ({
 
         {/* File Preview */}
         {previewMode && selectedFile && (
-          <div className="px-4 py-3 border-b border-border bg-accent/50">
+          <div className="absolute top-[115px] left-0 right-0 z-10 px-4 py-3 border-b border-border bg-accent/50 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 {getFileIcon(selectedFile.type)}
@@ -434,10 +468,18 @@ const FriendChatBox = ({
         {/* Messages Area */}
         <div 
           ref={messagesContainerRef}
-          className={fullScreen 
-            ? "flex-1 overflow-y-auto p-4 space-y-4 bg-black/10"
-            : "flex-1 overflow-y-auto p-4 space-y-4"
+          className={
+            fullScreen || mobileMode
+              ? "absolute overflow-y-auto p-4 space-y-4 bg-black/10"
+              : "absolute overflow-y-auto p-4 space-y-4"
           }
+          style={{
+            top: `${headerHeight}px`,
+            left: 0,
+            right: 0,
+            bottom: '100px', // Reserve space for input area (more than before)
+            paddingBottom: '20px' // Additional padding for last message
+          }}
           onScroll={checkScrollPosition}
         >
           {loading && messages.length === 0 ? (
@@ -578,9 +620,10 @@ const FriendChatBox = ({
         )}
 
         {/* Input Area */}
-        <div className={fullScreen 
-          ? "border-t border-white/10 p-4 bg-black/20 backdrop-blur-sm"
-          : "border-t border-border p-4"
+        <div className={
+          fullScreen || mobileMode
+            ? "absolute bottom-0 left-0 right-0 z-10 border-t border-white/10 p-4 bg-black/20 backdrop-blur-sm"
+            : "absolute bottom-0 left-0 right-0 z-10 border-t border-border p-4 bg-background/95 backdrop-blur-sm rounded-b-lg"
         }>
           <form onSubmit={handleSendMessage} className="flex items-end space-x-2">
             <div className="flex-1 relative">
@@ -651,7 +694,7 @@ const FriendChatBox = ({
     </div>
   );
 
-  return fullScreen ? modal : createPortal(modal, document.body);
+  return fullScreen || mobileMode ? modal : createPortal(modal, document.body);
 };
 
 export default FriendChatBox;
