@@ -120,6 +120,24 @@ export const friendChatService = {
 
   // Get file URL for display (for images)
   getFileUrl(messageId) {
+    return `${import.meta.env.VITE_API_URL}${API_BASE_URL}/view/${messageId}`;
+  },
+
+  // Get file download URL
+  getDownloadUrl(messageId) {
     return `${import.meta.env.VITE_API_URL}${API_BASE_URL}/download/${messageId}`;
+  },
+
+  // Get image blob for display
+  async getImageBlob(messageId) {
+    try {
+      const response = await api.get(`${API_BASE_URL}/view/${messageId}`, {
+        responseType: 'blob'
+      });
+      return URL.createObjectURL(response.data);
+    } catch (error) {
+      console.error('Error fetching image blob:', error);
+      throw error;
+    }
   }
 };

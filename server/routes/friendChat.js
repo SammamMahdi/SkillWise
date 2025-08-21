@@ -6,6 +6,7 @@ const {
   getMessages, 
   getConversations, 
   downloadFile, 
+  viewFile,
   deleteMessage,
   upload 
 } = require('../controllers/friendChatController');
@@ -28,6 +29,9 @@ router.post('/send-file', upload, sendFileMessage);
 
 // Download file
 router.get('/download/:messageId', downloadFile);
+
+// View file for display (images)
+router.get('/view/:messageId', viewFile);
 
 // Delete message
 router.delete('/message/:messageId', deleteMessage);

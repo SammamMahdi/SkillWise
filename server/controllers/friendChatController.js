@@ -388,6 +388,53 @@ class FriendChatController {
     }
   }
 
+  // View file for display (images)
+  static async viewFile(req, res) {
+    try {
+      const { messageId } = req.params;
+      const userId = req.userId;
+
+      const message = await FriendMessage.findById(messageId);
+      
+      if (!message) {
+        return res.status(404).json({
+          success: false,
+          message: 'Message not found'
+        });
+      }
+
+      if (!message.isParticipant(userId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      if (message.messageType === 'text') {
+        return res.status(400).json({
+          success: false,
+          message: 'Not a file message'
+        });
+      }
+
+      // Decrypt file metadata
+      const otherParticipant = message.participants.find(p => p.toString() !== userId);
+      const encryptionKey = MessageEncryption.deriveChatKey(userId, otherParticipant);
+      const fileData = MessageEncryption.decryptFileData(message.encryptedFileData, encryptionKey);
+
+      // Set headers for inline display (not download)
+      res.setHeader('Content-Type', fileData.mimeType);
+      res.setHeader('Cache-Control', 'private, max-age=86400'); // Cache for 24 hours
+      res.sendFile(path.resolve(message.filePath));
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to view file'
+      });
+    }
+  }
+
   // Delete message
   static async deleteMessage(req, res) {
     try {
@@ -433,6 +480,7 @@ module.exports = {
   getMessages: FriendChatController.getMessages,
   getConversations: FriendChatController.getConversations,
   downloadFile: FriendChatController.downloadFile,
+  viewFile: FriendChatController.viewFile,
   deleteMessage: FriendChatController.deleteMessage,
   upload: upload.single('file')
 };

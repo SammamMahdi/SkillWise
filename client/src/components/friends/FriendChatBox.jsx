@@ -41,6 +41,7 @@ const FriendChatBox = ({
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(115); // Default: header + security notice
+  const [imageBlobUrls, setImageBlobUrls] = useState({});
   
   const { user } = useAuth();
   const currentUserId = user?.id || user?._id;
@@ -99,6 +100,11 @@ const FriendChatBox = ({
       if (container) {
         container.removeEventListener('scroll', checkScrollPosition);
       }
+      
+      // Cleanup blob URLs to prevent memory leaks
+      Object.values(imageBlobUrls).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
     };
   }, [isOpen, friend]); // Minimal dependencies
 
@@ -116,6 +122,22 @@ const FriendChatBox = ({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [newMessage]);
+
+  // Load image blobs when messages change
+  useEffect(() => {
+    const loadImageBlobs = async () => {
+      const imageMessages = messages.filter(msg => msg.messageType === 'image');
+      for (const message of imageMessages) {
+        if (!imageBlobUrls[message._id]) {
+          await loadImageBlob(message._id);
+        }
+      }
+    };
+    
+    if (messages.length > 0) {
+      loadImageBlobs();
+    }
+  }, [messages]);
 
   // Calculate header height dynamically
   useEffect(() => {
@@ -306,6 +328,20 @@ const FriendChatBox = ({
     }
   };
 
+  // Load image blob for display
+  const loadImageBlob = async (messageId) => {
+    if (imageBlobUrls[messageId]) return imageBlobUrls[messageId];
+    
+    try {
+      const blobUrl = await friendChatService.getImageBlob(messageId);
+      setImageBlobUrls(prev => ({ ...prev, [messageId]: blobUrl }));
+      return blobUrl;
+    } catch (error) {
+      console.error('Failed to load image blob:', error);
+      return null;
+    }
+  };
+
   // Group messages by date
   const messageGroups = messages.reduce((groups, message) => {
     const date = new Date(message.createdAt).toDateString();
@@ -322,6 +358,63 @@ const FriendChatBox = ({
     
     return groups;
   }, []);
+
+  // Image Display Component
+  const ImageDisplay = ({ message }) => {
+    const [imageUrl, setImageUrl] = useState(imageBlobUrls[message._id] || null);
+    const [loading, setLoading] = useState(!imageBlobUrls[message._id]);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+      const loadImage = async () => {
+        if (!imageUrl && !error) {
+          try {
+            setLoading(true);
+            const blobUrl = await loadImageBlob(message._id);
+            if (blobUrl) {
+              setImageUrl(blobUrl);
+            } else {
+              setError(true);
+            }
+          } catch (err) {
+            setError(true);
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      loadImage();
+    }, [message._id, imageUrl, error]);
+
+    if (loading) {
+      return (
+        <div className="max-w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      );
+    }
+
+    if (error || !imageUrl) {
+      return (
+        <div className="max-w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center flex-col space-y-2">
+          <Eye className="w-8 h-8 text-gray-400" />
+          <span className="text-sm text-gray-500">Image unavailable</span>
+          <span className="text-xs text-gray-400">{message.fileData.originalName}</span>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={imageUrl}
+        alt={message.fileData.originalName}
+        className="max-w-full h-48 object-cover rounded-lg cursor-pointer"
+        onClick={() => downloadFile(message)}
+        onError={() => setError(true)}
+      />
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -542,12 +635,7 @@ const FriendChatBox = ({
                                 </div>
                                 
                                 {message.messageType === 'image' && (
-                                  <img
-                                    src={friendChatService.getFileUrl(message._id)}
-                                    alt={message.fileData.originalName}
-                                    className="max-w-full h-48 object-cover rounded-lg cursor-pointer"
-                                    onClick={() => downloadFile(message)}
-                                  />
+                                  <ImageDisplay message={message} />
                                 )}
                                 
                                 <button
@@ -681,12 +769,20 @@ const FriendChatBox = ({
 
           {/* Helper Text */}
           <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-foreground/50">
-              {selectedFile ? 'Ready to send file' : 'Enter to send, Shift+Enter for new line'}
-            </p>
+            <div className="flex flex-col space-y-1">
+              <p className="text-xs text-foreground/50">
+                {selectedFile ? 'Ready to send file' : 'Enter to send, Shift+Enter for new line'}
+              </p>
+              {selectedFile && selectedFile.type.startsWith('image/') && (
+                <p className="text-xs text-orange-500 flex items-center space-x-1">
+                  <EyeOff className="w-3 h-3" />
+                  <span>Images are not encrypted</span>
+                </p>
+              )}
+            </div>
             <div className="flex items-center space-x-1 text-xs text-green-500">
               <Shield className="w-3 h-3" />
-              <span>Encrypted</span>
+              <span>Messages Encrypted</span>
             </div>
           </div>
         </div>
