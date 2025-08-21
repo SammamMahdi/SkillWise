@@ -196,10 +196,6 @@ const userSchema = new mongoose.Schema({
   lastLogin: Date
 }, { timestamps: false });
 
-// Ensure indexes
-userSchema.index({ handle: 1 }, { unique: true });
-userSchema.index({ username: 1 }, { unique: true, sparse: true, collation: { locale: 'en', strength: 2 } });
-
 // Auto-generate handle on first save
 userSchema.pre('validate', function(next) {
   if (!this.handle) {

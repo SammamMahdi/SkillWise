@@ -15,7 +15,9 @@ import {
   Target,
   Heart,
   Brain,
-  BookOpen
+  BookOpen,
+  Edit3,
+  RotateCcw
 } from 'lucide-react';
 import * as THREE from 'three';
 import { skillConnectService } from '../../services/skillConnectService';
@@ -23,6 +25,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { toast } from 'react-hot-toast';
 import AgeRestricted from '../common/AgeRestricted';
+import DashboardButton from '../common/DashboardButton';
+import SkillOnboarding from './SkillOnboarding';
 import bg from '../auth/evening-b2g.jpg';
 
 const SkillConnect = () => {
@@ -47,6 +51,7 @@ const SkillConnect = () => {
   const [availableSkills, setAvailableSkills] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSkillUpdate, setShowSkillUpdate] = useState(false);
   
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -328,6 +333,24 @@ const SkillConnect = () => {
               </div>
 
               <div className="flex items-center space-x-4">
+                <DashboardButton />
+                
+                <motion.button
+                  onClick={() => setShowSkillUpdate(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 hover:from-purple-600/30 hover:to-blue-600/30 rounded-lg transition-all duration-200 text-white border border-white/20 hover:border-white/40 shadow-lg hover:shadow-purple-500/20"
+                  whileHover={{ scale: 1.05, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Update your skill preferences to find new connections"
+                >
+                  <motion.div
+                    animate={{ rotate: [0, -15, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </motion.div>
+                  <span className="text-sm font-medium">Update Skills</span>
+                </motion.button>
+                
                 <motion.button
                   onClick={() => setShowFilters(!showFilters)}
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 text-white"
@@ -541,6 +564,21 @@ const SkillConnect = () => {
           )}
         </main>
       </div>
+      
+      {/* Skill Update Modal */}
+      <AnimatePresence>
+        {showSkillUpdate && (
+          <SkillOnboarding 
+            isUpdate={true}
+            onComplete={() => {
+              setShowSkillUpdate(false);
+              toast.success('Skills updated successfully!');
+              handleRefresh(); // Refresh connections with new skills
+            }}
+            onSkip={() => setShowSkillUpdate(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

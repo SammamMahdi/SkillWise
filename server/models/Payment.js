@@ -121,7 +121,6 @@ const walletSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-paymentCodeSchema.index({ code: 1 });
 paymentCodeSchema.index({ isRedeemed: 1 });
 paymentCodeSchema.index({ expiresAt: 1 });
 

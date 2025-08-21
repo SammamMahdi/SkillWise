@@ -33,7 +33,7 @@ const iconMap = {
   Users: Users
 };
 
-const SkillOnboarding = () => {
+const SkillOnboarding = ({ isUpdate = false, onComplete, onSkip }) => {
   const { user, updateProfile } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -130,7 +130,11 @@ const SkillOnboarding = () => {
   };
 
   const handleSkip = () => {
-    navigate('/dashboard');
+    if (isUpdate && onSkip) {
+      onSkip();
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleComplete = async () => {
@@ -146,7 +150,7 @@ const SkillOnboarding = () => {
       const response = await skillConnectService.saveUserSkillPreferences(skillPreferences, true);
       
       if (response.success) {
-        toast.success('Welcome to SkillConnect! Your preferences have been saved.');
+        toast.success(isUpdate ? 'Your skill preferences have been updated!' : 'Welcome to SkillConnect! Your preferences have been saved.');
         // Update user context to reflect completed onboarding
         await updateProfile({ 
           skillPreferences: { 
@@ -154,7 +158,12 @@ const SkillOnboarding = () => {
             hasCompletedSkillOnboarding: true 
           } 
         });
-        navigate('/dashboard');
+        
+        if (isUpdate && onComplete) {
+          onComplete();
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
       console.error('Error saving skill preferences:', error);
@@ -246,7 +255,7 @@ const SkillOnboarding = () => {
           {/* Step Content */}
           <div className="bg-card/20 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
             {currentStep === 0 && (
-              <WelcomeStep onNext={handleNext} onSkip={handleSkip} />
+              <WelcomeStep onNext={handleNext} onSkip={handleSkip} isUpdate={isUpdate} />
             )}
             
             {currentStep === 1 && (
@@ -287,18 +296,20 @@ const SkillOnboarding = () => {
 };
 
 // Welcome Step Component
-const WelcomeStep = ({ onNext, onSkip }) => (
+const WelcomeStep = ({ onNext, onSkip, isUpdate = false }) => (
   <div className="text-center">
     <div className="mb-8">
       <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
         <Sparkles className="w-10 h-10 text-primary" />
       </div>
       <h1 className="text-3xl font-bold text-foreground mb-4">
-        Welcome to SkillConnect!
+        {isUpdate ? 'Update Your Skills' : 'Welcome to SkillConnect!'}
       </h1>
       <p className="text-lg text-foreground/80 mb-6 leading-relaxed">
-        Discover and connect with like-minded learners who share your interests and skills. 
-        Let's build your learning profile to find your perfect study companions.
+        {isUpdate 
+          ? 'Update your skill preferences to discover new learning connections and opportunities that match your evolving interests.'
+          : 'Discover and connect with like-minded learners who share your interests and skills. Let\'s build your learning profile to find your perfect study companions.'
+        }
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-primary/10 rounded-xl p-4">
@@ -325,7 +336,7 @@ const WelcomeStep = ({ onNext, onSkip }) => (
         className="px-6 py-3 text-foreground/60 hover:text-foreground transition-colors duration-200 flex items-center space-x-2"
       >
         <SkipForward className="w-4 h-4" />
-        <span>Skip for now</span>
+        <span>{isUpdate ? 'Cancel' : 'Skip for now'}</span>
       </button>
       <button
         onClick={onNext}

@@ -357,9 +357,9 @@ const addReview = async (req, res) => {
 // Get skill of the month
 const getSkillOfMonth = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).populate('enrolledCourses.course');
+    const user = await User.findById(req.params.userId).populate('dashboardData.enrolledCourses.course');
     
-    if (!user || !user.enrolledCourses.length) {
+    if (!user || !user.dashboardData?.enrolledCourses?.length) {
       return res.json({
         success: true,
         data: { skill: 'General Learning' }
@@ -367,7 +367,7 @@ const getSkillOfMonth = async (req, res) => {
     }
 
     // Get the top course (first one) and its first tag
-    const topCourse = user.enrolledCourses[0].course;
+    const topCourse = user.dashboardData.enrolledCourses[0].course;
     const skillOfMonth = topCourse?.tags?.[0] || 'General Learning';
 
     res.json({

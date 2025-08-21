@@ -207,7 +207,6 @@ const skillConnectionSchema = new mongoose.Schema({
 skillSchema.index({ category: 1, name: 1 });
 skillUserSchema.index({ skill: 1 });
 skillUserSchema.index({ 'users.user': 1 });
-userSkillPreferenceSchema.index({ user: 1 });
 ageGroupSchema.index({ 'ageRange.min': 1, 'ageRange.max': 1 });
 courseEnrollmentSchema.index({ course: 1 });
 skillConnectionSchema.index({ user: 1 });
