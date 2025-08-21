@@ -135,6 +135,10 @@ const TopBar = ({
                     {/* Column 2: Social & Communication */}
                     <div className="space-y-2">
                       <div className="text-xs font-semibold text-primary/80 mb-3 uppercase tracking-wide">Social</div>
+                      <Link to="/skill-connect" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                        <div className="font-medium text-sm text-white">SkillConnect</div>
+                        <div className="text-xs text-white/60">Find skill-based connections</div>
+                      </Link>
                       <Link to="/friends" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                         <div className="font-medium text-sm text-white">Friends</div>
                         <div className="text-xs text-white/60">Connect with students</div>

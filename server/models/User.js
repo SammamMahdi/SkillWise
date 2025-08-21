@@ -148,6 +148,34 @@ const userSchema = new mongoose.Schema({
   sentFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   receivedFriendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
+  // SkillConnect system fields
+  skillPreferences: {
+    selectedSkills: [{
+      skill: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Skill'
+      },
+      selectedSubSkills: [String],
+      proficiencyLevel: {
+        type: String,
+        enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+        default: 'Beginner'
+      },
+      addedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    hasCompletedSkillOnboarding: {
+      type: Boolean,
+      default: false
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+
   // extra placeholders (as requested earlier)
   extradictionary1: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },
   extradictionary2: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} },

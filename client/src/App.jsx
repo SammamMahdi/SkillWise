@@ -49,6 +49,10 @@ import StyledProfileSetup from './components/profile/StyledProfileSetup'
 // NEW: Age verification wrapper
 import AgeVerificationWrapper from './components/auth/AgeVerificationWrapper'
 
+// SkillConnect components
+import SkillConnect from './components/skillConnect/SkillConnect'
+import SkillOnboarding from './components/skillConnect/SkillOnboarding'
+
 // Child components
 import BecomeChildPage from './components/child/BecomeChildPage'
 
@@ -230,6 +234,18 @@ function AppRoutes() {
       {/* Teacher Application routes */}
       <Route path="/apply-teacher" element={<TeacherApplicationForm />} />
       <Route path="/admin/approve-teachers" element={<ApproveTeacherPage />} />
+      
+      {/* SkillConnect routes */}
+      <Route path="/skill-connect" element={
+        <AgeVerificationWrapper>
+          <SkillConnect />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/skill-connect/onboarding" element={
+        <AgeVerificationWrapper>
+          <SkillOnboarding />
+        </AgeVerificationWrapper>
+      } />
     </Routes>
   )
 }

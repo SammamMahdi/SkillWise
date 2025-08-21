@@ -14,6 +14,7 @@
     "@tanstack/react-query": "^5.84.1",
     "axios": "^1.6.2",
     "clsx": "^2.0.0",
+    "framer-motion": "^12.23.12",
     "googleapis": "^155.0.0",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
@@ -22,7 +23,8 @@
     "react-hot-toast": "^2.4.1",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.20.1",
-    "tailwind-merge": "^2.0.0"
+    "tailwind-merge": "^2.0.0",
+    "three": "^0.179.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",

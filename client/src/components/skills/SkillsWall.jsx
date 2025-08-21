@@ -19,10 +19,22 @@ import CreateSkillPost from './CreateSkillPost';
 import SkillPostCard from './SkillPostCard';
 import DashboardButton from '../common/DashboardButton';
 import ChildLockModal from '../common/ChildLockModal';
+import AgeRestricted from '../common/AgeRestricted';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SkillsWall = () => {
   const { user } = useAuth();
+  
+  // Check if user is a child
+  if (user?.role === 'child') {
+    return (
+      <AgeRestricted 
+        title="Skills Wall"
+        message="The Skills Wall is for mature users who can responsibly share and manage professional skills and services."
+        redirectPath="/dashboard"
+      />
+    );
+  }
   const [skillPosts, setSkillPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
