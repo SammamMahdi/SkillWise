@@ -26,6 +26,7 @@
     "cloudinary": "^1.41.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "docx": "^9.5.1",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
@@ -34,11 +35,13 @@
     "google-auth-library": "^9.0.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.10.0",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "multer": "^2.0.0-rc.2",
     "node-fetch": "2",
-    "nodemailer": "^6.9.7"
+    "nodemailer": "^6.9.7",
+    "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
     "eslint": "^9.0.0",

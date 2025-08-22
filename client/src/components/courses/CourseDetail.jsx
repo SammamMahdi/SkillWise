@@ -272,14 +272,14 @@ export default function CourseDetail() {
               <button onClick={() => setShowContentModal(false)} className="text-foreground/60 hover:text-foreground">
                 <XCircle className="w-6 h-6" />
               </button>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-foreground/60">
-                <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  {selectedContent.url}
-                </a>
-              </p>
-            </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-foreground/60">
+                    <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {selectedContent.url}
+                    </a>
+                  </p>
+                </div>
           </div>
         </div>
       )}

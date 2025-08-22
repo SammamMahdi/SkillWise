@@ -136,7 +136,7 @@ const AIRecommendations = () => {
     }
   }
 
-  const accept = '.pdf,.docx'
+  const accept = '.pdf,.doc,.docx'
 
   return (
     <section
@@ -198,7 +198,7 @@ const AIRecommendations = () => {
                   onChange={onSelect} 
                   className="block w-full cursor-pointer text-white/80 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 file:transition-all file:duration-300" 
                 />
-                <p className="text-xs text-white/60">Supported formats: PDF, DOCX (max 8MB)</p>
+                <p className="text-xs text-white/60">Supported formats: PDF, DOC, DOCX (max 8MB)</p>
               </div>
               <button
                 type="submit"

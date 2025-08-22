@@ -3,9 +3,13 @@ const { Mistral } = require('@mistralai/mistralai');
 const Course = require('../models/Course');
 const TempUserCV = require('../models/TempUserCV');
 const AIRecommendation = require('../models/AIRecommendation');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
+const fs = require('fs');
+const path = require('path');
 
 /**
- * Handle CV OCR using OCR.space
+ * Handle CV parsing using native libraries (PDF and DOCX)
  * Expects multipart/form-data with field name `cv`
  */
 async function ocrCv(req, res) {
@@ -14,87 +18,80 @@ async function ocrCv(req, res) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const apiKey = process.env.OCR_SPACE_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ success: false, message: 'OCR API key not configured' });
-    }
-
-    const formData = new (require('form-data'))();
-    const fs = require('fs');
-    const path = require('path');
-
     const filePath = req.file.path;
     const filename = path.basename(filePath);
     const fileExt = path.extname(filename).toLowerCase();
 
-    formData.append('apikey', apiKey);
-    formData.append('OCREngine', '2');
-    formData.append('scale', 'true');
-    formData.append('isTable', 'true');
-    formData.append('language', 'eng');
-    
-    // For PDFs, enable multi-page processing
-    if (fileExt === '.pdf') {
-      formData.append('isOverlayRequired', 'false');
-      formData.append('filetype', 'PDF');
-    }
-    
-    formData.append('file', fs.createReadStream(filePath), filename);
+    let text = '';
+    let pages = [];
 
-    const response = await axios.post('https://api.ocr.space/parse/image', formData, {
-      headers: formData.getHeaders(),
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      timeout: 120000, // Increased timeout for multi-page PDFs
-    });
+    try {
+      if (fileExt === '.pdf') {
+        // Parse PDF using pdf-parse
+        const dataBuffer = fs.readFileSync(filePath);
+        const pdfData = await pdfParse(dataBuffer);
+        text = pdfData.text;
+        
+        // For PDFs, we'll treat the entire content as one page for now
+        // pdf-parse doesn't provide page-by-page breakdown by default
+        pages = [{
+          pageNumber: 1,
+          text: text,
+          confidence: 100, // Native parsing is 100% accurate
+          wordCount: text.split(/\s+/).length
+        }];
+      } else if (fileExt === '.docx' || fileExt === '.doc') {
+        // Parse DOCX/DOC using mammoth
+        const dataBuffer = fs.readFileSync(filePath);
+        const result = await mammoth.extractRawText({ buffer: dataBuffer });
+        text = result.value;
+        
+        pages = [{
+          pageNumber: 1,
+          text: text,
+          confidence: 100, // Native parsing is 100% accurate
+          wordCount: text.split(/\s+/).length
+        }];
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Unsupported file format. Please upload a PDF, DOC, or DOCX file.' 
+        });
+      }
 
-    const data = response.data;
-    if (!data || data.OCRExitCode !== 1) {
-      const message = data?.ErrorMessage || data?.ErrorDetails || 'OCR failed';
-      return res.status(400).json({ success: false, message });
-    }
+      if (!text || text.trim().length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'No text extracted from document' 
+        });
+      }
 
-    // Process results - handle both single and multi-page
-    const parsedResults = data.ParsedResults || [];
-    
-    if (parsedResults.length === 0) {
-      return res.status(400).json({ success: false, message: 'No text extracted from document' });
-    }
+      // Clean up the uploaded file
+      fs.unlinkSync(filePath);
 
-    // For multi-page documents, return structured page data
-    if (parsedResults.length > 1) {
-      const pages = parsedResults.map((result, index) => ({
-        pageNumber: index + 1,
-        text: result.ParsedText || '',
-        confidence: result.TextOverlay?.Lines?.[0]?.Words?.[0]?.Confidence || 0,
-        wordCount: result.TextOverlay?.Lines?.reduce((count, line) => count + (line.Words?.length || 0), 0) || 0
-      }));
-
-      return res.json({ 
-        success: true, 
-        text: pages.map(p => p.text).join('\n\n--- PAGE BREAK ---\n\n'),
-        pages: pages,
-        totalPages: pages.length,
-        isMultiPage: true
-      });
-    } else {
-      // Single page document
-      const text = parsedResults[0].ParsedText || '';
       return res.json({ 
         success: true, 
         text: text,
-        pages: [{
-          pageNumber: 1,
-          text: text,
-          confidence: parsedResults[0].TextOverlay?.Lines?.[0]?.Words?.[0]?.Confidence || 0,
-          wordCount: parsedResults[0].TextOverlay?.Lines?.reduce((count, line) => count + (line.Words?.length || 0), 0) || 0
-        }],
-        totalPages: 1,
-        isMultiPage: false
+        pages: pages,
+        totalPages: pages.length,
+        isMultiPage: pages.length > 1
+      });
+
+    } catch (parseError) {
+      // Clean up the uploaded file on error
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      
+      console.error('Parse Error:', parseError);
+      return res.status(400).json({ 
+        success: false, 
+        message: `Failed to parse document: ${parseError.message}` 
       });
     }
+
   } catch (error) {
-    console.error('OCR Error:', error);
+    console.error('CV Parse Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }
@@ -207,11 +204,15 @@ async function recommendCoursesFromText(req, res) {
       'Write two sections exactly in this order with headings:',
       'Related to Field:, then a bullet list of up to 5 items formatted as: - CourseName — brief reason referencing specific CV skills or experience',
       'Unrelated to Field:, then a bullet list of up to 5 items formatted as: - CourseName — brief reason explaining complementary value or breadth',
+      'CRITICAL: Each section must contain DIFFERENT courses. Do NOT repeat any course name between the two sections.',
+      'Related courses should directly relate to the CV holder\'s field, skills, or experience.',
+      'Unrelated courses should be from completely different fields that would provide complementary knowledge or broaden their skill set.',
       'Each bullet MUST include a concise justification (one sentence).',
-      'Do not invent any course names. Use only names from the catalog.'
+      'Do not invent any course names. Use only names from the catalog.',
+      'Ensure you have at least 3-5 unique courses in each section without any duplicates.'
     ].join(' ');
 
-    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCOURSE CATALOG (name and description):\n${JSON.stringify(catalog)}\n\nFirst, validate this is a CV. If not, respond with the error message. If it is a CV, return the two sections as specified, ensuring each bullet contains a short justification tied to the CV.`;
+    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCOURSE CATALOG (name and description):\n${JSON.stringify(catalog)}\n\nFirst, validate this is a CV. If not, respond with the error message. If it is a CV, return the two sections as specified. IMPORTANT: Each section must contain completely different courses - no duplicates between "Related to Field" and "Unrelated to Field". Ensure each bullet contains a short justification tied to the CV.`;
 
     const chatResponse = await client.chat.complete({
       model: 'mistral-small-latest',

@@ -658,23 +658,23 @@ export default function StudentCourseView() {
           onAdminView={() => navigate(`/courses/${id}/admin`)}
           showAdminView={user?.role === 'Teacher' || user?.role === 'Admin'}
         />
-        {/* Progress Bar */}
-        {enrollment && (
+              {/* Progress Bar */}
+              {enrollment && (
           <div className="mb-6 lg:w-2/3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Course Progress</span>
-              <span className="text-sm text-foreground/60">{progress}%</span>
-            </div>
-            <div className="w-full bg-card/50 rounded-full h-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Course Progress</span>
+                    <span className="text-sm text-foreground/60">{progress}%</span>
+                  </div>
+                  <div className="w-full bg-card/50 rounded-full h-3">
               <div className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-            </div>
-          </div>
-        )}
-        {!enrollment && (
+                  </div>
+                </div>
+              )}
+              {!enrollment && (
           <button onClick={handleEnroll} disabled={enrolling} className="px-8 py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2">
             {enrolling ? (<><Loader2 className="w-5 h-5 animate-spin" /> Enrolling...</>) : (<><BookOpen className="w-5 h-5" /> Enroll in Course</>)}
-          </button>
-        )}
+                </button>
+              )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           <div className="lg:col-span-2">
             {course.lectures?.length > 0 ? (
@@ -689,12 +689,12 @@ export default function StudentCourseView() {
                 handleTakeExam={handleTakeExam}
               />
             ) : (
-              <div className="text-center py-12">
-                <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
-                <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
-              </div>
-            )}
+          <div className="text-center py-12">
+            <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
+            <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
+          </div>
+        )}
           </div>
           <StudentCourseStats course={course} enrollment={enrollment} progress={progress} />
         </div>
