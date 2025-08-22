@@ -142,6 +142,8 @@ const NotificationCenter = () => {
         return <Bell className="w-5 h-5 text-blue-600" />;
       case 'exam_graded':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'post_shared':
+        return <span className="text-2xl">📤</span>;
       default:
         return <Bell className="w-5 h-5 text-foreground/60" />;
     }
@@ -170,6 +172,8 @@ const NotificationCenter = () => {
         return 'border-l-green-500';
       case 'exam_published':
         return 'border-l-blue-500';
+      case 'post_shared':
+        return 'border-l-blue-400';
       default:
         return 'border-l-gray-500';
     }

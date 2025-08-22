@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema({
       'friend_rejected', 'exam_review_request', 'exam_approved', 'exam_rejected',
       'exam_published', 'exam_graded', 'exam_submission_review', 'exam_score_published',
       'exam_violation_submission', 'exam_reattempt_request', 'exam_reattempt_approved', 'exam_reattempt_rejected',
-      'test' // For testing purposes
+      'post_shared', 'test' // For testing purposes
     ],
     required: true
   },
@@ -50,7 +50,13 @@ const notificationSchema = new mongoose.Schema({
     violationType: String,
     studentMessage: String,
     action: String,
-    response: String
+    response: String,
+    // For post sharing notifications
+    postId: { type: mongoose.Schema.Types.ObjectId, ref: 'CommunityPost' },
+    sharedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    sharedByUser: String,
+    postType: String,
+    postTitle: String
   },
   isRead: { 
     type: Boolean, 

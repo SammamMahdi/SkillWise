@@ -1,3 +1,63 @@
+import axios from 'axios';
+import API_CONFIG from '../config/api.js';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Backend notification methods
+export const backendNotificationService = {
+  // Get user notifications
+  async getNotifications({ page = 1, limit = 20, unreadOnly = false } = {}) {
+    const res = await api.get(`/notifications?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`);
+    return res.data;
+  },
+
+  // Mark notification as read
+  async markAsRead(notificationId) {
+    const res = await api.put(`/notifications/${notificationId}/read`);
+    return res.data;
+  },
+
+  // Mark all notifications as read
+  async markAllAsRead() {
+    const res = await api.put('/notifications/read-all');
+    return res.data;
+  },
+
+  // Get notifications by type
+  async getNotificationsByType(type, { page = 1, limit = 20 } = {}) {
+    const res = await api.get(`/notifications/type/${type}?page=${page}&limit=${limit}`);
+    return res.data;
+  },
+
+  // Get unread count
+  async getUnreadCount() {
+    const res = await api.get('/notifications?unreadOnly=true&limit=1');
+    return res.data;
+  }
+};
+
 // Simple notification service for UI feedback
 class NotificationService {
   constructor() {

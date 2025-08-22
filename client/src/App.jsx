@@ -22,6 +22,7 @@ import FriendsPage from './components/friends/FriendsPage'
 import FriendChatList from './components/friends/FriendChatList'
 import PublicProfile from './components/profile/PublicProfile'
 import FriendSystemTest from './components/test/FriendSystemTest'
+import CommunityFeed from './components/community/CommunityFeed'
 
 // Exam components
 import TeacherExamDashboard from './components/exams/TeacherExamDashboard'
@@ -198,6 +199,16 @@ function AppRoutes() {
       <Route path="/friend-chat" element={
         <AgeVerificationWrapper>
           <FriendChatList />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/community" element={
+        <AgeVerificationWrapper>
+          <CommunityFeed />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/community/posts/:postId" element={
+        <AgeVerificationWrapper>
+          <CommunityFeed />
         </AgeVerificationWrapper>
       } />
       <Route path="/profile/:handle" element={

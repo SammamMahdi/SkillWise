@@ -2,6 +2,7 @@ import React from 'react'
 import SkillsSection from './SkillsSection'
 import CompletedCoursesSection from './CompletedCoursesSection'
 import CurrentCoursesSection from './CurrentCoursesSection'
+import SharedContentSection from './SharedContentSection'
 
 const DashboardContent = ({ firstName, profile, currentCourses, completedCourses, fmtDate }) => {
   return (
@@ -14,9 +15,10 @@ const DashboardContent = ({ firstName, profile, currentCourses, completedCourses
           <CompletedCoursesSection completedCourses={completedCourses} fmtDate={fmtDate} />
         </section>
 
-        {/* RIGHT - Current Courses */}
-        <section>
+        {/* RIGHT - Current Courses and Shared Content */}
+        <section className="space-y-6 sm:space-y-8">
           <CurrentCoursesSection currentCourses={currentCourses} fmtDate={fmtDate} />
+          <SharedContentSection />
         </section>
       </div>
     </main>

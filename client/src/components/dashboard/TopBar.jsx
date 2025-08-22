@@ -72,6 +72,12 @@ const TopBar = ({
               Courses
             </Link>
             <Link
+              to="/community"
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 ${glow} text-white/80 hover:text-white font-semibold text-sm sm:text-base`}
+            >
+              Community Feed
+            </Link>
+            <Link
               to="/skills"
               className={`px-3 sm:px-4 py-2 sm:py-2.5 ${glow} text-white/80 hover:text-white font-semibold text-sm sm:text-base`}
             >
