@@ -72,24 +72,24 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
     
     setIsSubmitting(true)
     try {
-      const payload = { type, privacy }
-      if (type === 'blog') Object.assign(payload, { title, text })
-      if (type === 'image') Object.assign(payload, { images, text })
-      if (type === 'poll') Object.assign(payload, { poll: { question: pollQuestion, options: pollOptions } })
-      if (type === 'debate') Object.assign(payload, { debateTopic, text })
-      if (type === 'share_course') {
-        const chosen = enrollments.find(e => (e.course?._id || e.course?.id || e.course) === selectedCourseId)
-        if (chosen) Object.assign(payload, { sharedCourse: {
-          course: selectedCourseId,
-          enrolledAt: chosen.enrolledAt,
-          overallProgress: chosen.overallProgress,
-          currentLectureIndex: chosen.currentLectureIndex
-        }})
-      }
+    const payload = { type, privacy }
+    if (type === 'blog') Object.assign(payload, { title, text })
+    if (type === 'image') Object.assign(payload, { images, text })
+    if (type === 'poll') Object.assign(payload, { poll: { question: pollQuestion, options: pollOptions } })
+    if (type === 'debate') Object.assign(payload, { debateTopic, text })
+    if (type === 'share_course') {
+      const chosen = enrollments.find(e => (e.course?._id || e.course?.id || e.course) === selectedCourseId)
+      if (chosen) Object.assign(payload, { sharedCourse: {
+        course: selectedCourseId,
+        enrolledAt: chosen.enrolledAt,
+        overallProgress: chosen.overallProgress,
+        currentLectureIndex: chosen.currentLectureIndex
+      }})
+    }
       
-      const res = await communityService.createPost(payload)
-      if (res.success) {
-        onCreated?.(res.data)
+    const res = await communityService.createPost(payload)
+    if (res.success) {
+      onCreated?.(res.data)
         // Reset form
         setTitle('')
         setText('')
@@ -138,7 +138,7 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
       <div className="flex flex-wrap gap-3 mb-6">
         {TYPE_TABS.map(tab => {
           const IconComponent = tab.icon
-          return (
+  return (
             <button
               key={tab.value}
               onClick={() => setType(tab.value)}
@@ -185,31 +185,31 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                     <div className="font-semibold">{option.label}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{option.description}</div>
                   </div>
-                </div>
+        </div>
               </button>
             )
           })}
-        </div>
-        
-        {/* Privacy information */}
+      </div>
+
+      {/* Privacy information */}
         <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-start gap-3">
             <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-primary text-xs">ℹ</span>
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              {privacy === 'public' ? (
+        {privacy === 'public' ? (
                 <span className="text-green-600 dark:text-green-400 font-medium">🌍 Public posts can be viewed and shared by everyone</span>
-              ) : privacy === 'friends' ? (
+        ) : privacy === 'friends' ? (
                 <span className="text-blue-600 dark:text-blue-400 font-medium">👥 Friends-only posts can only be viewed by your friends</span>
-              ) : (
+        ) : (
                 <span className="text-gray-600 dark:text-gray-400 font-medium">🔒 Private posts are only visible to you</span>
-              )}
-              {privacy !== 'public' && (
+        )}
+        {privacy !== 'public' && (
                 <div className="mt-1 text-gray-500 dark:text-gray-500">
                   Note: Only public posts can be shared by other users
                 </div>
-              )}
+        )}
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
 
       {/* Content Forms */}
       <div className="space-y-6">
-        {type === 'blog' && (
+      {type === 'blog' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -241,10 +241,10 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-32 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               />
             </div>
-          </div>
-        )}
+        </div>
+      )}
 
-        {type === 'image' && (
+      {type === 'image' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -284,7 +284,7 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                   Preview ({images.length} images)
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {images.map((img, idx) => (
+            {images.map((img, idx) => (
                     <div key={idx} className="relative group">
                       <img
                         src={img.webp || img.original}
@@ -298,8 +298,8 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                         <X className="w-3 h-3" />
                       </button>
                     </div>
-                  ))}
-                </div>
+            ))}
+          </div>
               </div>
             )}
             
@@ -314,10 +314,10 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-24 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               />
             </div>
-          </div>
-        )}
+        </div>
+      )}
 
-        {type === 'poll' && (
+      {type === 'poll' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -336,7 +336,7 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 Poll Options
               </label>
               <div className="space-y-3">
-                {pollOptions.map((opt, idx) => (
+            {pollOptions.map((opt, idx) => (
                   <div key={opt.optionId} className="flex gap-3">
                     <div className="w-8 h-8 bg-primary/20 text-primary rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">
                       {String.fromCharCode(65 + idx)}
@@ -348,8 +348,8 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                       className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
                     />
                   </div>
-                ))}
-              </div>
+            ))}
+          </div>
               
               <div className="flex gap-3 mt-3">
                 <button
@@ -359,7 +359,7 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                   <Plus className="w-4 h-4" />
                   Add Option
                 </button>
-                {pollOptions.length > 2 && (
+            {pollOptions.length > 2 && (
                   <button
                     onClick={() => setPollOptions(prev => prev.slice(0, -1))}
                     className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
@@ -368,11 +368,11 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                   </button>
                 )}
               </div>
-            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {type === 'debate' && (
+      {type === 'debate' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -397,10 +397,10 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-24 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               />
             </div>
-          </div>
-        )}
+        </div>
+      )}
 
-        {type === 'share_course' && (
+      {type === 'share_course' && (
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -412,12 +412,12 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               >
                 <option value="">Choose one of your enrolled courses</option>
-                {enrollments.map(en => (
-                  <option key={en.course?._id || en.course?.id || en.course} value={en.course?._id || en.course?.id || en.course}>
+            {enrollments.map(en => (
+              <option key={en.course?._id || en.course?.id || en.course} value={en.course?._id || en.course?.id || en.course}>
                     {en.course?.title} - {en.overallProgress || 0}% complete
-                  </option>
-                ))}
-              </select>
+              </option>
+            ))}
+          </select>
             </div>
             
             <div>
@@ -431,8 +431,8 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-24 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               />
             </div>
-          </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Submit Button */}

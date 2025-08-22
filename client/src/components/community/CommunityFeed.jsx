@@ -105,7 +105,7 @@ const CommunityFeed = () => {
     setShowCreatePost(false)
     setCreatePostType('blog')
   }
-
+  
   return (
     <>
       {/* Three.js Background */}
@@ -117,14 +117,14 @@ const CommunityFeed = () => {
           
           {/* Back to Dashboard Button */}
           <div className="px-6 pt-6">
-            <button
+              <button
               onClick={handleBackToDashboard}
               className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 hover:shadow-lg"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </button>
-          </div>
+                </div>
           
           {/* Community Header */}
           <CommunityHeader 
@@ -184,18 +184,18 @@ const CommunityFeed = () => {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <FeedCard
-                      post={post}
-                      onLike={onLike}
-                      onComment={onComment}
-                      onVote={onVote}
-                      onShare={onShare}
-                      onDelete={onDelete}
-                      onPostUpdated={onPostUpdated}
-                      onPrivacyChange={onPrivacyChange}
-                      currentUserId={currentUserId}
-                    />
-                  </div>
+        <FeedCard
+          post={post}
+          onLike={onLike}
+          onComment={onComment}
+          onVote={onVote}
+          onShare={onShare}
+          onDelete={onDelete}
+          onPostUpdated={onPostUpdated}
+          onPrivacyChange={onPrivacyChange}
+          currentUserId={currentUserId}
+        />
+      </div>
                 </PostHighlighter>
               ))}
             </div>
@@ -243,7 +243,7 @@ const CommunityFeed = () => {
                   className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
                 >
                   Create Your First Post
-                </button>
+        </button>
               </div>
             )}
           </div>
