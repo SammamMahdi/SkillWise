@@ -15,6 +15,9 @@ import toast from 'react-hot-toast';
 import ExamWarningModal from '../exams/ExamWarningModal';
 import ChildLockModal from '../common/ChildLockModal';
 import DashboardButton from '../common/DashboardButton';
+import StudentCourseHeader from './StudentCourseHeader'
+import StudentCourseStats from './StudentCourseStats'
+import StudentLectureList from './StudentLectureList'
 
 export default function StudentCourseView() {
   const { id } = useParams();
@@ -634,165 +637,53 @@ export default function StudentCourseView() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={() => navigate('/courses')}
-              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Courses
-            </button>
-            <DashboardButton />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Course Info */}
-            <div className="lg:col-span-2">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold">{course.title}</h1>
-                  <p className="text-foreground/80 text-lg mt-2">{course.description}</p>
-                </div>
-                {(user?.role === 'Teacher' || user?.role === 'Admin') && (
-                  <button
-                    onClick={() => navigate(`/courses/${id}/admin`)}
-                    className="ml-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm"
-                  >
-                    Admin View
-                  </button>
-                )}
-              </div>
-
-              {/* Progress Bar */}
-              {enrollment && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Course Progress</span>
-                    <span className="text-sm text-foreground/60">{progress}%</span>
-                  </div>
-                  <div className="w-full bg-card/50 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Enroll Button */}
-              {!enrollment && (
-                <button
-                  onClick={handleEnroll}
-                  disabled={enrolling}
-                  className="px-8 py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {enrolling ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Enrolling...
-                    </>
-                  ) : (
-                    <>
-                      <BookOpen className="w-5 h-5" />
-                      Enroll in Course
-                    </>
-                  )}
-                </button>
-              )}
+        <StudentCourseHeader
+          title={course.title}
+          description={course.description}
+          onBack={() => navigate('/courses')}
+          onAdminView={() => navigate(`/courses/${id}/admin`)}
+          showAdminView={user?.role === 'Teacher' || user?.role === 'Admin'}
+        />
+        {/* Progress Bar */}
+        {enrollment && (
+          <div className="mb-6 lg:w-2/3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Course Progress</span>
+              <span className="text-sm text-foreground/60">{progress}%</span>
             </div>
-
-            {/* Course Stats */}
-            <div className="space-y-6">
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-4">Course Overview</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground/60">Instructor</span>
-                    <span className="font-medium">{course.teacher?.name || 'Unknown'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground/60">Lectures</span>
-                    <span className="font-medium">{course.lectures?.length || 0}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground/60">Duration</span>
-                    <span className="font-medium">
-                      {course.lectures?.reduce((total, l) => total + (l.estimatedDuration || 0), 0)} min
-                    </span>
-                  </div>
-                  {enrollment && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground/60">Your Progress</span>
-                      <span className="font-medium text-primary">{progress}%</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {course.tags?.length > 0 && (
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
-                  <h3 className="text-lg font-semibold mb-4">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {course.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 bg-primary/20 text-primary rounded-full text-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="w-full bg-card/50 rounded-full h-3">
+              <div className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
             </div>
           </div>
-        </div>
-
-        {/* Lectures Section */}
-        {course.lectures?.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Course Content</h2>
-                             {enrollment && (
-                 <div className="flex items-center gap-2 text-sm text-foreground/60">
-                   <Target className="w-4 h-4" />
-                   <span>{Object.entries(lectureProgress).filter(([index, progress]) => {
-                     const lectureIndex = parseInt(index);
-                     const lecture = course.lectures[lectureIndex];
-                     return progress.completed && (!lecture?.exam || progress.quizPassed);
-                   }).length} of {course.lectures.length} completed</span>
-                 </div>
-               )}
-            </div>
-
-            {!enrollment && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <Lock className="w-5 h-5 text-yellow-500" />
-                  <div>
-                    <h3 className="font-medium text-yellow-700">Enroll to Access Course Content</h3>
-                    <p className="text-sm text-yellow-600">You need to enroll in this course to view lectures and take quizzes.</p>
-                  </div>
-                </div>
+        )}
+        {!enrollment && (
+          <button onClick={handleEnroll} disabled={enrolling} className="px-8 py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2">
+            {enrolling ? (<><Loader2 className="w-5 h-5 animate-spin" /> Enrolling...</>) : (<><BookOpen className="w-5 h-5" /> Enroll in Course</>)}
+          </button>
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          <div className="lg:col-span-2">
+            {course.lectures?.length > 0 ? (
+              <StudentLectureList
+                course={course}
+                enrollment={enrollment}
+                lectureProgress={lectureProgress}
+                expandedLectures={expandedLectures}
+                toggleLectureExpansion={toggleLectureExpansion}
+                markLectureComplete={markLectureComplete}
+                handleViewContent={setSelectedContent}
+                handleTakeExam={handleTakeExam}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
+                <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
               </div>
             )}
-
-            <div className="space-y-4">
-              {course.lectures.map((lecture, index) => renderLectureContent(lecture, index))}
-            </div>
           </div>
-        )}
-
-        {/* Empty State */}
-        {(!course.lectures || course.lectures.length === 0) && (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
-            <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
-          </div>
-        )}
+          <StudentCourseStats course={course} enrollment={enrollment} progress={progress} />
+        </div>
       </div>
 
       {/* Content Modal */}
@@ -845,12 +736,7 @@ export default function StudentCourseView() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <h4 className="font-medium">{selectedContent.title}</h4>
-                  {selectedContent.duration && (
-                    <p className="text-sm text-foreground/60">
-                      Duration: {Math.floor(selectedContent.duration / 60)}:{(selectedContent.duration % 60).toString().padStart(2, '0')}
-                    </p>
-                  )}
+                  <h3 className="text-xl font-semibold">{selectedContent.title}</h3>
                   <a 
                     href={selectedContent.url} 
                     target="_blank" 
