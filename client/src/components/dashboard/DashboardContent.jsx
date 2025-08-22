@@ -1,5 +1,5 @@
 import React from 'react'
-import SkillsSection from './SkillsSection'
+import NotesSection from './NotesSection';
 import CompletedCoursesSection from './CompletedCoursesSection'
 import CurrentCoursesSection from './CurrentCoursesSection'
 import SharedContentSection from './SharedContentSection'
@@ -11,7 +11,7 @@ const DashboardContent = ({ firstName, profile, currentCourses, completedCourses
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
         {/* LEFT - Skills and Completed Courses */}
         <section className="space-y-6 sm:space-y-8">
-          <SkillsSection firstName={firstName} profile={profile} fmtDate={fmtDate} />
+          <NotesSection />
           <CompletedCoursesSection completedCourses={completedCourses} fmtDate={fmtDate} />
         </section>
 
@@ -26,3 +26,6 @@ const DashboardContent = ({ firstName, profile, currentCourses, completedCourses
 }
 
 export default DashboardContent
+
+
+

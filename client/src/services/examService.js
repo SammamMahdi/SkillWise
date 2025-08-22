@@ -78,6 +78,8 @@ class ExamService {
     }
   }
 
+
+
   async startExamAttempt(examId, browserInfo) {
     try {
       const response = await api.post(`/exams/${examId}/start`, {

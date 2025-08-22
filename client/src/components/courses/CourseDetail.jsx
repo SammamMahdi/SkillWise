@@ -41,6 +41,8 @@ export default function CourseDetail() {
   const [expandedLectures, setExpandedLectures] = useState(new Set());
   const [selectedContent, setSelectedContent] = useState(null);
   const [showContentModal, setShowContentModal] = useState(false);
+  
+
 
   useEffect(() => {
     load();
@@ -70,6 +72,8 @@ export default function CourseDetail() {
       setLoading(false);
     }
   }
+
+
 
   const doEnroll = async () => {
     try {
@@ -123,6 +127,8 @@ export default function CourseDetail() {
       setLoadingExams(false);
     }
   };
+
+
 
   const toggleLectureExpansion = (lectureId) => {
     const newExpanded = new Set(expandedLectures);
@@ -234,6 +240,8 @@ export default function CourseDetail() {
               <h2 className="text-xl font-semibold mb-4">About This Course</h2>
               <p className="text-foreground/80 leading-relaxed">{course.description}</p>
             </div>
+            
+
             <CourseContent
               course={course}
               user={user}
@@ -243,6 +251,7 @@ export default function CourseDetail() {
               onAddLecture={() => navigate(`/courses/${id}/add-lecture`)}
               navigate={navigate}
               canEdit={canEditCourse(user, course?.teacher?._id)}
+
             />
             {/* Exams block remains inline for now */}
             {/* Existing exams rendering preserved */}
@@ -260,6 +269,7 @@ export default function CourseDetail() {
             navigate={navigate}
             id={id}
             canSeeInternal={canSeeInternal}
+
           />
         </div>
       </div>

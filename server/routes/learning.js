@@ -79,6 +79,8 @@ router.get('/courses/:courseId/lectures/:lectureIndex/progress', learningControl
 // NEW: Course progress overview
 router.get('/courses/:courseId/progress', learningController.getCourseProgress);
 
+
+
 // Get user certificates
 router.get('/certificates', learningController.getUserCertificates);
 

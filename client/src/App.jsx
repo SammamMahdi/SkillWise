@@ -80,6 +80,7 @@ import ApproveTeacherPage from './components/admin/ApproveTeacherPage'
 import SuperUserAccessTest from './components/test/SuperUserAccessTest'
 import AIRecommendations from './components/ai/AI_recommendations'
 import AdminAIRecommendations from './components/admin/AdminAIRecommendations'
+import NotesPage from './components/notes/NotesPage'
 
 // Common components
 import NotificationContainer from './components/common/NotificationContainer'
@@ -257,6 +258,18 @@ function AppRoutes() {
       <Route path="/skill-connect/onboarding" element={
         <AgeVerificationWrapper>
           <SkillOnboarding />
+        </AgeVerificationWrapper>
+      } />
+
+      {/* Notes routes */}
+      <Route path="/notes" element={
+        <AgeVerificationWrapper>
+          <NotesPage />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/notes/:id" element={
+        <AgeVerificationWrapper>
+          <NotesPage />
         </AgeVerificationWrapper>
       } />
 

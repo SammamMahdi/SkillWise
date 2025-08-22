@@ -740,6 +740,8 @@ const updateUserCourseProgress = async (userId, courseId) => {
   }
 };
 
+
+
 module.exports = {
   getLearningDashboard,
   enrollInCourse,

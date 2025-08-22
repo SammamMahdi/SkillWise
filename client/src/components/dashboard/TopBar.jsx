@@ -132,6 +132,9 @@ const TopBar = ({
                        <Link to="/learning" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg text-center" onClick={() => setOpenActions(false)} role="menuitem">
                          <div className="font-medium text-sm text-white">Learning</div>
                        </Link>
+                       <Link to="/notes" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg text-center" onClick={() => setOpenActions(false)} role="menuitem">
+                         <div className="font-medium text-sm text-white">Notes</div>
+                       </Link>
                      </div>
                    </div>
 
@@ -153,6 +156,10 @@ const TopBar = ({
                          <div className="text-xs text-white/60">
                            {hasTeacherPermissions(user) ? 'Manage your exams' : 'Take available exams'}
                          </div>
+                       </Link>
+                       <Link to="/notes" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                         <div className="font-medium text-sm text-white">Notes</div>
+                         <div className="text-xs text-white/60">Create and organize your notes</div>
                        </Link>
                        {hasTeacherPermissions(user) && (
                          <Link to="/create-course" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
