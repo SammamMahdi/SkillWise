@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { Mistral } = require('@mistralai/mistralai');
 const Course = require('../models/Course');
+const TempUserCV = require('../models/TempUserCV');
+const AIRecommendation = require('../models/AIRecommendation');
 
 /**
  * Handle CV OCR using OCR.space
@@ -240,5 +242,114 @@ async function recommendCoursesFromText(req, res) {
 }
 
 module.exports.recommendCoursesFromText = recommendCoursesFromText;
+
+// ---------------------------
+// Store CV text temporarily
+// ---------------------------
+async function storeTempCv(req, res) {
+  try {
+    const userId = req.userId;
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ success: false, message: 'text is required' });
+    }
+    const upserted = await TempUserCV.findOneAndUpdate(
+      { user: userId },
+      { text, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) },
+      { new: true, upsert: true }
+    );
+    return res.json({ success: true, data: { id: upserted._id } });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+}
+
+// ---------------------------
+// Suggest courses to add (explicit trigger from client)
+// ---------------------------
+async function suggestCoursesToAdd(req, res) {
+  try {
+    const userId = req.userId;
+    const apiKey = process.env.MISTRAL_API_KEY;
+    if (!apiKey) return res.status(500).json({ success: false, message: 'Mistral API key not configured' });
+
+    // Get CV snapshot
+    const temp = await TempUserCV.findOne({ user: userId });
+    const cvText = temp?.text || '';
+    if (!cvText) return res.json({ success: true, message: 'No CV stored' });
+
+    // Build current catalog (names + description)
+    const courses = await Course.find({}, 'title description').lean();
+    const catalog = courses.map(c => ({ courseName: c.title, description: c.description || '' }));
+
+    const client = new Mistral({ apiKey });
+    const systemPrompt = [
+      'You advise platform admins on new courses to add.',
+      'Given a user CV and the current catalog, suggest up to 5 NEW course names that are not in the current catalog but are logical additions for users like this CV holder.',
+      'Output MUST be plain text with a bullet list of: - NewCourseName — brief reason. Do not exceed 5 items.'
+    ].join(' ');
+
+    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCURRENT CATALOG:\n${JSON.stringify(catalog.map(c => c.courseName))}\n\nPropose up to 5 NEW course names (not in the list) with brief reasons.`;
+
+    const chatResponse = await client.chat.complete({
+      model: 'mistral-small-latest',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.3
+    });
+
+    const suggestionsText = chatResponse?.choices?.[0]?.message?.content || '';
+
+    // Extract proposed names heuristically (start of each bullet before dash)
+    const names = (suggestionsText.match(/^\s*[-•]\s*(.+?)\s+—/gm) || [])
+      .map(line => line.replace(/^\s*[-•]\s*/, '').split(' — ')[0])
+      .slice(0, 5);
+
+    const rec = new AIRecommendation({
+      user: userId,
+      fromCV: true,
+      cvSnapshot: cvText.slice(0, 4000),
+      suggestionsText,
+      suggestedCourseNames: names
+    });
+    await rec.save();
+
+    return res.json({ success: true, data: { id: rec._id } });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+}
+
+// ---------------------------
+// Admin: list & delete recommendations
+// ---------------------------
+async function listCourseAddRecommendations(req, res) {
+  try {
+    const docs = await AIRecommendation.find({ type: 'courses_to_add', status: { $in: ['pending', 'actioned'] } })
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ success: true, data: docs });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+}
+
+async function deleteCourseAddRecommendation(req, res) {
+  try {
+    const { id } = req.params;
+    await AIRecommendation.findByIdAndDelete(id);
+    return res.json({ success: true });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: e.message });
+  }
+}
+
+module.exports.storeTempCv = storeTempCv;
+module.exports.suggestCoursesToAdd = suggestCoursesToAdd;
+module.exports.listCourseAddRecommendations = listCourseAddRecommendations;
+module.exports.deleteCourseAddRecommendation = deleteCourseAddRecommendation;
 
 

@@ -184,6 +184,12 @@ const TopBar = ({
                           <div className="text-xs text-white/60">System management</div>
                         </Link>
                       )}
+                      {hasAdminPermissions(user) && (
+                        <Link to="/admin/ai-recommendations" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                          <div className="font-medium text-sm text-white">AI Course Suggestions</div>
+                          <div className="text-xs text-white/60">Review & manage recommendations</div>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

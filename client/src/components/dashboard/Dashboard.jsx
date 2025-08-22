@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { canManageCourses } from '../../utils/permissions'
@@ -15,6 +16,7 @@ import bg from '../auth/a.jpg'
 
 const Dashboard = () => {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const { theme } = useTheme()
   const [openUser, setOpenUser] = useState(false)
   const [openActions, setOpenActions] = useState(false)
@@ -66,7 +68,7 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     await logout()
-    window.location.href = '/'
+    navigate('/login', { replace: true })
   }
 
   useEffect(() => {

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAuth } from '../../contexts/AuthContext'
 import aiService from '../../services/aiService'
-import TopBar from '../dashboard/TopBar'
 import bg from '../auth/a.jpg'
 import { useNavigate } from 'react-router-dom'
 
@@ -14,10 +13,6 @@ const AIRecommendations = () => {
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [openUser, setOpenUser] = useState(false)
-  const [openActions, setOpenActions] = useState(false)
-  const userMenuRef = useRef(null)
-  const actionsMenuRef = useRef(null)
 
   // New: user skills input and recommendations
   const [skillsInput, setSkillsInput] = useState('') // e.g., "React, Node.js, MongoDB"
@@ -25,21 +20,11 @@ const AIRecommendations = () => {
   const [suggestionsText, setSuggestionsText] = useState('')
   const [matchedCourses, setMatchedCourses] = useState([])
 
-  const handleLogout = async () => {
-    // Handle logout logic here
-    window.location.href = '/'
-  }
-
   useEffect(() => {
-    const onClick = (e) => {
-      if (openUser && userMenuRef.current && !userMenuRef.current.contains(e.target)) setOpenUser(false)
-      if (openActions && actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) setOpenActions(false)
-    }
-    const onKey = (e) => { if (e.key === 'Escape') { setOpenUser(false); setOpenActions(false) } }
-    document.addEventListener('mousedown', onClick)
+    const onKey = (e) => { if (e.key === 'Escape') { /* no nav menus here */ } }
     document.addEventListener('keydown', onKey)
-    return () => { document.removeEventListener('mousedown', onClick); document.removeEventListener('keydown', onKey) }
-  }, [openUser, openActions])
+    return () => { document.removeEventListener('keydown', onKey) }
+  }, [])
 
   const onSelect = (e) => {
     const f = e.target.files?.[0]
@@ -68,7 +53,8 @@ const AIRecommendations = () => {
           confidence: page.confidence,
           wordCount: page.wordCount
         })))
-        // Pre-fill skills input from first page heuristically (optional, keep as is)
+        // Store CV text temporarily
+        try { await aiService.storeTempCv(response.pages.map(p => p.text).join('\n\n')) } catch {}
       } else {
         // Fallback to old format
         const pageTexts = response.text.split(/\n\s*\n/).filter(page => page.trim().length > 0)
@@ -79,6 +65,8 @@ const AIRecommendations = () => {
           confidence: 0,
           wordCount: pageText.split(/\s+/).length
         })))
+        // Store CV text temporarily
+        try { await aiService.storeTempCv(response.text) } catch {}
       }
     } catch (err) {
       setError(err.message || 'Failed to perform OCR')
@@ -128,8 +116,6 @@ const AIRecommendations = () => {
   }
 
   const accept = '.pdf,.png,.jpg,.jpeg,.webp'
-  const displayHandle = user?.username || user?.handle
-  const isCourseCreator = false // This page is for students only
 
   return (
     <section
@@ -159,24 +145,14 @@ const AIRecommendations = () => {
       </div>
 
       <div className="relative z-10 min-h-screen">
-        <TopBar 
-          user={user}
-          openUser={openUser}
-          setOpenUser={setOpenUser}
-          openActions={openActions}
-          setOpenActions={setOpenActions}
-          userMenuRef={userMenuRef}
-          actionsMenuRef={actionsMenuRef}
-          isCourseCreator={isCourseCreator}
-          handleLogout={handleLogout}
-          displayHandle={displayHandle}
-        />
-        
         <div className="max-w-[1800px] mx-auto px-3 sm:px-4 md:px-6 lg:px-10 py-8 sm:py-10 md:py-12">
           {/* Header Section */}
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">AI Recommendations</h1>
-            <p className="text-lg text-white/70">Upload your CV to extract text and get AI-powered insights</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">AI Recommendations</h1>
+              <p className="text-lg text-white/70">Upload your CV to extract text and get AI-powered insights</p>
+            </div>
+            <button onClick={() => navigate('/dashboard')} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary font-semibold rounded-xl border border-white/10 transition-all duration-300">Back to Dashboard</button>
           </div>
 
           {/* Role Warning */}
@@ -323,6 +299,28 @@ const AIRecommendations = () => {
               >
                 {loading ? 'Analyzing…' : 'Suggest Courses From CV Text'}
               </button>
+              {pages.length > 0 && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setLoading(true)
+                      setError('')
+                      const text = pages.map(p => p.text).join('\n\n')
+                      try { await aiService.storeTempCv(text) } catch {}
+                      await aiService.suggestAddFromCv()
+                      alert('Sent to admin for review.')
+                    } catch (e) {
+                      setError(e.message || 'Failed to send to admin')
+                    } finally {
+                      setLoading(false)
+                    }
+                  }}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-300 font-semibold disabled:opacity-50 transition-all duration-300"
+                >
+                  {loading ? 'Submitting…' : 'Send Recommendations To Admin'}
+                </button>
+              )}
             </div>
 
             {recommendations && (
@@ -377,14 +375,14 @@ const AIRecommendations = () => {
                         <p className="text-white/70 text-sm mb-4 line-clamp-2">{c.description}</p>
                         <div className="flex gap-3">
                           <button
-                            onClick={() => navigate(`/courses/${c._id}`)}
+                            onClick={() => navigate(`/courses/${c._id}`, { state: { from: '/ai/recommendations' } })}
                             className="flex-1 px-4 py-2 bg-background/80 border border-white/10 rounded-lg hover:bg-foreground/5 hover:border-primary/50 hover:text-primary transition-all duration-200 text-sm"
                           >
                             View Details
                           </button>
                           {user?.role === 'Student' && (
                             <button
-                              onClick={() => navigate(`/courses/${c._id}`)}
+                              onClick={() => navigate(`/courses/${c._id}`, { state: { from: '/ai/recommendations' } })}
                               className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 text-sm"
                             >
                               Enroll

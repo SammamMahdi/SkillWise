@@ -78,6 +78,7 @@ import ApproveTeacherPage from './components/admin/ApproveTeacherPage'
 // Test components
 import SuperUserAccessTest from './components/test/SuperUserAccessTest'
 import AIRecommendations from './components/ai/AI_recommendations'
+import AdminAIRecommendations from './components/admin/AdminAIRecommendations'
 
 // Common components
 import NotificationContainer from './components/common/NotificationContainer'
@@ -252,6 +253,13 @@ function AppRoutes() {
       <Route path="/ai/recommendations" element={
         <AgeVerificationWrapper>
           <AIRecommendations />
+        </AgeVerificationWrapper>
+      } />
+
+      {/* Admin: AI course suggestions to add */}
+      <Route path="/admin/ai-recommendations" element={
+        <AgeVerificationWrapper>
+          <AdminAIRecommendations />
         </AgeVerificationWrapper>
       } />
     </Routes>
