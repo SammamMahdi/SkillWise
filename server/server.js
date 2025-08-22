@@ -165,6 +165,7 @@ app.use("/api/exams", require("./routes/exams"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/teacher-applications", require("./routes/teacherApplication"));
 app.use("/api/skill-connect", require("./routes/skillConnect"));
+app.use("/api/ai", require("./routes/ai"));
 // app.use('/api/modules', require('./routes/modules'));
 
 // ---- Username routes (public availability + set username) ----

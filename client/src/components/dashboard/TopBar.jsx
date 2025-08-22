@@ -151,6 +151,12 @@ const TopBar = ({
                         <div className="font-medium text-sm text-white">Skills Wall</div>
                         <div className="text-xs text-white/60">Share and discover skills</div>
                       </Link>
+                      {user?.role === 'Student' && (
+                        <Link to="/ai/recommendations" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                          <div className="font-medium text-sm text-white">AI Recommendations</div>
+                          <div className="text-xs text-white/60">Upload CV and get insights</div>
+                        </Link>
+                      )}
                     </div>
 
                     {/* Column 3: Account & Tools */}

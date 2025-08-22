@@ -15,12 +15,13 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const ok = ['.jpg', '.jpeg', '.png', '.webp'].includes(path.extname(file.originalname).toLowerCase());
-  cb(ok ? null : new Error('Only JPG/PNG/WebP allowed'), ok);
+  const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+  const ok = allowed.includes(path.extname(file.originalname).toLowerCase());
+  cb(ok ? null : new Error('Only JPG/PNG/WebP/PDF allowed'), ok);
 };
 
 module.exports = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 4 * 1024 * 1024 },
+  limits: { fileSize: 8 * 1024 * 1024 },
 });
