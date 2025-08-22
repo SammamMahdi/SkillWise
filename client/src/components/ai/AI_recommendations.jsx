@@ -46,6 +46,16 @@ const AIRecommendations = () => {
       
       // Handle the new response format with page data
       if (response.pages && response.pages.length > 0) {
+        // Check if content looks like a CV
+        const allText = response.pages.map(p => p.text).join('\n\n').toLowerCase()
+        const cvKeywords = ['experience', 'education', 'skills', 'work', 'job', 'employment', 'resume', 'cv', 'curriculum vitae', 'professional', 'career', 'qualifications', 'employment history', 'work history']
+        const isCV = cvKeywords.some(keyword => allText.includes(keyword))
+        
+        if (!isCV) {
+          setError('Sorry, this document does not appear to be a CV. Please upload a proper CV document.')
+          return
+        }
+        
         setPages(response.pages.map(page => ({
           id: page.pageNumber,
           text: page.text.trim(),
@@ -58,6 +68,17 @@ const AIRecommendations = () => {
       } else {
         // Fallback to old format
         const pageTexts = response.text.split(/\n\s*\n/).filter(page => page.trim().length > 0)
+        
+        // Check if content looks like a CV
+        const allText = response.text.toLowerCase()
+        const cvKeywords = ['experience', 'education', 'skills', 'work', 'job', 'employment', 'resume', 'cv', 'curriculum vitae', 'professional', 'career', 'qualifications', 'employment history', 'work history']
+        const isCV = cvKeywords.some(keyword => allText.includes(keyword))
+        
+        if (!isCV) {
+          setError('Sorry, this document does not appear to be a CV. Please upload a proper CV document.')
+          return
+        }
+        
         setPages(pageTexts.map((pageText, index) => ({
           id: index + 1,
           text: pageText.trim(),
@@ -102,7 +123,7 @@ const AIRecommendations = () => {
       setError('')
       const text = pages.map(p => p.text).join('\n\n')
       if (!text || text.trim().length === 0) {
-        setError('Run OCR first to extract CV text.')
+        setError('Scan PDF first to extract CV text.')
         return
       }
       const { suggestionsText, matchedCourseNames, courses } = await aiService.recommendFromCvText(text)
@@ -115,7 +136,7 @@ const AIRecommendations = () => {
     }
   }
 
-  const accept = '.pdf,.png,.jpg,.jpeg,.webp'
+  const accept = '.pdf,.docx'
 
   return (
     <section
@@ -150,7 +171,7 @@ const AIRecommendations = () => {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">AI Recommendations</h1>
-              <p className="text-lg text-white/70">Upload your CV to extract text and get AI-powered insights</p>
+              <p className="text-lg text-white/70">Upload your CV to scan and get AI-powered insights</p>
             </div>
             <button onClick={() => navigate('/dashboard')} className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary font-semibold rounded-xl border border-white/10 transition-all duration-300">Back to Dashboard</button>
           </div>
@@ -177,7 +198,7 @@ const AIRecommendations = () => {
                   onChange={onSelect} 
                   className="block w-full cursor-pointer text-white/80 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 file:transition-all file:duration-300" 
                 />
-                <p className="text-xs text-white/60">Supported formats: PDF, PNG, JPG, JPEG, WebP (max 8MB)</p>
+                <p className="text-xs text-white/60">Supported formats: PDF, DOCX (max 8MB)</p>
               </div>
               <button
                 type="submit"
@@ -192,7 +213,7 @@ const AIRecommendations = () => {
                 ) : (
                   <>
                     <span>🔍</span>
-                    Run OCR Analysis
+                    Scan PDF
                   </>
                 )}
               </button>
@@ -213,7 +234,7 @@ const AIRecommendations = () => {
           {pages.length > 0 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-white">Extracted Content</h2>
+                <h2 className="text-2xl font-semibold text-white">Scanned Content</h2>
                 <div className="text-sm text-white/60">{pages.length} page{pages.length !== 1 ? 's' : ''} detected</div>
               </div>
               
@@ -291,7 +312,7 @@ const AIRecommendations = () => {
               >
                 {loading ? 'Analyzing…' : 'Recommend Top 5 Courses'}
               </button>
-              <div className="text-sm text-white/60">Or use your OCR results:</div>
+              <div className="text-sm text-white/60">Or use your scanned results:</div>
               <button
                 onClick={recommendFromCv}
                 disabled={loading}

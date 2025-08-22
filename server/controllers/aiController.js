@@ -200,7 +200,9 @@ async function recommendCoursesFromText(req, res) {
     const client = new Mistral({ apiKey });
 
     const systemPrompt = [
-      'You are an expert learning advisor. Read the CV text and suggest courses based ONLY on the provided catalog (courseName + description).',
+      'You are an expert learning advisor. First, validate if the provided text is actually a CV by checking for CV-like content.',
+      'If the text does NOT contain CV-like content (missing experience, education, skills, work history, etc.), respond with ONLY: "Sorry, this document does not appear to be a CV. Please upload a proper CV document."',
+      'If it IS a CV, proceed to suggest courses based ONLY on the provided catalog (courseName + description).',
       'Output MUST be plain text, no JSON.',
       'Write two sections exactly in this order with headings:',
       'Related to Field:, then a bullet list of up to 5 items formatted as: - CourseName — brief reason referencing specific CV skills or experience',
@@ -209,7 +211,7 @@ async function recommendCoursesFromText(req, res) {
       'Do not invent any course names. Use only names from the catalog.'
     ].join(' ');
 
-    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCOURSE CATALOG (name and description):\n${JSON.stringify(catalog)}\n\nReturn the two sections as specified, ensuring each bullet contains a short justification tied to the CV.`;
+    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCOURSE CATALOG (name and description):\n${JSON.stringify(catalog)}\n\nFirst, validate this is a CV. If not, respond with the error message. If it is a CV, return the two sections as specified, ensuring each bullet contains a short justification tied to the CV.`;
 
     const chatResponse = await client.chat.complete({
       model: 'mistral-small-latest',
@@ -285,11 +287,13 @@ async function suggestCoursesToAdd(req, res) {
     const client = new Mistral({ apiKey });
     const systemPrompt = [
       'You advise platform admins on new courses to add.',
-      'Given a user CV and the current catalog, suggest up to 5 NEW course names that are not in the current catalog but are logical additions for users like this CV holder.',
+      'First, validate if the provided text is actually a CV by checking for CV-like content.',
+      'If the text does NOT contain CV-like content (missing experience, education, skills, work history, etc.), respond with ONLY: "Sorry, this document does not appear to be a CV. Please upload a proper CV document."',
+      'If it IS a CV, proceed to suggest up to 5 NEW course names that are not in the current catalog but are logical additions for users like this CV holder.',
       'Output MUST be plain text with a bullet list of: - NewCourseName — brief reason. Do not exceed 5 items.'
     ].join(' ');
 
-    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCURRENT CATALOG:\n${JSON.stringify(catalog.map(c => c.courseName))}\n\nPropose up to 5 NEW course names (not in the list) with brief reasons.`;
+    const userPrompt = `CV TEXT START\n${cvText}\nCV TEXT END\n\nCURRENT CATALOG:\n${JSON.stringify(catalog.map(c => c.courseName))}\n\nFirst, validate this is a CV. If not, respond with the error message. If it is a CV, propose up to 5 NEW course names (not in the list) with brief reasons.`;
 
     const chatResponse = await client.chat.complete({
       model: 'mistral-small-latest',
