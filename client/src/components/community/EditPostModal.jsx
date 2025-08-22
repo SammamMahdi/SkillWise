@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { X, Globe, Users, Lock, Edit3, Save, AlertCircle } from 'lucide-react'
 import { communityService } from '../../services/communityService'
 
 const PRIVACY_OPTIONS = [
-  { value: 'public', label: 'Public', icon: '🌍' },
-  { value: 'friends', label: 'Friends', icon: '👥' },
-  { value: 'only_me', label: 'Only Me', icon: '🔒' }
+  { value: 'public', label: 'Public', icon: Globe, description: 'Visible to everyone' },
+  { value: 'friends', label: 'Friends', icon: Users, description: 'Visible to friends only' },
+  { value: 'only_me', label: 'Only Me', icon: Lock, description: 'Visible only to you' }
 ]
 
 const EditPostModal = ({ post, isOpen, onClose, onPostUpdated }) => {
@@ -91,58 +92,101 @@ const EditPostModal = ({ post, isOpen, onClose, onPostUpdated }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20 dark:border-gray-700/50">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Post</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center">
+              <Edit3 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Post</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Update your post content and privacy</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Privacy Settings */}
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
               Privacy Settings
             </label>
-            <div className="flex gap-3">
-              {PRIVACY_OPTIONS.map(option => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handlePrivacyChange(option.value)}
-                  disabled={loading}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border transition-all ${
-                    formData.privacy === option.value
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  <span className="text-lg">{option.icon}</span>
-                  <span className="font-medium">{option.label}</span>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {PRIVACY_OPTIONS.map(option => {
+                const IconComponent = option.icon
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handlePrivacyChange(option.value)}
+                    disabled={loading}
+                    className={`group p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
+                      formData.privacy === option.value
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${
+                        formData.privacy === option.value
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                      }`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">{option.label}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{option.description}</div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            
+            {/* Privacy information */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-primary text-xs">ℹ</span>
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {formData.privacy === 'public' ? (
+                    <span className="text-green-600 dark:text-green-400 font-medium">🌍 Public posts can be viewed and shared by everyone</span>
+                  ) : formData.privacy === 'friends' ? (
+                    <span className="text-blue-600 dark:text-blue-400 font-medium">👥 Friends-only posts can only be viewed by your friends</span>
+                  ) : (
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">🔒 Private posts are only visible to you</span>
+                  )}
+                  {formData.privacy !== 'public' && (
+                    <div className="mt-1 text-gray-500 dark:text-gray-500">
+                      Note: Only public posts can be shared by other users
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Title Input */}
           {post.type === 'blog' && (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Title
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
                 placeholder="Enter post title..."
                 disabled={loading}
               />
@@ -150,15 +194,15 @@ const EditPostModal = ({ post, isOpen, onClose, onPostUpdated }) => {
           )}
 
           {/* Text Input */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
               {post.type === 'blog' ? 'Content' : 'Text'}
             </label>
             <textarea
               value={formData.text}
               onChange={(e) => handleInputChange('text', e.target.value)}
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
               placeholder={post.type === 'blog' ? 'Write your blog content...' : 'Write your post...'}
               disabled={loading}
             />
@@ -166,27 +210,46 @@ const EditPostModal = ({ post, isOpen, onClose, onPostUpdated }) => {
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-red-800 dark:text-red-200">Error</h4>
+                  <p className="text-red-700 dark:text-red-300 text-sm mt-1">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-2xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || (!formData.text.trim() && !formData.title.trim())}
-              className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="group relative flex-1 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
-              {loading ? 'Updating...' : 'Update Post'}
+              <span className="relative z-10 flex items-center gap-2">
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Update Post
+                  </>
+                )}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
           </div>
         </form>
