@@ -16,30 +16,27 @@ export default function ExamAssignmentModal({
   if (!showExamModal || !currentLecture) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background border border-border rounded-lg p-6 w-full max-w-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-card/20 border border-white/10 rounded-2xl p-6 w-full max-w-2xl shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold">Assign Exam - {currentLecture.title}</h3>
-          <button
-            onClick={() => setShowExamModal(false)}
-            className="text-foreground/60 hover:text-foreground"
-          >
+          <h3 className="text-xl font-semibold text-white">Assign Exam - {currentLecture.title}</h3>
+          <button onClick={() => setShowExamModal(false)} className="text-white/70 hover:text-white">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {teacherExams.length === 0 ? (
           <div className="text-center py-8">
-            <FileText className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
-            <h4 className="text-lg font-medium mb-2">No Exams Available</h4>
-            <p className="text-foreground/60 mb-4">You need to create exams first before assigning them to lectures.</p>
+            <FileText className="w-16 h-16 text-white/40 mx-auto mb-4" />
+            <h4 className="text-lg font-medium text-white mb-2">No Exams Available</h4>
+            <p className="text-white/70 mb-4">You need to create exams first before assigning them to lectures.</p>
             <div className="space-y-3">
               <button
                 onClick={() => {
                   setShowExamModal(false);
                   setShowExamCreationModal(true);
                 }}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                className="px-4 py-2 bg-primary/80 hover:bg-primary text-white rounded-xl"
               >
                 Create New Exam
               </button>
@@ -48,7 +45,7 @@ export default function ExamAssignmentModal({
                   setShowExamModal(false);
                   navigate('/exams/create');
                 }}
-                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90"
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-xl hover:bg-secondary/90"
               >
                 Go to Exam Creator
               </button>
@@ -57,7 +54,7 @@ export default function ExamAssignmentModal({
         ) : (
           <>
             <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Select Exam</label>
+              <label className="block text-sm font-medium mb-2 text-white/80">Select Exam</label>
               <select
                 value={currentLecture.exam ? 
                   (typeof currentLecture.exam === 'string' ? currentLecture.exam : 
@@ -74,7 +71,7 @@ export default function ExamAssignmentModal({
                     removeExam(currentLecture._tmpId);
                   }
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-card border border-border"
+                className="w-full px-3 py-2 rounded-xl bg-black/20 text-white/90 border border-white/10 backdrop-blur-sm"
               >
                 <option value="">No exam assigned</option>
                 {teacherExams.map(exam => (
@@ -95,27 +92,25 @@ export default function ExamAssignmentModal({
 
             {currentLecture.exam && (
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Passing Score (%)</label>
+                <label className="block text-sm font-medium mb-2 text-white/80">Passing Score (%)</label>
                 <input
                   type="number"
                   min="0"
                   max="100"
                   value={currentLecture.passingScore || 60}
                   onChange={(e) => patchLecture(currentLecture._tmpId, { passingScore: parseInt(e.target.value) || 60 })}
-                  className="w-full px-3 py-2 rounded-lg bg-card border border-border"
+                  className="w-full px-3 py-2 rounded-xl bg-black/20 text-white/90 border border-white/10 backdrop-blur-sm"
                 />
               </div>
             )}
 
             {currentLecture.exam && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2 text-green-800">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 text-emerald-300">
                   <FileText className="w-4 h-4" />
                   <span className="font-medium">Exam Assigned</span>
                 </div>
-                <p className="text-green-700 text-sm mt-1">
-                  Students must pass this exam to complete the lecture.
-                </p>
+                <p className="text-emerald-200/80 text-sm mt-1">Students must pass this exam to complete the lecture.</p>
               </div>
             )}
 
@@ -123,14 +118,14 @@ export default function ExamAssignmentModal({
               {currentLecture.exam && (
                 <button
                   onClick={() => removeExam(currentLecture._tmpId)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700"
                 >
                   Remove Exam
                 </button>
               )}
               <button
                 onClick={() => setShowExamModal(false)}
-                className="px-6 py-2 bg-foreground/10 text-foreground rounded-lg hover:bg-foreground/20"
+                className="px-6 py-2 bg-white/10 text-white rounded-xl hover:bg-white/20 backdrop-blur-sm"
               >
                 Close
               </button>
