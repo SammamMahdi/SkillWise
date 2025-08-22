@@ -81,6 +81,7 @@ import SuperUserAccessTest from './components/test/SuperUserAccessTest'
 import AIRecommendations from './components/ai/AI_recommendations'
 import AdminAIRecommendations from './components/admin/AdminAIRecommendations'
 import NotesPage from './components/notes/NotesPage'
+import ConsultationsPage from './components/consultations/ConsultationsPage'
 
 // Common components
 import NotificationContainer from './components/common/NotificationContainer'
@@ -270,6 +271,13 @@ function AppRoutes() {
       <Route path="/notes/:id" element={
         <AgeVerificationWrapper>
           <NotesPage />
+        </AgeVerificationWrapper>
+      } />
+
+      {/* Consultation routes */}
+      <Route path="/consultations" element={
+        <AgeVerificationWrapper>
+          <ConsultationsPage />
         </AgeVerificationWrapper>
       } />
 

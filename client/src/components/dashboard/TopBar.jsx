@@ -161,6 +161,12 @@ const TopBar = ({
                          <div className="font-medium text-sm text-white">Notes</div>
                          <div className="text-xs text-white/60">Create and organize your notes</div>
                        </Link>
+                       <Link to="/consultations" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
+                         <div className="font-medium text-sm text-white">Consultations</div>
+                         <div className="text-xs text-white/60">
+                           {hasTeacherPermissions(user) ? 'View consultation requests' : 'Book consultation hours'}
+                         </div>
+                       </Link>
                        {hasTeacherPermissions(user) && (
                          <Link to="/create-course" className="block px-3 py-2 hover:bg-white/10 transition-colors duration-200 rounded-lg" onClick={() => setOpenActions(false)} role="menuitem">
                            <div className="font-medium text-sm text-white">Create Course</div>

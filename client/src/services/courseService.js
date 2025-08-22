@@ -62,3 +62,11 @@ export async function getTeacherCourses(token) {
   });
   return data;
 }
+
+// Get courses the current user is enrolled in
+export async function getEnrolledCourses(token) {
+  const { data } = await axios.get(`${API}/learning/dashboard`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return data;
+}

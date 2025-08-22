@@ -168,6 +168,7 @@ app.use("/api/skill-connect", require("./routes/skillConnect"));
 app.use("/api/ai", require("./routes/ai"));
 app.use("/api/community", require("./routes/community"));
 app.use("/api/notes", require("./routes/notes"));
+app.use('/api/consultations', require('./routes/consultationRoutes'));
 // app.use('/api/modules', require('./routes/modules'));
 
 // ---- Username routes (public availability + set username) ----
@@ -249,3 +250,5 @@ process.on("unhandledRejection", (err, promise) => {
   console.log(`Error: ${err.message}`);
   process.exit(1);
 });
+
+
