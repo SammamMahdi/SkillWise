@@ -12,6 +12,8 @@ import ExamWarningModal from '../exams/ExamWarningModal';
 import CourseHeader from './CourseHeader';
 import CourseContent from './CourseContent';
 import CourseSidebar from './CourseSidebar';
+import { useTheme } from '../../contexts/ThemeContext';
+import bg from '../auth/a.jpg';
 
 const isCourseOwner = (user, course) => {
   const userId = user?._id || user?.id;
@@ -24,6 +26,7 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { theme } = useTheme();
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -193,7 +196,24 @@ export default function CourseDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <section
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}
+    >
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
+
+      <div className="relative z-10 p-6">
       <div className="max-w-4xl mx-auto">
         <CourseHeader
           course={course}
@@ -252,14 +272,14 @@ export default function CourseDetail() {
               <button onClick={() => setShowContentModal(false)} className="text-foreground/60 hover:text-foreground">
                 <XCircle className="w-6 h-6" />
               </button>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-foreground/60">
-                    <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      {selectedContent.url}
-                    </a>
-                  </p>
-                </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-foreground/60">
+                <a href={selectedContent.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  {selectedContent.url}
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -279,5 +299,6 @@ export default function CourseDetail() {
         />
       )}
     </div>
+    </section>
   );
 }

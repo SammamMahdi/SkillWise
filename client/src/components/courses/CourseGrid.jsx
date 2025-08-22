@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import bg from '../auth/a.jpg';
 import { listCourses, enroll, checkEnrollment } from '../../services/courseService';
 import { canSeeInternal, hasTeacherPermissions } from '../../utils/permissions';
 import ThemeToggle from '../common/ThemeToggle';
@@ -27,6 +29,7 @@ const useDebounce = (value, delay) => {
 export default function CourseGrid() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -203,13 +206,29 @@ export default function CourseGrid() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
+    <section
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}
+    >
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
+
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-1 h-1 bg-primary/20 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-40 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse"></div>
-        <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-primary/15 rounded-full animate-pulse"></div>
+        <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse-subtle"></div>
+        <div className="absolute top-40 right-20 w-1 h-1 bg-primary/20 rounded-full animate-float"></div>
+        <div className="absolute bottom-40 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-bounce-gentle"></div>
+        <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-primary/15 rounded-full animate-pulse-subtle"></div>
       </div>
 
       <div className="relative z-10 p-6">
@@ -360,11 +379,14 @@ export default function CourseGrid() {
                   {courses.map((c, index) => (
                     <div 
                       key={c._id} 
-                      className="group bg-card/80 backdrop-blur-sm border border-border rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:scale-105 animate-fadeIn hover:border-primary/30"
+                      className="group bg-card/80 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-1 animate-fadeIn hover:border-primary/30 hover:ring-1 hover:ring-primary/30"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <div className="h-48 bg-gradient-to-br from-primary/20 via-primary/30 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:via-primary/40 group-hover:to-primary/50 transition-all duration-300">
+                      <div className="relative h-48 bg-gradient-to-br from-primary/20 via-primary/30 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:via-primary/40 group-hover:to-primary/50 transition-all duration-300">
                         <BookOpen className="w-16 h-16 text-primary group-hover:scale-110 transition-transform duration-300" />
+                        {c.price === 0 && (
+                          <span className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Free</span>
+                        )}
                       </div>
 
                       <div className="p-6">
@@ -415,7 +437,15 @@ export default function CourseGrid() {
                           </div>
                           <div className="flex items-center text-sm text-foreground/60 group-hover:text-foreground/80 transition-colors duration-200">
                             <Tag className="w-4 h-4 mr-2 text-primary/60" /> 
-                            <span className="font-medium">{c.tags?.slice(0, 3).join(', ') || 'No tags'}</span>
+                            {c.tags?.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {c.tags.slice(0,3).map((t,i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs border border-primary/20">{t}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="font-medium">No tags</span>
+                            )}
                           </div>
                           <div className="flex items-center text-lg font-bold text-primary group-hover:text-primary/80 transition-colors duration-200">
                             <DollarSign className="w-5 h-5 mr-2" /> 
@@ -488,6 +518,6 @@ export default function CourseGrid() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

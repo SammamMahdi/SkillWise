@@ -18,6 +18,8 @@ import DashboardButton from '../common/DashboardButton';
 import StudentCourseHeader from './StudentCourseHeader'
 import StudentCourseStats from './StudentCourseStats'
 import StudentLectureList from './StudentLectureList'
+import { useTheme } from '../../contexts/ThemeContext'
+import bg from '../auth/a.jpg'
 
 export default function StudentCourseView() {
   const { id } = useParams();
@@ -627,16 +629,28 @@ export default function StudentCourseView() {
 
   const progress = calculateProgress();
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-card/20 text-foreground relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-1 h-1 bg-primary/20 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-40 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-pulse"></div>
-      </div>
+  const { theme } = useTheme()
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  return (
+    <section
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}
+    >
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <StudentCourseHeader
           title={course.title}
           description={course.description}
@@ -807,6 +821,6 @@ export default function StudentCourseView() {
         onVerify={handleChildLockVerify}
         feature="course_enrollment"
       />
-    </div>
+    </section>
   );
 }

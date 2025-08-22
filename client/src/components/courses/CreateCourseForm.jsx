@@ -9,11 +9,14 @@ import LecturesSection from './LecturesSection';
 import ContentManagementModal from './ContentManagementModal';
 import ExamAssignmentModal from './ExamAssignmentModal';
 import ExamCreationModal from './ExamCreationModal';
+import { useTheme } from '../../contexts/ThemeContext';
+import bg from '../auth/a.jpg';
 
 export default function CreateCourseForm() {
   const { user, token } = useAuth();
   const methods = useForm();
   const courseManagement = useCourseManagement();
+  const { theme } = useTheme();
   
   const {
     loading,
@@ -96,8 +99,23 @@ export default function CreateCourseForm() {
 
   return (
     <FormProvider {...methods}>
-    <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section
+      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
+        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
+      }`}
+      style={theme === 'dark' ? {
+        backgroundImage: `url(${bg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      } : {}}
+    >
+      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
+          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
+      }`} />
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8 text-center sm:text-left">
           <button
               onClick={() => window.history.back()}
@@ -113,13 +131,14 @@ export default function CreateCourseForm() {
         </div>
 
         {!!error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-rose-300 text-sm">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-rose-300 text-sm backdrop-blur-sm">
             {error}
           </div>
         )}
 
           <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8 max-w-5xl mx-auto">
             {/* Basic Information Section */}
+            <div className="bg-card/20 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
             <BasicInformationSection
               courseCode={courseCode}
               setCourseCode={setCourseCode}
@@ -130,8 +149,10 @@ export default function CreateCourseForm() {
               addTag={addTag}
               removeTag={removeTag}
             />
+            </div>
 
             {/* Lectures Section */}
+            <div className="bg-card/20 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
             <LecturesSection
               lectures={lectures}
               addLecture={addLecture}
@@ -143,20 +164,21 @@ export default function CreateCourseForm() {
               setShowExamCreationModal={setShowExamCreationModal}
               setExamData={setExamData}
             />
+            </div>
 
             {/* Submit Section */}
             <div className="flex justify-end gap-3">
-                                                     <button
-                             type="button"
+              <button
+                type="button"
                 onClick={() => window.history.back()}
-                className="px-6 py-3 rounded-lg bg-background border border-border"
+                className="px-6 py-3 rounded-lg bg-white/10 border border-white/20 hover:bg-white/15 backdrop-blur-sm"
               >
                 Cancel
-                          </button>
-                                                     <button
+              </button>
+              <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-3 rounded-lg bg-primary text-white flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-3 rounded-lg bg-primary/80 hover:bg-primary text-white flex items-center gap-2 disabled:opacity-50 shadow-md"
               >
               {loading ? (
                 <>
@@ -211,8 +233,8 @@ export default function CreateCourseForm() {
           removeOption={removeOption}
           updateOption={updateOption}
           createExamForLecture={createExamForLecture}
-                 />
-               </div>
+        />
+    </section>
     </FormProvider>
-   );
- }
+  );
+}
