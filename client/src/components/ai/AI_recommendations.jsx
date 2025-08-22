@@ -4,10 +4,12 @@ import { useAuth } from '../../contexts/AuthContext'
 import aiService from '../../services/aiService'
 import TopBar from '../dashboard/TopBar'
 import bg from '../auth/a.jpg'
+import { useNavigate } from 'react-router-dom'
 
 const AIRecommendations = () => {
   const { theme } = useTheme()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [file, setFile] = useState(null)
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -16,6 +18,12 @@ const AIRecommendations = () => {
   const [openActions, setOpenActions] = useState(false)
   const userMenuRef = useRef(null)
   const actionsMenuRef = useRef(null)
+
+  // New: user skills input and recommendations
+  const [skillsInput, setSkillsInput] = useState('') // e.g., "React, Node.js, MongoDB"
+  const [recommendations, setRecommendations] = useState(null)
+  const [suggestionsText, setSuggestionsText] = useState('')
+  const [matchedCourses, setMatchedCourses] = useState([])
 
   const handleLogout = async () => {
     // Handle logout logic here
@@ -38,6 +46,9 @@ const AIRecommendations = () => {
     setFile(f || null)
     setPages([])
     setError('')
+    setRecommendations(null)
+    setSuggestionsText('')
+    setMatchedCourses([])
   }
 
   const onSubmit = async (e) => {
@@ -57,6 +68,7 @@ const AIRecommendations = () => {
           confidence: page.confidence,
           wordCount: page.wordCount
         })))
+        // Pre-fill skills input from first page heuristically (optional, keep as is)
       } else {
         // Fallback to old format
         const pageTexts = response.text.split(/\n\s*\n/).filter(page => page.trim().length > 0)
@@ -70,6 +82,46 @@ const AIRecommendations = () => {
       }
     } catch (err) {
       setError(err.message || 'Failed to perform OCR')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const runRecommendations = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const list = skillsInput.split(',').map(s => s.trim()).filter(Boolean)
+      if (list.length === 0) {
+        setError('Please enter at least one skill (comma-separated).')
+        return
+      }
+      const data = await aiService.recommendFromSkills(list)
+      setRecommendations({
+        skills_detected: data.skills_detected || list,
+        recommended_courses: data.recommended_courses || []
+      })
+    } catch (e) {
+      setError(e.message || 'Failed to get recommendations')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const recommendFromCv = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const text = pages.map(p => p.text).join('\n\n')
+      if (!text || text.trim().length === 0) {
+        setError('Run OCR first to extract CV text.')
+        return
+      }
+      const { suggestionsText, matchedCourseNames, courses } = await aiService.recommendFromCvText(text)
+      setSuggestionsText(suggestionsText || '')
+      setMatchedCourses(Array.isArray(courses) ? courses : [])
+    } catch (e) {
+      setError(e.message || 'Failed to get suggestions')
     } finally {
       setLoading(false)
     }
@@ -243,6 +295,109 @@ const AIRecommendations = () => {
               </div>
             </div>
           )}
+
+          {/* Skills → Recommendations */}
+          <div className="bg-card/20 backdrop-blur-sm rounded-2xl border border-white/10 p-6 mt-8">
+            <h2 className="text-xl font-semibold text-white mb-4">Get Course Recommendations</h2>
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-white/80">Enter your skills (comma-separated)</label>
+              <input
+                type="text"
+                value={skillsInput}
+                onChange={(e) => setSkillsInput(e.target.value)}
+                placeholder="e.g., React, Node.js, MongoDB"
+                className="w-full rounded-xl bg-black/20 border border-white/10 p-3 text-white/90 placeholder:text-white/40"
+              />
+              <button
+                onClick={runRecommendations}
+                disabled={loading}
+                className="px-6 py-3 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-semibold disabled:opacity-50 transition-all duration-300"
+              >
+                {loading ? 'Analyzing…' : 'Recommend Top 5 Courses'}
+              </button>
+              <div className="text-sm text-white/60">Or use your OCR results:</div>
+              <button
+                onClick={recommendFromCv}
+                disabled={loading}
+                className="px-6 py-3 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary font-semibold disabled:opacity-50 transition-all duration-300"
+              >
+                {loading ? 'Analyzing…' : 'Suggest Courses From CV Text'}
+              </button>
+            </div>
+
+            {recommendations && (
+              <div className="mt-6 space-y-4">
+                <div>
+                  <div className="text-sm text-white/60 mb-2">Skills detected</div>
+                  <div className="flex flex-wrap gap-2">
+                    {recommendations.skills_detected.map((s, i) => (
+                      <span key={i} className="px-2 py-1 rounded-lg bg-primary/15 text-primary text-xs border border-primary/20">{s}</span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-white/60 mb-2">Recommended Courses</div>
+                  {recommendations.recommended_courses.length > 0 ? (
+                    <div className="grid gap-3">
+                      {recommendations.recommended_courses.map((c, i) => (
+                        <div key={i} className="p-4 rounded-xl border border-white/10 bg-card/20 backdrop-blur-sm">
+                          <div className="font-semibold text-white">{c.courseName}</div>
+                          {c.reason && <div className="text-sm text-white/70">{c.reason}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-white/70 text-sm">No recommendations available.</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {suggestionsText && (
+              <div className="mt-6">
+                <div className="text-sm text-white/60 mb-2">AI Suggestions (from CV text)</div>
+                <div className="bg-black/20 rounded-xl p-4 border border-white/5 whitespace-pre-wrap text-white/90 text-sm leading-relaxed">{suggestionsText}</div>
+              </div>
+            )}
+
+            {matchedCourses.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4">Matched Courses</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {matchedCourses.map((c, index) => (
+                    <div 
+                      key={c._id || index}
+                      className="group bg-card/80 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:scale-105"
+                    >
+                      <div className="h-36 bg-gradient-to-br from-primary/20 via-primary/30 to-primary/40 flex items-center justify-center">
+                        <span className="text-primary font-bold text-xl">SW</span>
+                      </div>
+                      <div className="p-6">
+                        <h4 className="text-lg font-semibold text-white mb-2 line-clamp-2">{c.title}</h4>
+                        <p className="text-white/70 text-sm mb-4 line-clamp-2">{c.description}</p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => navigate(`/courses/${c._id}`)}
+                            className="flex-1 px-4 py-2 bg-background/80 border border-white/10 rounded-lg hover:bg-foreground/5 hover:border-primary/50 hover:text-primary transition-all duration-200 text-sm"
+                          >
+                            View Details
+                          </button>
+                          {user?.role === 'Student' && (
+                            <button
+                              onClick={() => navigate(`/courses/${c._id}`)}
+                              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 hover:shadow-lg hover:shadow-primary/25 transition-all duration-200 text-sm"
+                            >
+                              Enroll
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
