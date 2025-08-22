@@ -221,11 +221,11 @@ const NotesPage = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold text-foreground">
             {currentNote ? currentNote.title : 'My Notes'}
           </h1>
           {stats.totalNotes && (
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-foreground/60 mt-2">
               {stats.totalNotes} notes • {stats.pinnedNotes} pinned
             </p>
           )}
@@ -235,7 +235,7 @@ const NotesPage = () => {
             <>
               <button
                 onClick={editNote}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90"
               >
                 Edit
               </button>
@@ -244,7 +244,7 @@ const NotesPage = () => {
                 className={`px-4 py-2 rounded-lg border ${
                   currentNote.isPinned
                     ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                    : 'bg-card text-foreground/80 border-border'
                 }`}
               >
                 {currentNote.isPinned ? '📌 Pinned' : '📌 Pin'}
@@ -266,20 +266,20 @@ const NotesPage = () => {
         {/* Left Sidebar - Notes List */}
         <div className="lg:col-span-1">
           {/* Search and Filters */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6 shadow-sm">
+          <div className="bg-card border border-border rounded-lg p-4 mb-6 shadow-sm">
             <input
               type="text"
               placeholder="Search notes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
+              className="w-full px-3 py-2 border border-border rounded-lg mb-4 bg-background text-foreground"
             />
             
             <div className="space-y-3">
               <select
                 value={filters.category || 'all'}
                 onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
               >
                 <option value="all">All Categories</option>
                 {filters.categories?.map(cat => (
@@ -301,7 +301,7 @@ const NotesPage = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
               >
                 <option value="updatedAt">Last Updated</option>
                 <option value="createdAt">Created Date</option>
@@ -317,12 +317,12 @@ const NotesPage = () => {
               <div
                 key={note._id}
                 onClick={() => navigate(`/notes/${note._id}`)}
-                className={`bg-white dark:bg-gray-800 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
-                  currentNote?._id === note._id ? 'ring-2 ring-blue-500' : ''
+                className={`bg-card border border-border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                  currentNote?._id === note._id ? 'ring-2 ring-primary' : ''
                 } ${note.isPinned ? 'border-l-4 border-l-yellow-400' : ''}`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                  <h3 className="font-semibold text-foreground truncate">
                     {note.isPinned && '📌 '}{note.title}
                   </h3>
                   <button
@@ -330,12 +330,12 @@ const NotesPage = () => {
                       e.stopPropagation();
                       togglePin(note._id);
                     }}
-                    className="text-gray-400 hover:text-yellow-500"
+                    className="text-foreground/40 hover:text-yellow-500"
                   >
                     📌
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                <p className="text-sm text-foreground/60 line-clamp-2">
                   {note.content.replace(/[#*`]/g, '').substring(0, 100)}...
                 </p>
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -345,7 +345,7 @@ const NotesPage = () => {
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-foreground/40 mt-2">
                   {new Date(note.updatedAt).toLocaleDateString()}
                 </p>
               </div>
@@ -357,32 +357,32 @@ const NotesPage = () => {
         <div className="lg:col-span-2">
           {isEditing ? (
             /* Note Editor */
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
               <div className="space-y-4">
                 <input
                   type="text"
                   placeholder="Note title..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-2xl font-bold border-b border-gray-300 pb-2 focus:outline-none focus:border-blue-500"
+                  className="w-full text-2xl font-bold border-b border-border pb-2 focus:outline-none focus:border-primary bg-transparent text-foreground"
                 />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Category
                     </label>
                     <input
                       type="text"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                       placeholder="General"
                     />
                   </div>
                   
                   <div className="flex items-center space-x-4">
-                    <label className="flex items-center">
+                    <label className="flex items-center text-foreground">
                       <input
                         type="checkbox"
                         checked={isPinned}
@@ -391,7 +391,7 @@ const NotesPage = () => {
                       />
                       Pin Note
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center text-foreground">
                       <input
                         type="checkbox"
                         checked={isPublic}
@@ -405,7 +405,7 @@ const NotesPage = () => {
 
                 {/* Tags */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Tags
                   </label>
                   <div className="flex gap-2 mb-2">
@@ -415,11 +415,11 @@ const NotesPage = () => {
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && addTag()}
                       placeholder="Add tag..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                     />
                     <button
                       onClick={addTag}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                      className="px-4 py-2 bg-card text-foreground rounded-lg hover:bg-card/80 border border-border"
                     >
                       Add
                     </button>
@@ -444,7 +444,7 @@ const NotesPage = () => {
 
                 {/* Keywords */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Keywords
                   </label>
                   <div className="flex gap-2 mb-2">
@@ -454,11 +454,11 @@ const NotesPage = () => {
                       onChange={(e) => setKeywordInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
                       placeholder="Add keyword..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-foreground"
                     />
                     <button
                       onClick={addKeyword}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                      className="px-4 py-2 bg-card text-foreground rounded-lg hover:bg-card/80 border border-border"
                     >
                       Add
                     </button>
@@ -483,14 +483,14 @@ const NotesPage = () => {
 
                 {/* Markdown Editor */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Content (Markdown)
                   </label>
                   <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Write your note in Markdown..."
-                    className="w-full h-96 px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm resize-none"
+                    className="w-full h-96 px-3 py-2 border border-border rounded-lg font-mono text-sm resize-none bg-background text-foreground"
                   />
                 </div>
 
@@ -499,13 +499,13 @@ const NotesPage = () => {
                   <button
                     onClick={saveNote}
                     disabled={!title.trim() || !content.trim()}
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {currentNote ? 'Update' : 'Save'} Note
                   </button>
                   <button
                     onClick={cancelEdit}
-                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="px-6 py-2 border border-border rounded-lg hover:bg-card bg-background text-foreground"
                   >
                     Cancel
                   </button>
@@ -522,16 +522,16 @@ const NotesPage = () => {
             </div>
           ) : currentNote ? (
             /* Note Viewer */
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+            <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   {currentNote.isPinned && <span className="text-2xl">📌</span>}
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-bold text-foreground">
                     {currentNote.title}
                   </h2>
                 </div>
                 
-                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <div className="flex items-center gap-4 text-sm text-foreground/60 mb-4">
                   <span>Category: {currentNote.category}</span>
                   <span>Updated: {new Date(currentNote.updatedAt).toLocaleString()}</span>
                   {currentNote.isPublic && <span className="text-green-600">Public</span>}
@@ -564,17 +564,17 @@ const NotesPage = () => {
             </div>
           ) : (
             /* Welcome Message */
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center shadow-sm">
+            <div className="bg-card border border-border rounded-lg p-12 text-center shadow-sm">
               <div className="text-6xl mb-4">📝</div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-foreground mb-4">
                 Welcome to Your Notes
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-foreground/60 mb-6">
                 Create your first note to get started. Use Markdown for rich formatting, add tags and keywords for easy organization.
               </p>
               <button
                 onClick={createNewNote}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 text-lg"
+                className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 text-lg"
               >
                 Create Your First Note
               </button>
