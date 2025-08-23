@@ -477,4 +477,44 @@ exports.updatePostPrivacy = async (req, res) => {
   }
 };
 
+// Get community statistics
+exports.getCommunityStats = async (req, res) => {
+  try {
+    // Get total number of posts
+    const totalPosts = await CommunityPost.countDocuments();
+    
+    // Get total number of community members (users)
+    const totalMembers = await User.countDocuments();
+    
+    // Get trending posts count (posts created in the last 24 hours with high engagement)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const trendingPosts = await CommunityPost.countDocuments({
+      createdAt: { $gte: twentyFourHoursAgo },
+      $expr: {
+        $gte: [
+          { $add: [{ $size: '$likes' }, { $size: '$shares' }, { $size: '$comments' }] },
+          5 // Posts with at least 5 total interactions are considered trending
+        ]
+      }
+    });
+    
+    // Alternative: Get posts from last 24 hours as "trending today"
+    const postsToday = await CommunityPost.countDocuments({
+      createdAt: { $gte: twentyFourHoursAgo }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        totalPosts,
+        totalMembers,
+        trendingToday: Math.max(trendingPosts, postsToday) // Use whichever is higher
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching community stats:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch community stats' });
+  }
+};
+
 

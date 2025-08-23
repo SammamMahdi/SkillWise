@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { TrendingUp, Users, Sparkles, Filter } from 'lucide-react'
+import { communityService } from '../../services/communityService'
 
 const CommunityHeader = ({ onFilterChange, activeFilter }) => {
   const [isVisible, setIsVisible] = useState(false)
@@ -8,19 +9,39 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
     members: 0,
     trending: 0
   })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate loading stats
-    const timer = setTimeout(() => {
-      setStats({
-        posts: 1247,
-        members: 8923,
-        trending: 156
-      })
-      setIsVisible(true)
-    }, 500)
+    const fetchStats = async () => {
+      try {
+        setLoading(true)
+        const response = await communityService.getCommunityStats()
+        
+        if (response.success) {
+          setStats({
+            posts: response.data.totalPosts,
+            members: response.data.totalMembers,
+            trending: response.data.trendingToday
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch community stats:', error)
+        // Fallback to default values if API fails
+        setStats({
+          posts: 0,
+          members: 0,
+          trending: 0
+        })
+      } finally {
+        setLoading(false)
+        // Animate in after data loads
+        setTimeout(() => {
+          setIsVisible(true)
+        }, 100)
+      }
+    }
 
-    return () => clearTimeout(timer)
+    fetchStats()
   }, [])
 
   const filters = [
@@ -61,7 +82,11 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Posts</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.posts.toLocaleString()}</p>
+                {loading ? (
+                  <div className="w-16 h-8 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+                ) : (
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.posts.toLocaleString()}</p>
+                )}
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-white" />
@@ -73,7 +98,11 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Community Members</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.members.toLocaleString()}</p>
+                {loading ? (
+                  <div className="w-16 h-8 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+                ) : (
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.members.toLocaleString()}</p>
+                )}
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
@@ -85,7 +114,11 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Trending Today</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.trending}</p>
+                {loading ? (
+                  <div className="w-16 h-8 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+                ) : (
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.trending.toLocaleString()}</p>
+                )}
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-white" />

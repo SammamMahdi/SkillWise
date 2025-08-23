@@ -10,6 +10,7 @@ router.use(verifyToken);
 router.use(apiLimiter);
 
 router.get('/feed', ctrl.listFeed);
+router.get('/stats', ctrl.getCommunityStats);
 router.post('/posts', ctrl.createPost);
 router.delete('/posts/:postId', ctrl.deletePost);
 router.put('/posts/:postId', ctrl.editPost);

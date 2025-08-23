@@ -128,6 +128,11 @@ export const communityService = {
   async updatePostPrivacy(postId, privacy) {
     const res = await api.patch(`/community/posts/${postId}/privacy`, { privacy })
     return res.data
+  },
+
+  async getCommunityStats() {
+    const res = await api.get('/community/stats')
+    return res.data
   }
 }
 
