@@ -160,6 +160,7 @@ app.use("/api/friend-chat", require("./routes/friendChat"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/learning", require("./routes/learning"));
 app.use("/api/courses", require("./routes/courses"));
+app.use("/api/lecture-content", require("./routes/lectureContent"));
 app.use("/api/friends", require("./routes/friends"));
 app.use("/api/exams", require("./routes/exams"));
 app.use("/api/payments", require("./routes/payments"));

@@ -100,10 +100,10 @@ const ChatBox = ({
       clearInterval(refreshIntervalRef.current);
     }
     
-    // Start new interval for refreshing messages every 1 second
+    // Start new interval for refreshing messages every 100ms for real-time experience
     refreshIntervalRef.current = setInterval(() => {
       refreshMessages();
-    }, 1000);
+    }, 100);
   };
 
   const refreshMessages = async () => {

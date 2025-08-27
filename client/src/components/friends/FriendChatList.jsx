@@ -302,6 +302,7 @@ const FriendChatList = () => {
           isOpen={chatBoxOpen}
           onClose={closeChat}
           friend={selectedFriend}
+          popupMode={true}
         />
       </div>
     </div>

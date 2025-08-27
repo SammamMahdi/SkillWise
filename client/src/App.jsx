@@ -17,6 +17,8 @@ import EditCourseForm from './components/courses/EditCourseForm'
 import AddLectureForm from './components/courses/AddLectureForm'
 import CourseDetail from './components/courses/CourseDetail'
 import StudentCourseView from './components/courses/StudentCourseView'
+import LectureView from './components/courses/LectureView'
+import EnhancedLectureView from './components/courses/EnhancedLectureView'
 import Dashboard from './components/dashboard/Dashboard'
 import FriendsPage from './components/friends/FriendsPage'
 import FriendChatList from './components/friends/FriendChatList'
@@ -166,6 +168,11 @@ function AppRoutes() {
       <Route path="/courses/:id" element={
         <AgeVerificationWrapper>
           <StudentCourseView />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/courses/:courseId/lecture/:lectureIndex" element={
+        <AgeVerificationWrapper>
+          <LectureView />
         </AgeVerificationWrapper>
       } />
       <Route path="/courses/:id/admin" element={

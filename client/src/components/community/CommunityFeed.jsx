@@ -7,6 +7,7 @@ import PostHighlighter from './PostHighlighter'
 import ThreeJSBackground from './ThreeJSBackground'
 import CommunityHeader from './CommunityHeader'
 import FloatingActionButton from './FloatingActionButton'
+import UniversalTopBar from '../common/UniversalTopBar'
 import { useCommunityFeed } from '../../hooks/useCommunityFeed'
 
 const CommunityFeed = () => {
@@ -108,23 +109,16 @@ const CommunityFeed = () => {
   
   return (
     <>
+      <UniversalTopBar />
+
       {/* Three.js Background */}
       <ThreeJSBackground />
-      
+
       {/* Main Content */}
       <div className="relative z-10 min-h-screen bg-gradient-to-br from-gray-50/50 via-white/50 to-gray-100/50 dark:from-gray-900/50 dark:via-gray-800/50 dark:to-gray-900/50">
         <div className="max-w-6xl mx-auto">
-          
-          {/* Back to Dashboard Button */}
-          <div className="px-6 pt-6">
-              <button
-              onClick={handleBackToDashboard}
-              className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 hover:shadow-lg"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
-            </button>
-                </div>
+
+
           
           {/* Community Header */}
           <CommunityHeader 

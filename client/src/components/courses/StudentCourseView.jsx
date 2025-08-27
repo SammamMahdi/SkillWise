@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  BookOpen, ArrowLeft, Play, Lock, CheckCircle, XCircle, 
+import {
+  BookOpen, ArrowLeft, Play, Lock, CheckCircle, XCircle,
   ChevronDown, ChevronRight, Video, File, FileText, Clock,
   User, Calendar, Award, Target, BarChart3, Eye, EyeOff,
   Loader2, AlertCircle, CheckSquare, Square, PlayCircle,
-  Download, ExternalLink, Bookmark, BookmarkCheck
+  Download, ExternalLink, Bookmark, BookmarkCheck, Sparkles,
+  TrendingUp, Star, Users, Globe
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getCourse, checkEnrollment, enroll } from '../../services/courseService';
@@ -14,12 +15,12 @@ import examService from '../../services/examService';
 import toast from 'react-hot-toast';
 import ExamWarningModal from '../exams/ExamWarningModal';
 import ChildLockModal from '../common/ChildLockModal';
-import DashboardButton from '../common/DashboardButton';
+import UniversalTopBar from '../common/UniversalTopBar';
 import StudentCourseHeader from './StudentCourseHeader'
 import StudentCourseStats from './StudentCourseStats'
 import StudentLectureList from './StudentLectureList'
+import CourseThreeJSBackground from './CourseThreeJSBackground';
 import { useTheme } from '../../contexts/ThemeContext'
-import bg from '../auth/a.jpg'
 
 export default function StudentCourseView() {
   const { id } = useParams();
@@ -632,75 +633,197 @@ export default function StudentCourseView() {
   const { theme } = useTheme()
 
   return (
-    <section
-      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
-        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
-      }`}
-      style={theme === 'dark' ? {
-        backgroundImage: `url(${bg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      } : {}}
-    >
-      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
-        theme === 'dark' 
-          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
-          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
-      }`} />
+    <>
+      <UniversalTopBar />
+      <CourseThreeJSBackground />
+      <section className="relative min-h-screen overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-900 dark:via-blue-950/30 dark:to-purple-950/20">
+        {/* Glass morphism overlay */}
+        <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <StudentCourseHeader
-          title={course.title}
-          description={course.description}
-          onBack={() => navigate('/courses')}
-          onAdminView={() => navigate(`/courses/${id}/admin`)}
-          showAdminView={user?.role === 'Teacher' || user?.role === 'Admin'}
-        />
-              {/* Progress Bar */}
-              {enrollment && (
-          <div className="mb-6 lg:w-2/3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Course Progress</span>
-                    <span className="text-sm text-foreground/60">{progress}%</span>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Enhanced Course Header */}
+        <div className="mb-8">
+          <div className="bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-white/10 p-8 shadow-2xl">
+            {/* Course Title and Info */}
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-4 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl backdrop-blur-sm">
+                    <BookOpen className="w-8 h-8 text-primary" />
                   </div>
-                  <div className="w-full bg-card/50 rounded-full h-3">
-              <div className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                  <div>
+                    <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                      {course.title}
+                    </h1>
+                    <div className="flex items-center gap-4 text-sm text-foreground/60">
+                      <div className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        <span>{course.teacher?.name || 'Unknown Teacher'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{course.lectures?.length || 0} Lectures</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{course.enrolledCount || 0} Students</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-              {!enrollment && (
-          <button onClick={handleEnroll} disabled={enrolling} className="px-8 py-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2">
-            {enrolling ? (<><Loader2 className="w-5 h-5 animate-spin" /> Enrolling...</>) : (<><BookOpen className="w-5 h-5" /> Enroll in Course</>)}
-                </button>
-              )}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          <div className="lg:col-span-2">
-            {course.lectures?.length > 0 ? (
-              <StudentLectureList
-                course={course}
-                enrollment={enrollment}
-                lectureProgress={lectureProgress}
-                expandedLectures={expandedLectures}
-                toggleLectureExpansion={toggleLectureExpansion}
-                markLectureComplete={markLectureComplete}
-                handleViewContent={setSelectedContent}
-                handleTakeExam={handleTakeExam}
-              />
-            ) : (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-foreground/40 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
-            <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
+
+                <p className="text-foreground/70 text-lg leading-relaxed mb-6">
+                  {course.description}
+                </p>
+
+                {/* Course Tags */}
+                {course.tags && course.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {course.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium border border-primary/20"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 lg:min-w-[200px]">
+                {(user?.role === 'Teacher' || user?.role === 'Admin') && (
+                  <button
+                    onClick={() => navigate(`/courses/${id}/admin`)}
+                    className="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/30 transition-all duration-300 backdrop-blur-sm"
+                  >
+                    Admin View
+                  </button>
+                )}
+
+                {!enrollment && (
+                  <button
+                    onClick={handleEnroll}
+                    disabled={enrolling}
+                    className="px-6 py-3 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {enrolling ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enrolling...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Enroll Now
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Progress Section */}
+        {enrollment && (
+          <div className="mb-8">
+            <div className="bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 p-6 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl">
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Course Progress</h3>
+                    <p className="text-sm text-foreground/60">Keep up the great work!</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">{progress}%</div>
+                  <div className="text-xs text-foreground/60">Complete</div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="w-full bg-white/20 dark:bg-black/20 rounded-full h-4 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-primary via-purple-500 to-blue-500 h-4 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-foreground/50 mt-2">
+                  <span>Started</span>
+                  <span>In Progress</span>
+                  <span>Completed</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-          </div>
-          <StudentCourseStats course={course} enrollment={enrollment} progress={progress} />
-        </div>
-      </div>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Lectures Section */}
+          <div className="lg:col-span-3">
+            <div className="bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-xl overflow-hidden">
+              <div className="p-6 border-b border-white/20 dark:border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl">
+                    <PlayCircle className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">Course Content</h2>
+                    <p className="text-sm text-foreground/60">{course.lectures?.length || 0} lectures available</p>
+                  </div>
+                </div>
+              </div>
 
-      {/* Content Modal */}
+              <div className="p-6">
+                {course.lectures?.length > 0 ? (
+                  <StudentLectureList
+                    course={course}
+                    enrollment={enrollment}
+                    lectureProgress={lectureProgress}
+                    expandedLectures={expandedLectures}
+                    toggleLectureExpansion={toggleLectureExpansion}
+                    markLectureComplete={markLectureComplete}
+                    handleViewContent={setSelectedContent}
+                    handleTakeExam={handleTakeExam}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="p-4 bg-gradient-to-r from-gray-500/10 to-slate-500/10 rounded-2xl w-fit mx-auto mb-4">
+                      <BookOpen className="w-16 h-16 text-foreground/40" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No Content Available</h3>
+                    <p className="text-foreground/60">This course doesn't have any lectures yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          {/* Course Stats Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Course Stats</h3>
+                  <p className="text-sm text-foreground/60">Your progress</p>
+                </div>
+              </div>
+
+              <StudentCourseStats course={course} enrollment={enrollment} progress={progress} />
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* Content Modal */}
       {showContentModal && selectedContent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background border border-border rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -716,37 +839,85 @@ export default function StudentCourseView() {
 
             {selectedContent.type === 'video' ? (
               <div className="space-y-4">
-                <div className="aspect-video bg-black rounded-xl overflow-hidden">
-                  {selectedContent.url && (
+                <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
+                  {selectedContent.url ? (
                     (() => {
                       const url = selectedContent.url;
                       let embedUrl = url;
-                      
+                      let isValidVideo = false;
+
+                      // Handle YouTube URLs
                       if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
-                        const videoId = url.includes('youtube.com/watch') 
+                        const videoId = url.includes('youtube.com/watch')
                           ? url.split('v=')[1]?.split('&')[0]
                           : url.split('youtu.be/')[1]?.split('?')[0];
-                        
+
                         if (videoId) {
-                          embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                        }
-                      } else if (url.includes('vimeo.com/')) {
-                        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-                        if (videoId) {
-                          embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                          embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&showinfo=0&controls=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`;
+                          isValidVideo = true;
                         }
                       }
-                      
-                      return (
+                      // Handle Vimeo URLs
+                      else if (url.includes('vimeo.com/')) {
+                        const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+                        if (videoId && !isNaN(videoId)) {
+                          embedUrl = `https://player.vimeo.com/video/${videoId}`;
+                          isValidVideo = true;
+                        }
+                      }
+                      // Handle direct video URLs (mp4, webm, etc.)
+                      else if (url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i)) {
+                        return (
+                          <video
+                            controls
+                            className="w-full h-full"
+                            preload="metadata"
+                          >
+                            <source src={url} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        );
+                      }
+                      // For other URLs, try as iframe
+                      else {
+                        embedUrl = url;
+                        isValidVideo = true;
+                      }
+
+                      return isValidVideo ? (
                         <iframe
                           src={embedUrl}
                           title={selectedContent.title}
-                          className="w-full h-full"
+                          className="w-full h-full border-0"
                           allowFullScreen
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          loading="lazy"
                         />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-white">
+                          <div className="text-center">
+                            <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                            <p className="text-lg mb-2">Unable to load video</p>
+                            <p className="text-sm opacity-75">Invalid video URL format</p>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline mt-2 inline-block"
+                            >
+                              Open in new tab
+                            </a>
+                          </div>
+                        </div>
                       );
                     })()
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-white">
+                      <div className="text-center">
+                        <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-lg">No video URL provided</p>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -814,13 +985,14 @@ export default function StudentCourseView() {
         />
       )}
 
-      {/* Child Lock Modal */}
-      <ChildLockModal
-        isOpen={showChildLockModal}
-        onClose={() => setShowChildLockModal(false)}
-        onVerify={handleChildLockVerify}
-        feature="course_enrollment"
-      />
-    </section>
+        {/* Child Lock Modal */}
+        <ChildLockModal
+          isOpen={showChildLockModal}
+          onClose={() => setShowChildLockModal(false)}
+          onVerify={handleChildLockVerify}
+          feature="course_enrollment"
+        />
+      </section>
+    </>
   );
 }

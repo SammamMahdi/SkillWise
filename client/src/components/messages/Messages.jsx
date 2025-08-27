@@ -3,7 +3,7 @@ import { MessageCircle, Clock, User, AlertTriangle, Shield } from 'lucide-react'
 import { messagesService } from '../../services/messagesService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
-import DashboardButton from '../common/DashboardButton';
+import UniversalTopBar from '../common/UniversalTopBar';
 import ChatBox from './ChatBox';
 
 const Messages = () => {
@@ -109,15 +109,17 @@ const Messages = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6 transition-colors">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
-              <div className="flex items-center space-x-2">
-                <p className="text-foreground/60">Your skill-related conversations</p>
-                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
+    <>
+      <UniversalTopBar />
+      <div className="min-h-screen bg-background p-6 transition-colors">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
+                <div className="flex items-center space-x-2">
+                  <p className="text-foreground/60">Your skill-related conversations</p>
+                  <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
                   !chatBoxOpen ? 'text-green-500 opacity-100' : 'text-foreground/40 opacity-60'
                 }`}>
                   <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
@@ -136,7 +138,6 @@ const Messages = () => {
                 <Shield className="w-4 h-4" />
                 <span>Friend Chats</span>
               </Link>
-              <DashboardButton />
             </div>
           </div>
         </div>
@@ -266,7 +267,8 @@ const Messages = () => {
           />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

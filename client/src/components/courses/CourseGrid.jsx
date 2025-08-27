@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle } from 'lucide-react';
+import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle, Sparkles, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import bg from '../auth/a.jpg';
 import { listCourses, enroll, checkEnrollment } from '../../services/courseService';
 import { canSeeInternal, hasTeacherPermissions } from '../../utils/permissions';
-import ThemeToggle from '../common/ThemeToggle';
-import DashboardButton from '../common/DashboardButton';
+import UniversalTopBar from '../common/UniversalTopBar';
+import CourseThreeJSBackground from './CourseThreeJSBackground';
 
 // Debounce hook for search
 const useDebounce = (value, delay) => {
@@ -206,79 +206,85 @@ export default function CourseGrid() {
   }
 
   return (
-    <section
-      className={`relative min-h-screen overflow-y-auto transition-all duration-500 ${
-        theme === 'dark' ? 'auth-bg-dark' : 'auth-bg-light'
-      }`}
-      style={theme === 'dark' ? {
-        backgroundImage: `url(${bg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      } : {}}
-    >
-      <div className={`pointer-events-none absolute inset-0 transition-all duration-500 ${
-        theme === 'dark' 
-          ? 'bg-gradient-to-br from-black/60 via-slate-900/45 to-blue-950/60'
-          : 'bg-gradient-to-br from-white/20 via-white/10 to-transparent'
-      }`} />
+    <>
+      <UniversalTopBar variant="transparent" />
+      <CourseThreeJSBackground />
+      <section className="relative min-h-screen overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-900 dark:via-blue-950/30 dark:to-purple-950/20">
+        {/* Glass morphism overlay */}
+        <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]" />
 
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-2 h-2 bg-primary/30 rounded-full animate-pulse-subtle"></div>
-        <div className="absolute top-40 right-20 w-1 h-1 bg-primary/20 rounded-full animate-float"></div>
-        <div className="absolute bottom-40 left-1/4 w-1.5 h-1.5 bg-primary/25 rounded-full animate-bounce-gentle"></div>
-        <div className="absolute top-1/2 right-1/3 w-1 h-1 bg-primary/15 rounded-full animate-pulse-subtle"></div>
-      </div>
-
-      <div className="relative z-10 p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header Section with Dashboard and Theme buttons */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <DashboardButton variant="secondary" />
-              
-              {/* Theme Toggle */}
-              <ThemeToggle size="md" />
+        <div className="relative z-10 p-6">
+          <div className="max-w-7xl mx-auto">
+            {/* Header Section with Glass Card */}
+            <div className="mb-8">
+              <div className="bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-white/10 p-8 shadow-2xl">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="p-3 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl backdrop-blur-sm">
+                      <BookOpen className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-2xl backdrop-blur-sm">
+                      <Sparkles className="w-8 h-8 text-blue-500" />
+                    </div>
+                    <div className="p-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-2xl backdrop-blur-sm">
+                      <TrendingUp className="w-8 h-8 text-green-500" />
+                    </div>
+                  </div>
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+                    Explore Courses
+                  </h1>
+                  <p className="text-foreground/70 text-xl max-w-2xl mx-auto">
+                    Discover premium courses designed to elevate your skills and accelerate your learning journey
+                  </p>
+                  <div className="flex items-center justify-center gap-6 mt-6 text-sm text-foreground/60">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span>{courses.length} Active Courses</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span>Expert Instructors</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <span>Interactive Learning</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <div className="text-center">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-3">
-                Explore Courses
-              </h1>
-              <p className="text-foreground/60 text-lg">Discover and enroll to level up your skills</p>
-            </div>
-          </div>
 
           {/* Search and Filters */}
           <div className="mb-8 space-y-6">
             {/* Search Bar */}
             <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-foreground/40 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search courses by title, description, or tags..."
-                value={searchQuery}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSearchQuery(value);
-                  // Clear error when user starts typing
-                  if (err) setErr('');
-                }}
-                className={`w-full pl-12 pr-4 py-4 bg-card/80 backdrop-blur-sm border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-lg ${
-                  searchQuery ? 'border-primary/50 bg-primary/10' : ''
-                }`}
-              />
-              {searchLoading && (
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                </div>
-              )}
-              {searchQuery && !searchLoading && (
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                </div>
-              )}
+              <div className="bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 p-1 shadow-xl">
+                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-foreground/50 w-5 h-5 z-10" />
+                <input
+                  type="text"
+                  placeholder="Search courses by title, description, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+                    // Clear error when user starts typing
+                    if (err) setErr('');
+                  }}
+                  className={`w-full pl-14 pr-4 py-4 bg-white/20 dark:bg-black/20 backdrop-blur-sm border-0 rounded-xl focus:ring-2 focus:ring-primary/50 focus:outline-none transition-all duration-300 text-lg placeholder:text-foreground/50 hover:bg-white/30 dark:hover:bg-black/30 ${
+                    searchQuery ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+                  }`}
+                />
+                {searchLoading && (
+                  <div className="absolute right-6 top-1/2 transform -translate-y-1/2 z-10">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                  </div>
+                )}
+                {searchQuery && !searchLoading && (
+                  <div className="absolute right-6 top-1/2 transform -translate-y-1/2 z-10">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Search Results Count */}
@@ -375,26 +381,37 @@ export default function CourseGrid() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-all duration-300 ease-in-out">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 transition-all duration-300 ease-in-out">
                   {courses.map((c, index) => (
-                    <div 
-                      key={c._id} 
-                      className="group bg-card/80 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-1 animate-fadeIn hover:border-primary/30 hover:ring-1 hover:ring-primary/30"
-                      style={{ animationDelay: `${index * 50}ms` }}
+                    <div
+                      key={c._id}
+                      className="group bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/20 transition-all duration-500 transform hover:-translate-y-2 animate-fadeIn hover:border-primary/40 hover:bg-white/20 dark:hover:bg-black/20"
+                      style={{ animationDelay: `${index * 100}ms` }}
                     >
-                      <div className="relative h-48 bg-gradient-to-br from-primary/20 via-primary/30 to-primary/40 flex items-center justify-center group-hover:from-primary/30 group-hover:via-primary/40 group-hover:to-primary/50 transition-all duration-300">
-                        <BookOpen className="w-16 h-16 text-primary group-hover:scale-110 transition-transform duration-300" />
+                      <div className="relative h-52 bg-gradient-to-br from-primary/10 via-purple-500/10 to-blue-500/10 flex items-center justify-center group-hover:from-primary/20 group-hover:via-purple-500/20 group-hover:to-blue-500/20 transition-all duration-500 overflow-hidden">
+                        {/* Animated background elements */}
+                        <div className="absolute inset-0 opacity-30">
+                          <div className="absolute top-4 right-4 w-8 h-8 bg-primary/20 rounded-full animate-pulse"></div>
+                          <div className="absolute bottom-6 left-6 w-4 h-4 bg-blue-500/20 rounded-full animate-bounce"></div>
+                          <div className="absolute top-1/2 left-1/3 w-2 h-2 bg-purple-500/20 rounded-full animate-ping"></div>
+                        </div>
+                        <div className="relative z-10 p-6 text-center">
+                          <BookOpen className="w-20 h-20 text-primary group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 mx-auto mb-2" />
+                          <div className="text-xs font-medium text-foreground/60 uppercase tracking-wider">Course</div>
+                        </div>
                         {c.price === 0 && (
-                          <span className="absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Free</span>
+                          <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm">Free</span>
+                        )}
+                        {c.price > 0 && (
+                          <span className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-xs font-bold bg-primary/20 text-primary border border-primary/30 backdrop-blur-sm">${c.price}</span>
                         )}
                       </div>
 
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="text-xl font-bold line-clamp-2 text-foreground group-hover:text-primary transition-colors duration-200">{c.title}</h3>
+                      <div className="p-6 bg-white/5 dark:bg-black/5 backdrop-blur-sm">
+                        <div className="mb-4">
+                          <h3 className="text-xl font-bold line-clamp-2 text-foreground group-hover:text-primary transition-colors duration-300 mb-2">{c.title}</h3>
+                          <p className="text-foreground/70 text-sm line-clamp-2 leading-relaxed">{c.description}</p>
                         </div>
-
-                        <p className="text-foreground/70 text-sm mb-4 line-clamp-2 leading-relaxed">{c.description}</p>
 
                         <div className="space-y-3 mb-4">
                           <div className="flex items-center justify-between text-xs text-foreground/70">
@@ -519,5 +536,6 @@ export default function CourseGrid() {
         </div>
       </div>
     </section>
+    </>
   );
 }

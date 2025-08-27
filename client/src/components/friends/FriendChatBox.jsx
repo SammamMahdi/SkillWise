@@ -21,12 +21,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import bg from '../auth/evening-b2g.jpg';
 
-const FriendChatBox = ({ 
-  isOpen, 
-  onClose, 
+const FriendChatBox = ({
+  isOpen,
+  onClose,
   friend,
   fullScreen = false,
-  mobileMode = false
+  mobileMode = false,
+  popupMode = false
 }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -56,7 +57,7 @@ const FriendChatBox = ({
     if (isOpen && friend) {
       fetchMessages();
       
-      // Simple auto-refresh interval - only create once
+      // High-frequency auto-refresh interval for real-time messaging
       const interval = setInterval(() => {
         // Only refresh if user is not actively typing and chat is visible
         if (!isTyping && !loading && !sending && document.visibilityState === 'visible') {
@@ -78,7 +79,7 @@ const FriendChatBox = ({
             })
             .catch(error => console.error('Auto-refresh error:', error));
         }
-      }, 5000); // Refresh every 5 seconds
+      }, 100); // Refresh every 100ms for real-time experience
       
       refreshIntervalRef.current = interval;
       
@@ -142,14 +143,14 @@ const FriendChatBox = ({
   // Calculate header height dynamically
   useEffect(() => {
     const calculateHeaderHeight = () => {
-      let height = 73; // Base header height
-      height += 42; // Security notice height
+      let height = 60; // Reduced base header height
+      height += 32; // Reduced security notice height
       if (previewMode && selectedFile) {
-        height += selectedFile.type.startsWith('image/') ? 180 : 100; // File preview height
+        height += selectedFile.type.startsWith('image/') ? 120 : 80; // Reduced file preview height
       }
       setHeaderHeight(height);
     };
-    
+
     calculateHeaderHeight();
   }, [previewMode, selectedFile]);
 
@@ -419,10 +420,15 @@ const FriendChatBox = ({
   if (!isOpen) return null;
 
   const modal = (
-    <div className={fullScreen ? "flex flex-col h-full" : mobileMode ? "flex flex-col h-full" : "fixed inset-0 z-50 flex"}>
+    <div className={
+      fullScreen ? "flex flex-col h-full" :
+      mobileMode ? "flex flex-col h-full" :
+      popupMode ? "fixed inset-0 z-50 flex items-center justify-center p-4" :
+      "fixed inset-0 z-50 flex"
+    }>
       {/* Backdrop - only show if not fullScreen and not mobileMode */}
       {!fullScreen && !mobileMode && (
-        <div 
+        <div
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
@@ -443,85 +449,80 @@ const FriendChatBox = ({
       
       {/* Chat Window */}
       <div className={
-        fullScreen 
-          ? "relative w-full h-full bg-black/20 backdrop-blur-xl border-l border-white/10 overflow-hidden"
+        fullScreen
+          ? "relative w-full h-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border-l border-white/20 dark:border-white/10 overflow-hidden"
           : mobileMode
-          ? "relative w-full h-full bg-black/20 backdrop-blur-xl max-h-[70vh] overflow-hidden"
-          : "relative w-full max-w-lg mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl max-h-[60vh] overflow-hidden"
+          ? "relative w-full h-full bg-white/10 dark:bg-black/20 backdrop-blur-xl overflow-hidden rounded-t-3xl"
+          : popupMode
+          ? "relative w-full max-w-2xl h-[600px] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+          : "relative w-full max-w-2xl mx-auto my-4 bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl max-h-[70vh] overflow-hidden"
       }>
         {/* Header */}
-        <div 
+        <div
           ref={headerRef}
           className={
-            fullScreen 
-              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+            fullScreen
+              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/20 backdrop-blur-sm"
               : mobileMode
-              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
-              : "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg"
+              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/20 backdrop-blur-sm rounded-t-3xl"
+              : popupMode
+              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/20 backdrop-blur-sm rounded-t-3xl"
+              : "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/20 dark:border-white/10 bg-white/10 dark:bg-black/20 backdrop-blur-sm rounded-t-3xl"
           }>
           <div className="flex items-center space-x-3">
             <button
               onClick={onClose}
-              className={
-                fullScreen || mobileMode
-                  ? "p-1 hover:bg-white/10 rounded-lg transition-colors text-white"
-                  : "p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
-              }
+              className="p-2 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-colors text-white"
             >
-              <ArrowLeft className={
-                fullScreen || mobileMode 
-                  ? "w-5 h-5 text-white" 
-                  : "w-5 h-5 text-foreground/60"
-              } />
+              <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-              {friend?.avatar ? (
-                <img 
-                  src={friend.avatar} 
-                  alt={friend.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-5 h-5 text-primary" />
-              )}
+
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 flex items-center justify-center overflow-hidden ring-2 ring-white/20">
+                {friend?.avatar ? (
+                  <img
+                    src={friend.avatar}
+                    alt={friend.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-blue-400" />
+                )}
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
-            
+
             <div className="min-w-0 flex-1">
-              <h3 className={
-                fullScreen || mobileMode
-                  ? "font-semibold text-white truncate"
-                  : "font-semibold text-foreground truncate"
-              }>
+              <h3 className="font-semibold text-white truncate text-lg">
                 {friend?.name}
               </h3>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-1">
-                  <Shield className="w-3 h-3 text-green-500" />
-                  <span className="text-xs text-green-500">End-to-end encrypted</span>
+                  <Shield className="w-3 h-3 text-green-400" />
+                  <span className="text-xs text-green-400">End-to-end encrypted</span>
                 </div>
-                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 text-foreground/40 opacity-60`}>
-                  <div className={`w-2 h-2 rounded-full transition-all duration-300 bg-foreground/30`}></div>
-                  <span className="transition-all duration-300">Live</span>
+                <div className="flex items-center space-x-1 text-xs text-white/60">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span>Online</span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <button
             onClick={onClose}
-            className="p-1 hover:bg-accent rounded-lg transition-colors hidden md:block"
+            className="p-2 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-colors hidden md:block"
           >
-            <X className="w-5 h-5 text-foreground/60" />
+            <X className="w-5 h-5 text-white/70 hover:text-white" />
           </button>
         </div>
 
         {/* Security Notice */}
-        <div className="absolute top-[73px] left-0 right-0 z-10 px-4 py-2 border-b border-border bg-green-50 dark:bg-green-900/20 backdrop-blur-sm">
+        <div className="absolute left-0 right-0 z-10 px-4 py-2 border-b border-white/20 dark:border-white/10 bg-green-500/10 backdrop-blur-sm top-[80px]">
           <div className="flex items-center space-x-2">
-            <Shield className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-            <p className="text-xs text-green-800 dark:text-green-200">
-              Your conversation is protected with end-to-end encryption. Only you and {friend?.name} can read these messages.
+            <Shield className="w-3 h-3 text-green-400 flex-shrink-0" />
+            <p className="text-xs text-green-300">
+              End-to-end encrypted • Only you and {friend?.name} can read these messages
             </p>
           </div>
         </div>
@@ -710,8 +711,10 @@ const FriendChatBox = ({
         {/* Input Area */}
         <div className={
           fullScreen || mobileMode
-            ? "absolute bottom-0 left-0 right-0 z-10 border-t border-white/10 p-4 bg-black/20 backdrop-blur-sm"
-            : "absolute bottom-0 left-0 right-0 z-10 border-t border-border p-4 bg-background/95 backdrop-blur-sm rounded-b-lg"
+            ? "absolute bottom-0 left-0 right-0 z-10 border-t border-white/10 p-3 bg-black/30 backdrop-blur-sm safe-area-bottom"
+            : popupMode
+            ? "absolute bottom-0 left-0 right-0 z-10 border-t border-white/20 dark:border-white/10 p-4 bg-white/10 dark:bg-black/20 backdrop-blur-sm rounded-b-3xl"
+            : "absolute bottom-0 left-0 right-0 z-10 border-t border-border p-3 bg-background/95 backdrop-blur-sm rounded-b-lg"
         }>
           <form onSubmit={handleSendMessage} className="flex items-end space-x-2">
             <div className="flex-1 relative">
@@ -724,7 +727,9 @@ const FriendChatBox = ({
                 onBlur={() => setIsTyping(false)}
                 placeholder={selectedFile ? "Add a caption..." : "Type your encrypted message..."}
                 disabled={sending}
-                className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground resize-none placeholder:text-foreground/40 transition-all duration-200 max-h-32"
+                className={`w-full px-3 py-3 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground resize-none placeholder:text-foreground/40 transition-all duration-200 max-h-32 ${
+                  mobileMode ? 'text-base min-h-[44px]' : 'text-sm'
+                }`}
                 rows="1"
                 maxLength={1000}
               />
@@ -738,7 +743,9 @@ const FriendChatBox = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-all duration-200"
+              className={`p-3 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-all duration-200 ${
+                mobileMode ? 'min-w-[44px] min-h-[44px]' : 'p-2'
+              }`}
               disabled={sending}
             >
               <Paperclip className="w-5 h-5" />
@@ -748,7 +755,9 @@ const FriendChatBox = ({
             <button
               type="submit"
               disabled={(!newMessage.trim() && !selectedFile) || sending}
-              className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[40px]"
+              className={`bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${
+                mobileMode ? 'p-3 min-w-[44px] min-h-[44px]' : 'p-2 min-w-[40px]'
+              }`}
             >
               {sending ? (
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />

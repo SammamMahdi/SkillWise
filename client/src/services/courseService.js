@@ -11,7 +11,7 @@ export async function listCourses(params = {}) {
 
 export async function getCourse(id) {
   const { data } = await axios.get(`${API}/courses/${id}`);
-  return data; // expect { ok, course }
+  return data; // expect { success, data: course }
 }
 
 // ---------- writes ----------

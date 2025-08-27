@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate, useParams } from 'react-router-dom';
 import { notesService } from '../../services/notesService';
+import UniversalTopBar from '../common/UniversalTopBar';
 
 const NotesPage = () => {
   const [notes, setNotes] = useState([]);
@@ -217,7 +218,9 @@ const NotesPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <>
+      <UniversalTopBar />
+      <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -581,8 +584,9 @@ const NotesPage = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
