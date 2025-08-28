@@ -1,6 +1,6 @@
 import React from 'react'
 
-const StudentCourseStats = ({ course, enrollment, progress }) => {
+const StudentCourseStats = ({ course, enrollment, progress, serverProgress }) => {
   return (
     <div className="space-y-6">
       <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
@@ -21,7 +21,7 @@ const StudentCourseStats = ({ course, enrollment, progress }) => {
           {enrollment && (
             <div className="flex items-center justify-between">
               <span className="text-foreground/60">Your Progress</span>
-              <span className="font-medium text-primary">{progress}%</span>
+              <span className="font-medium text-primary">{typeof serverProgress === 'number' ? Math.round(serverProgress) : progress}%</span>
             </div>
           )}
         </div>

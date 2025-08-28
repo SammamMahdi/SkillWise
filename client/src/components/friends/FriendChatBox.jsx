@@ -419,7 +419,7 @@ const FriendChatBox = ({
   if (!isOpen) return null;
 
   const modal = (
-    <div className={fullScreen ? "flex flex-col h-full" : mobileMode ? "flex flex-col h-full" : "fixed inset-0 z-50 flex"}>
+    <div className={fullScreen ? "fixed inset-0 z-50 flex flex-col h-full" : mobileMode ? "flex flex-col h-full" : "fixed inset-0 z-50 flex items-center justify-center"}>
       {/* Backdrop - only show if not fullScreen and not mobileMode */}
       {!fullScreen && !mobileMode && (
         <div 
@@ -444,10 +444,10 @@ const FriendChatBox = ({
       {/* Chat Window */}
       <div className={
         fullScreen 
-          ? "relative w-full h-full bg-black/20 backdrop-blur-xl border-l border-white/10 overflow-hidden"
+          ? "relative w-full h-full bg-black/20 backdrop-blur-2xl border-l border-white/10 overflow-hidden"
           : mobileMode
           ? "relative w-full h-full bg-black/20 backdrop-blur-xl max-h-[70vh] overflow-hidden"
-          : "relative w-full max-w-lg mx-auto my-4 bg-background border border-border rounded-lg shadow-2xl max-h-[60vh] overflow-hidden"
+          : "relative w-[90vw] md:w-3/4 lg:w-1/2 h-[80vh] bg-background/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
       }>
         {/* Header */}
         <div 

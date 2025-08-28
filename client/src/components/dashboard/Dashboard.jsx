@@ -106,7 +106,10 @@ const Dashboard = () => {
       const transformed = {
         id: enrollment._id,
         title: course.title || 'Course Title',
-        progressPct: enrollment.progress || 0,
+        // Prefer overallProgress from enrollment; fallback to legacy progress or 0
+        progressPct: typeof enrollment.overallProgress === 'number' 
+          ? enrollment.overallProgress 
+          : (typeof enrollment.progress === 'number' ? enrollment.progress : 0),
         lastLessonTitle: course.lectures?.[enrollment.currentLectureIndex || 0]?.title || '—',
         startedAt: new Date().toISOString(), // Use current date as fallback since enrolledAt doesn't exist
         percentileInCourse: 0.5, // This would need to be calculated based on other students' progress

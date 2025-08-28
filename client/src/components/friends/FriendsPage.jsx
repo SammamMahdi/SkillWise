@@ -284,9 +284,9 @@ const FriendsPage = () => {
 
         {/* Main Content */}
         <div className="relative z-10 min-h-screen">
-          <div className="max-w-5xl mx-auto p-4">
+          <div className="max-w-7xl mx-auto p-6">
             {/* Header */}
-            <div className="mb-4 bg-white/10 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 p-4">
+            <div className="mb-6 bg-white/10 dark:bg-black/20 backdrop-blur-2xl rounded-3xl border border-white/20 dark:border-white/10 p-6 shadow-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl">
@@ -314,7 +314,7 @@ const FriendsPage = () => {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex bg-white/10 dark:bg-black/20 backdrop-blur-xl rounded-xl p-1 gap-1 mb-4">
+            <div className="flex bg-white/10 dark:bg-black/20 backdrop-blur-xl rounded-2xl p-1.5 gap-2 mb-6 shadow-lg">
               {[
                 { id: 'friends', label: 'My Friends', icon: Users, count: friends.length },
                 { id: 'search', label: 'Find Friends', icon: Search },
@@ -344,7 +344,7 @@ const FriendsPage = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white/10 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 p-4">
+            <div className="bg-white/10 dark:bg-black/20 backdrop-blur-2xl rounded-3xl border border-white/20 dark:border-white/10 p-6 shadow-xl">
               {activeTab === 'friends' && (
                 <div>
                   <h2 className="text-lg font-semibold mb-4 text-white">My Friends ({friends.length})</h2>

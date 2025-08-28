@@ -21,6 +21,7 @@ import StudentCourseStats from './StudentCourseStats'
 import StudentLectureList from './StudentLectureList'
 import CourseThreeJSBackground from './CourseThreeJSBackground';
 import { useTheme } from '../../contexts/ThemeContext'
+import modernSystem from '../../services/modernSystem'
 
 export default function StudentCourseView() {
   const { id } = useParams();
@@ -41,6 +42,7 @@ export default function StudentCourseView() {
   const [selectedExam, setSelectedExam] = useState(null);
   const [lectureProgress, setLectureProgress] = useState({});
   const [courseExams, setCourseExams] = useState([]);
+  const [serverCourseProgress, setServerCourseProgress] = useState(null);
 
   // Load course and enrollment data
   useEffect(() => {
@@ -94,6 +96,15 @@ export default function StudentCourseView() {
           } catch (enrollmentError) {
             console.error('Error loading enrollment details:', enrollmentError);
           }
+        }
+
+        // Always load server-side course progress from lecture system (extradictionary1)
+        try {
+          const resp = await modernSystem.progress.getCourseProgress(id);
+          const data = resp.data || resp;
+          setServerCourseProgress(data);
+        } catch (e) {
+          // non-fatal, UI will fallback to local calculation
         }
       } catch (err) {
         setError(err.message || 'Failed to load course');
@@ -639,6 +650,10 @@ export default function StudentCourseView() {
   }
 
   const progress = calculateProgress;
+  const progressFromServer = typeof serverCourseProgress?.overallProgress === 'number'
+    ? serverCourseProgress.overallProgress
+    : (typeof serverCourseProgress?.overallPercentage === 'number' ? serverCourseProgress.overallPercentage : null);
+  const progressValue = progressFromServer !== null ? Math.round(progressFromServer) : progress;
 
   return (
     <>
@@ -748,7 +763,7 @@ export default function StudentCourseView() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">{progress}%</div>
+                  <div className="text-2xl font-bold text-primary">{progressValue}%</div>
                   <div className="text-xs text-foreground/60">Complete</div>
                 </div>
               </div>
@@ -757,7 +772,7 @@ export default function StudentCourseView() {
                 <div className="w-full bg-white/20 dark:bg-black/20 rounded-full h-4 overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-primary via-purple-500 to-blue-500 h-4 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${progressValue}%` }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
                   </div>
@@ -825,7 +840,12 @@ export default function StudentCourseView() {
                 </div>
               </div>
 
-              <StudentCourseStats course={course} enrollment={enrollment} progress={progress} />
+              <StudentCourseStats 
+                course={course} 
+                enrollment={enrollment} 
+                progress={progressValue} 
+                serverProgress={progressFromServer}
+              />
             </div>
           </div>
         </div>
