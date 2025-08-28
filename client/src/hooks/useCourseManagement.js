@@ -419,7 +419,7 @@ export function useCourseManagement() {
           isExam: !!l.isExam,
           timeLimit: l.timeLimit ? Number(l.timeLimit) : undefined,
           shuffleQuestions: !!l.shuffleQuestions,
-          exam: null, // Don't send exam object here, it will be created separately
+          exam: (l.exam && l.exam._id) ? l.exam._id : null, // Preserve existing exam ObjectIds
           examRequired: !!l.examRequired,
           passingScore: l.passingScore ? Number(l.passingScore) : 60,
           estimatedDuration: l.estimatedDuration ? Number(l.estimatedDuration) : undefined,
@@ -434,7 +434,7 @@ export function useCourseManagement() {
           }))
         })),
         examData: lectures
-          .filter(l => l.exam && typeof l.exam === 'object' && l.exam.questions)
+          .filter(l => l.exam && typeof l.exam === 'object' && l.exam.questions && !l.exam._id)
           .map(l => ({
             lectureIndex: lectures.indexOf(l),
             examData: l.exam

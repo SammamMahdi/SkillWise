@@ -413,7 +413,7 @@ router.put('/:id', verifyToken, express.json(), async (req, res) => {
         isExam: lecture.isExam || false,
         timeLimit: lecture.timeLimit,
         shuffleQuestions: lecture.shuffleQuestions || false,
-        exam: lecture.exam || null,
+        exam: (lecture.exam && typeof lecture.exam === 'string' && lecture.exam.match(/^[0-9a-fA-F]{24}$/)) ? lecture.exam : null, // Preserve valid ObjectIds
         examRequired: lecture.examRequired || false,
         passingScore: lecture.passingScore || 60,
         estimatedDuration: lecture.estimatedDuration,

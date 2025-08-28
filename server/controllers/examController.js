@@ -1028,7 +1028,7 @@ const getCourseExams = async (req, res) => {
     if (user.role === 'Student') {
       examsWithAttempts = await Promise.all(
         exams.map(async (exam) => {
-          const examObj = typeof exam.toObject === 'function' ? exam.toObject() : exam;
+          const examObj = exam;
           const attempts = await ExamAttempt.find({
             exam: examObj._id,
             student: userId
