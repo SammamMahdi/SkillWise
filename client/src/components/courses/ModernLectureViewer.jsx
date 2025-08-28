@@ -38,6 +38,8 @@ const ModernLectureViewer = () => {
 
   useEffect(() => {
     loadLectureData();
+    // Reset auto-quiz UI state when navigating between lectures/courses
+    setAutoQuizState({ started: false, answers: {}, warnings: 0, attempts: 0, locked: false, result: null });
   }, [courseId, lectureIndex]);
 
   useEffect(() => {
@@ -82,6 +84,14 @@ const ModernLectureViewer = () => {
       // Handle different response structures for progress
       const progressData = progressResponse.data || progressResponse;
       setProgress(progressData);
+      // If already completed, reflect in auto-quiz UI (without forcing locked for other lectures)
+      try {
+        const isCompleted = Array.isArray(progressData.lectureProgress)
+          && progressData.lectureProgress.some(lp => lp.lectureIndex === lectureIdx && (lp.status === 'completed' || lp.completed === true));
+        if (isCompleted) {
+          setAutoQuizState(prev => ({ ...prev, result: { passed: true } }));
+        }
+      } catch {}
 
       // Load quiz if exists
       if (lecture.modernQuiz || lecture.exam || (lecture.quiz && lecture.quiz.length > 0)) {
@@ -289,15 +299,17 @@ const ModernLectureViewer = () => {
       // non-fatal
     }
 
-    // Update progress if passed
-    if (passed) {
-      try {
-        const lp = await modernSystem.progress.getCourseProgress(courseId);
-        await modernSystem.progress.trackCompletion(courseId, lectureIdx, { contentViewed: true });
-      } catch {}
+    // Refresh progress regardless; server reads from extradictionary1
+    try {
+      const resp = await modernSystem.progress.getCourseProgress(courseId);
+      const newProgress = resp.data || resp;
+      setProgress(newProgress);
+      // if completed, lock and show completed message
+      const isCompleted = Array.isArray(newProgress.lectureProgress) && newProgress.lectureProgress.some(lp => lp.lectureIndex === lectureIdx && (lp.status === 'completed' || lp.completed === true));
+      setAutoQuizState(prev => ({ ...prev, started: false, attempts: prev.attempts + 1, result: { passed, correct, totalPoints, details }, locked: isCompleted ? true : prev.locked }));
+    } catch {
+      setAutoQuizState(prev => ({ ...prev, started: false, attempts: prev.attempts + 1, result: { passed, correct, totalPoints, details } }));
     }
-
-    setAutoQuizState(prev => ({ ...prev, started: false, attempts: prev.attempts + 1, result: { passed, correct, totalPoints, details } }));
   };
 
   const navigateToLecture = (index) => {
@@ -308,7 +320,7 @@ const ModernLectureViewer = () => {
     return progress?.lectureProgress?.find(lp => lp.lectureIndex === lectureIdx);
   }, [progress, lectureIdx]);
 
-  const isCompleted = lectureProgress?.completed || false;
+  const isCompleted = (lectureProgress?.status === 'completed') || (lectureProgress?.completed === true);
 
   if (loading) {
     return (
@@ -585,7 +597,7 @@ const ModernLectureViewer = () => {
               <div className="bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold text-foreground">Auto Quiz</h3>
-                  {!autoQuizState.started && (
+                  {!autoQuizState.started && !isCompleted && !(autoQuizState.result && autoQuizState.result.passed) && (
                     <button
                       onClick={startAutoQuiz}
                       className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600"
@@ -594,9 +606,12 @@ const ModernLectureViewer = () => {
                       {autoQuizState.attempts >= 5 ? 'Max Attempts Reached' : 'Start'}
                     </button>
                   )}
+                  {!autoQuizState.started && (isCompleted || (autoQuizState.result && autoQuizState.result.passed)) && (
+                    <div className="text-green-600 dark:text-green-400 font-medium">Completed</div>
+                  )}
                 </div>
 
-                {autoQuizState.locked && (
+                {autoQuizState.locked && !(autoQuizState.result && autoQuizState.result.passed) && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-600 mb-3">
                     Quiz cancelled due to multiple window changes.
                   </div>
@@ -640,9 +655,14 @@ const ModernLectureViewer = () => {
                   </div>
                 )}
 
-                {!autoQuizState.started && autoQuizState.result && (
-                  <div className={`p-3 rounded ${autoQuizState.result.passed ? 'bg-green-500/10 border border-green-500/20 text-green-600' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}>
-                    {autoQuizState.result.passed ? 'All answers correct! Lecture completed.' : 'Some answers are incorrect. Try again.'}
+                {!autoQuizState.started && (isCompleted || (autoQuizState.result && autoQuizState.result.passed === true)) && (
+                  <div className={`p-3 rounded bg-green-500/10 border border-green-500/20 text-green-600`}>
+                    All answers correct! Lecture completed.
+                  </div>
+                )}
+                {!autoQuizState.started && autoQuizState.result && autoQuizState.result.passed === false && (
+                  <div className={`p-3 rounded bg-red-500/10 border border-red-500/20 text-red-600`}>
+                    Some answers are incorrect. Try again.
                   </div>
                 )}
               </div>
@@ -666,7 +686,7 @@ const ModernLectureViewer = () => {
                   ></div>
                 </div>
                 <div className="text-sm text-foreground/60">
-                  {progress?.completedLectures || 0} of {progress?.totalLectures || 0} lectures completed
+                  {(progress?.completedLectures ?? 0)} of {(progress?.totalLectures && progress.totalLectures > 0 ? progress.totalLectures : (course?.lectures?.length || 0))} lectures completed
                 </div>
               </div>
             </div>
@@ -678,7 +698,7 @@ const ModernLectureViewer = () => {
                 {course.lectures.map((lecture, index) => {
                   const lectureProgress = progress?.lectureProgress?.find(lp => lp.lectureIndex === index);
                   const isCurrentLecture = index === lectureIdx;
-                  const isLectureCompleted = lectureProgress?.completed || false;
+                  const isLectureCompleted = (lectureProgress?.status === 'completed') || (lectureProgress?.completed === true);
                   
                   return (
                     <button

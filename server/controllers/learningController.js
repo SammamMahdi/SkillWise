@@ -5,6 +5,26 @@ const SkillPost = require('../models/SkillPost');
 const LectureProgress = require('../models/LectureProgress');
 const ExamAttempt = require('../models/ExamAttempt');
 
+// Helpers for extradictionary1-based progress storage
+function getExtraCourseKey(courseId) {
+  return `course_progress:${courseId}`;
+}
+
+function ensureExtraCourseProgress(user, courseId) {
+  if (!user.extradictionary1) {
+    user.extradictionary1 = new Map();
+  }
+  const key = getExtraCourseKey(courseId);
+  let data = user.extradictionary1.get(key);
+  if (!data || typeof data !== 'object') {
+    data = { completedLectures: [], completedQuizzes: [], lastUpdated: new Date().toISOString() };
+  }
+  // Normalize arrays
+  data.completedLectures = Array.isArray(data.completedLectures) ? data.completedLectures : [];
+  data.completedQuizzes = Array.isArray(data.completedQuizzes) ? data.completedQuizzes : [];
+  return { key, data };
+}
+
 // @desc    Get user learning dashboard data
 // @route   GET /api/learning/dashboard
 // @access  Private
@@ -653,7 +673,7 @@ const saveAutoQuizAttempt = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Persist attempt in extradictionary2 keyed by course and lecture
+    // Persist attempt in extradictionary2 keyed by course and lecture (legacy/debug)
     const key = `auto_quiz:${courseId}:${lectureIdx}`;
     const attempts = user.extradictionary2.get(key) || [];
     attempts.push({
@@ -666,27 +686,95 @@ const saveAutoQuizAttempt = async (req, res) => {
     });
     // Cap attempts to 5 stored
     user.extradictionary2.set(key, attempts.slice(-5));
+    if (typeof user.markModified === 'function') {
+      user.markModified('extradictionary2');
+    }
 
-    // If passed, mark lecture as completed
+    // Persist attempt in extradictionary1 as canonical store (atomic update)
+    const { key: extraKeyAll, data: extraDataAll } = ensureExtraCourseProgress(user, courseId);
+    if (!extraDataAll.attemptsByLecture) extraDataAll.attemptsByLecture = {};
+    if (!Array.isArray(extraDataAll.attemptsByLecture[lectureIdx])) extraDataAll.attemptsByLecture[lectureIdx] = [];
+    extraDataAll.attemptsByLecture[lectureIdx].push({ at: new Date().toISOString(), correct, totalPoints, passed, warnings });
+    extraDataAll.attemptsByLecture[lectureIdx] = extraDataAll.attemptsByLecture[lectureIdx].slice(-5);
+    extraDataAll.lastUpdated = new Date().toISOString();
+    const upd1 = await User.updateOne(
+      { _id: req.userId },
+      { $set: { [`extradictionary1.${extraKeyAll}`]: extraDataAll } }
+    );
+    try { console.log('[auto-quiz] upsert attempts extradictionary1', { userId: req.userId, extraKey: extraKeyAll, modified: upd1.modifiedCount, matched: upd1.matchedCount }); } catch {}
+    // Mirror change on in-memory doc to avoid later save overwriting atomic update
+    try { user.extradictionary1.set(extraKeyAll, extraDataAll); if (typeof user.markModified === 'function') user.markModified('extradictionary1'); } catch {}
+
+    // If passed, mark lecture as completed in user enrollment and in LectureProgress model
     if (passed) {
       const enrollment = user.dashboardData?.enrolledCourses?.find(e => e.course.toString() === courseId);
       if (enrollment) {
-        // Ensure lectureProgress array exists
         const lp = enrollment.lectureProgress || [];
         const idx = lp.findIndex(p => p.lectureIndex === lectureIdx);
         if (idx >= 0) {
           lp[idx].completed = true;
           lp[idx].completedAt = new Date();
+          lp[idx].lastAccessed = new Date();
         } else {
           lp.push({ lectureIndex: lectureIdx, completed: true, completedAt: new Date(), timeSpent: 0, lastAccessed: new Date() });
         }
         enrollment.lectureProgress = lp;
       }
+
+      // Write progress to extradictionary1 (single source of truth for UI)
+      const { key: extraKey, data: extraData } = ensureExtraCourseProgress(user, courseId);
+      if (!extraData.completedLectures.includes(lectureIdx)) extraData.completedLectures.push(lectureIdx);
+      if (!extraData.completedQuizzes.includes(lectureIdx)) extraData.completedQuizzes.push(lectureIdx);
+      extraData.lastUpdated = new Date().toISOString();
+      const upd2 = await User.updateOne(
+        { _id: req.userId },
+        { $set: { [`extradictionary1.${extraKey}`]: extraData } }
+      );
+      try { console.log('[auto-quiz] upsert completion extradictionary1', { userId: req.userId, extraKey, modified: upd2.modifiedCount, matched: upd2.matchedCount }); } catch {}
+      try { user.extradictionary1.set(extraKey, extraData); if (typeof user.markModified === 'function') user.markModified('extradictionary1'); } catch {}
+
+      // Upsert LectureProgress document if model is available
+      if (LectureProgress && typeof LectureProgress.findOne === 'function') {
+        let lectureProgress = await LectureProgress.findOne({
+          student: req.userId,
+          course: courseId,
+          lectureIndex: lectureIdx
+        });
+
+        if (!lectureProgress) {
+          lectureProgress = new LectureProgress({
+            student: req.userId,
+            course: courseId,
+            lectureIndex: lectureIdx
+          });
+        }
+
+        lectureProgress.status = 'completed';
+        lectureProgress.lastAccessed = new Date();
+        if (!lectureProgress.startedAt) {
+          lectureProgress.startedAt = new Date();
+        }
+        if (!lectureProgress.completedAt) {
+          lectureProgress.completedAt = new Date();
+        }
+        // Nudge content progress to reflect completion for UI
+        lectureProgress.contentProgress = {
+          ...(lectureProgress.contentProgress || {}),
+          videoWatched: true,
+          videoProgress: 100,
+          pdfRead: (lectureProgress.contentProgress && lectureProgress.contentProgress.pdfRead) || false,
+          pdfPagesRead: (lectureProgress.contentProgress && lectureProgress.contentProgress.pdfPagesRead) || 0,
+        };
+        await lectureProgress.save();
+      }
+
+      // Recalculate overall course progress (from extradictionary1)
+      await updateUserCourseProgress(req.userId, courseId);
     }
 
     await user.save();
 
-    return res.json({ success: true, message: 'Auto quiz attempt saved', data: { attempts: user.extradictionary2.get(key) } });
+    return res.json({ success: true, message: 'Auto quiz attempt saved', data: { attempts: user.extradictionary2.get(key), extra: user.extradictionary1.get(extraKeyAll), passed } });
   } catch (error) {
     console.error('Save auto quiz attempt error:', error);
     res.status(500).json({ success: false, message: 'Server error while saving auto quiz attempt' });
@@ -709,47 +797,59 @@ const getCourseProgress = async (req, res) => {
       });
     }
 
-    // Get all lecture progress for this course and student
-    const lectureProgress = await LectureProgress.find({
-      student: req.userId,
-      course: courseId
-    }).sort({ lectureIndex: 1 });
+    // Read progress from extradictionary1 as the primary source
+    const user = await User.findById(req.userId).select('extradictionary1');
+    const extraKey = getExtraCourseKey(courseId);
+    // Handle Map or plain object storage
+    const rawContainer = user?.extradictionary1;
+    const extraData = rawContainer instanceof Map
+      ? (rawContainer.get(extraKey) || { completedLectures: [], completedQuizzes: [] })
+      : (rawContainer?.[extraKey] || { completedLectures: [], completedQuizzes: [] });
 
-    // Calculate overall progress
-    const totalLectures = course.lectures.length;
-    const completedLectures = lectureProgress.filter(lp => lp.status === 'completed').length;
+    // Fallback to LectureProgress if extradictionary1 absent
+    let completedLectureSet = new Set(Array.isArray(extraData.completedLectures) ? extraData.completedLectures : []);
+    if (completedLectureSet.size === 0) {
+      const lectureProgress = await LectureProgress.find({ student: req.userId, course: courseId });
+      lectureProgress.filter(lp => lp.status === 'completed').forEach(lp => completedLectureSet.add(lp.lectureIndex));
+    }
+
+    const totalLectures = Array.isArray(course.lectures) ? course.lectures.length : 0;
+    const completedLectures = completedLectureSet.size;
     const overallProgress = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
 
-    // Get exam scores
-    const examScores = await ExamAttempt.aggregate([
-      {
-        $match: {
-          student: req.userId,
-          exam: { $in: course.lectures.filter(l => l.exam).map(l => l.exam) }
-        }
-      },
-      {
-        $group: {
-          _id: '$exam',
-          bestScore: { $max: '$finalScore' },
-          attempts: { $sum: 1 },
-          passed: { $max: '$finalPassed' }
-        }
+    // Get exam scores (optional, guard missing model implementation)
+    let examScores = [];
+    try {
+      if (ExamAttempt && typeof ExamAttempt.aggregate === 'function') {
+        examScores = await ExamAttempt.aggregate([
+          {
+            $match: {
+              student: req.userId,
+              exam: { $in: course.lectures.filter(l => l.exam).map(l => l.exam) }
+            }
+          },
+          {
+            $group: {
+              _id: '$exam',
+              bestScore: { $max: '$finalScore' },
+              attempts: { $sum: 1 },
+              passed: { $max: '$finalPassed' }
+            }
+          }
+        ]);
       }
-    ]);
+    } catch {}
 
     const progressData = {
       courseId,
       totalLectures,
       completedLectures,
       overallProgress,
-      lectureProgress: lectureProgress.map(lp => ({
-        lectureIndex: lp.lectureIndex,
-        status: lp.status,
-        contentProgress: lp.contentProgress,
-        examProgress: lp.examProgress,
-        overallProgress: lp.overallProgress,
-        lastAccessed: lp.lastAccessed
+      // alias for clients expecting 'overallPercentage'
+      overallPercentage: overallProgress,
+      lectureProgress: Array.from(completedLectureSet).sort((a,b)=>a-b).map(idx => ({
+        lectureIndex: idx,
+        status: 'completed'
       })),
       examScores
     };
@@ -771,13 +871,15 @@ const getCourseProgress = async (req, res) => {
 // Helper function to update user's overall course progress
 const updateUserCourseProgress = async (userId, courseId) => {
   try {
-    const lectureProgress = await LectureProgress.find({
-      student: userId,
-      course: courseId
-    });
+    const course = await Course.findById(courseId).select('lectures');
+    const user = await User.findById(userId).select('extradictionary1 dashboardData');
+    const totalLectures = Array.isArray(course?.lectures) ? course.lectures.length : 0;
 
-    const totalLectures = lectureProgress.length;
-    const completedLectures = lectureProgress.filter(lp => lp.status === 'completed').length;
+    // Prefer extradictionary1 source
+    const extraKey = getExtraCourseKey(courseId);
+    const rawContainer = user?.extradictionary1;
+    const extraData = rawContainer instanceof Map ? rawContainer.get(extraKey) : rawContainer?.[extraKey];
+    const completedLectures = Array.isArray(extraData?.completedLectures) ? extraData.completedLectures.length : 0;
     const overallProgress = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
 
     // Update user's course progress

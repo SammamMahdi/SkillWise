@@ -53,7 +53,7 @@ const modernSystem = {
   progress: {
     async getCourseProgress(courseId) {
       try {
-        const response = await api.get(`/learning/courses/${courseId}`);
+        const response = await api.get(`/learning/courses/${courseId}/progress`);
         return response.data;
       } catch (error) {
         // Return default progress structure
