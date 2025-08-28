@@ -26,6 +26,7 @@ export default function StudentCourseView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useTheme();
 
   const [course, setCourse] = useState(null);
   const [enrollment, setEnrollment] = useState(null);
@@ -374,7 +375,7 @@ export default function StudentCourseView() {
     setShowContentModal(true);
   };
 
-  const calculateProgress = () => {
+  const calculateProgress = useMemo(() => {
     if (!course?.lectures?.length) return 0;
     const completedCount = Object.entries(lectureProgress).filter(([index, progress]) => {
       const lectureIndex = parseInt(index);
@@ -382,7 +383,7 @@ export default function StudentCourseView() {
       return progress.completed && (!lecture?.exam || progress.quizPassed);
     }).length;
     return Math.round((completedCount / course.lectures.length) * 100);
-  };
+  }, [course?.lectures, lectureProgress]);
 
   const getLectureStatus = (lectureIndex) => {
     const progress = lectureProgress[lectureIndex];
@@ -628,9 +629,7 @@ export default function StudentCourseView() {
     );
   }
 
-  const progress = calculateProgress();
-
-  const { theme } = useTheme()
+  const progress = calculateProgress;
 
   return (
     <>
