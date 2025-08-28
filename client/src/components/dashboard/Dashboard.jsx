@@ -11,6 +11,7 @@ import ProfileBanner from './ProfileBanner'
 import DashboardContent from './DashboardContent'
 import { fmtDate } from '../../utils/dateUtils'
 import { getLearningDashboard } from '../../services/learningService'
+import modernSystem from '../../services/modernSystem'
 import { skillsService } from '../../services/skillsService'
 import bg from '../auth/a.jpg'
 
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const [skillOfMonth, setSkillOfMonth] = useState('General Learning')
   const userMenuRef = useRef(null)
   const actionsMenuRef = useRef(null)
+  const [resolvedCourses, setResolvedCourses] = useState([])
 
   // Fetch learning dashboard data
   useEffect(() => {
@@ -120,6 +122,51 @@ const Dashboard = () => {
       return transformed
     }).filter(Boolean) // Remove null entries
   }, [dashboardData])
+
+  // Resolve authoritative progress and last lecture from learning progress API
+  useEffect(() => {
+    let isCancelled = false
+    const resolveProgress = async () => {
+      if (!currentCourses.length) {
+        setResolvedCourses([])
+        return
+      }
+      try {
+        const results = await Promise.all(currentCourses.map(async (c) => {
+          try {
+            const resp = await modernSystem.progress.getCourseProgress(c.courseId)
+            const data = resp?.data || {}
+            const overall = typeof data.overallPercentage === 'number' ? Math.round(data.overallPercentage) : (
+              typeof data.overallProgress === 'number' ? Math.round(data.overallProgress) : c.progressPct
+            )
+
+            // Determine last lecture title using lectureProgress if available
+            let lastTitle = c.lastLessonTitle
+            if (Array.isArray(data.lectureProgress) && data.lectureProgress.length > 0) {
+              const completed = data.lectureProgress
+                .filter(lp => lp.completed)
+                .map(lp => lp.lectureIndex)
+              if (completed.length > 0) {
+                const maxCompleted = Math.max(...completed)
+                const enrollment = dashboardData?.enrolledCourses?.find(e => e.course?._id === c.courseId)
+                const lectures = enrollment?.course?.lectures || []
+                lastTitle = lectures?.[maxCompleted]?.title || lastTitle
+              }
+            }
+
+            return { ...c, progressPct: overall, lastLessonTitle: lastTitle }
+          } catch (e) {
+            return c
+          }
+        }))
+        if (!isCancelled) setResolvedCourses(results)
+      } catch {
+        if (!isCancelled) setResolvedCourses(currentCourses)
+      }
+    }
+    resolveProgress()
+    return () => { isCancelled = true }
+  }, [currentCourses, dashboardData])
 
   const completedCourses = useMemo(() => {
     console.log('Transforming completed courses from:', dashboardData?.certificates) // Debug log
@@ -302,7 +349,7 @@ const Dashboard = () => {
         <DashboardContent 
           firstName={firstName}
           profile={profile}
-          currentCourses={currentCourses}
+          currentCourses={resolvedCourses.length ? resolvedCourses : currentCourses}
           completedCourses={completedCourses}
           fmtDate={fmtDate}
         />
