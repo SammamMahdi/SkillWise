@@ -204,12 +204,8 @@ export default function StudentCourseView() {
   };
 
   const isLectureUnlocked = (lectureIndex) => {
-    if (!enrollment) return false; // Non-enrolled students can't access any lectures
-    if (lectureIndex === 0) return true; // First lecture is always unlocked for enrolled students
-    
-    // Check if previous lecture is completed
-    const previousLecture = lectureProgress[lectureIndex - 1];
-    return previousLecture?.completed && previousLecture?.quizPassed;
+    // Once enrolled, all lectures are unlocked
+    return !!enrollment;
   };
 
   const markLectureComplete = async (lectureIndex) => {
@@ -389,7 +385,7 @@ export default function StudentCourseView() {
     const progress = lectureProgress[lectureIndex];
     if (progress?.completed && progress?.quizPassed) return 'completed';
     if (progress?.completed) return 'content-completed';
-    if (isLectureUnlocked(lectureIndex)) return 'unlocked';
+    if (!!enrollment) return 'unlocked';
     return 'locked';
   };
 
@@ -541,14 +537,7 @@ export default function StudentCourseView() {
                    </button>
                  )}
                  
-                 {/* Show warning if exam needs to be completed first */}
-                 {status === 'unlocked' && hasExam && !lectureProgress[lectureIndex]?.quizPassed && (
-                   <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                     <p className="text-sm text-yellow-700">
-                       ⚠️ You must complete the quiz before marking this lecture as complete.
-                     </p>
-                   </div>
-                 )}
+                 {/* Quiz is optional for unlocking lectures */}
               </div>
             )}
 

@@ -9,9 +9,7 @@ const StudentLectureList = ({ course, enrollment, lectureProgress, expandedLectu
     if (progress?.completed && progress?.quizPassed) return 'completed'
     if (progress?.completed) return 'content-completed'
     if (!enrollment) return 'locked'
-    if (index === 0) return 'unlocked'
-    const prev = lectureProgress[index - 1]
-    return prev?.completed && (!lecture.exam || prev?.quizPassed) ? 'unlocked' : 'locked'
+    return 'unlocked'
   }
 
   return (

@@ -181,38 +181,60 @@ export default function EditCourseForm() {
   const onSubmit = async (form) => {
     try {
       // Prepare the update payload
+      // Sanitize lectures/content to satisfy backend validation
+      const sanitizedLectures = lectures.map(l => ({
+        _id: l._id,
+        lectureCode: l.lectureCode,
+        title: (l.title || '').trim() || `Lecture ${l.lectureCode || ''}`.trim(),
+        content: (l.content || []).map(c => {
+          const type = c.type;
+          const url = (c.url || '').trim();
+          const title = (c.title || '').trim() || (type === 'video' ? 'Video' : type === 'pdf' ? 'Document' : 'Content');
+          let videoType = c.videoType;
+          let videoId = (c.videoId || '').trim();
+          if (type === 'video' && (!videoId || videoId.length === 0)) {
+            // Try to derive YouTube ID from URL if applicable
+            if (url.includes('youtube.com/watch')) {
+              const v = url.split('v=')[1]?.split('&')[0];
+              if (v) videoId = v;
+              videoType = videoType || 'youtube';
+            } else if (url.includes('youtu.be/')) {
+              const v = url.split('youtu.be/')[1]?.split('?')[0];
+              if (v) videoId = v;
+              videoType = videoType || 'youtube';
+            }
+          }
+          return {
+            _id: c._id,
+            type,
+            title,
+            url,
+            videoType,
+            videoId,
+            duration: c.duration ? Number(c.duration) : undefined,
+            pdfSize: c.pdfSize ? Number(c.pdfSize) : undefined,
+            pdfPages: c.pdfPages ? Number(c.pdfPages) : undefined
+          };
+        }),
+        quiz: l.quiz || [],
+        isLocked: !!l.isLocked,
+        isExam: !!l.isExam,
+        timeLimit: l.timeLimit ? Number(l.timeLimit) : undefined,
+        shuffleQuestions: !!l.shuffleQuestions,
+        exam: l.exam || null,
+        examRequired: !!l.examRequired,
+        passingScore: l.passingScore ? Number(l.passingScore) : 60,
+        estimatedDuration: l.estimatedDuration ? Number(l.estimatedDuration) : undefined,
+        difficulty: l.difficulty || 'beginner'
+      }));
+
       const payload = {
         title: form.title,
         description: form.description,
         price: Number(form.price) || 0,
         tags,
         courseCode,
-        lectures: lectures.map(l => ({
-          _id: l._id, // Keep existing ID for updates
-          lectureCode: l.lectureCode,
-          title: l.title,
-          content: (l.content || []).map(c => ({
-            _id: c._id, // Keep existing ID for updates
-            type: c.type,
-            title: c.title,
-            url: c.url,
-            videoType: c.videoType,
-            videoId: c.videoId,
-            duration: c.duration ? Number(c.duration) : undefined,
-            pdfSize: c.pdfSize ? Number(c.pdfSize) : undefined,
-            pdfPages: c.pdfPages ? Number(c.pdfPages) : undefined
-          })),
-          quiz: l.quiz || [],
-          isLocked: !!l.isLocked,
-          isExam: !!l.isExam,
-          timeLimit: l.timeLimit ? Number(l.timeLimit) : undefined,
-          shuffleQuestions: !!l.shuffleQuestions,
-          exam: l.exam || null,
-          examRequired: !!l.examRequired,
-          passingScore: l.passingScore ? Number(l.passingScore) : 60,
-          estimatedDuration: l.estimatedDuration ? Number(l.estimatedDuration) : undefined,
-          difficulty: l.difficulty || 'beginner'
-        })),
+        lectures: sanitizedLectures,
         examData: lectures
           .filter(l => l.exam && typeof l.exam === 'object' && l.exam.questions)
           .map(l => ({

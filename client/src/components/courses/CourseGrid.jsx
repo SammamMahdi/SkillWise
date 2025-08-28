@@ -497,10 +497,10 @@ export default function CourseGrid() {
                           )}
                           {hasTeacherPermissions(user) && (
                             <button
-                              onClick={() => navigate(`/courses/${c._id}/admin`)}
+                              onClick={() => navigate(`/courses/${c._id}/edit`)}
                               className="flex-1 px-4 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-all duration-200 font-medium"
                             >
-                              Admin View
+                              Edit Course
                             </button>
                           )}
                         </div>
