@@ -497,6 +497,13 @@ export default function StudentCourseView() {
             {/* Content Items */}
             {hasContent && (
               <div className="p-6 space-y-4">
+                {/* Editable Lecture Description display */}
+                {lecture.description && (
+                  <div className="mb-4">
+                    <h4 className="font-medium text-foreground/80">Overview</h4>
+                    <p className="text-sm text-foreground/70 whitespace-pre-wrap">{lecture.description}</p>
+                  </div>
+                )}
                 <h4 className="font-medium text-foreground/80">Content</h4>
                 <div className="space-y-3">
                   {lecture.content.map((content, contentIndex) => (
@@ -572,6 +579,19 @@ export default function StudentCourseView() {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Auto Quiz Section (separate system) */}
+            {lecture.autoQuizEnabled !== false && Array.isArray(lecture.autoQuiz) && lecture.autoQuiz.length >= 5 && (
+              <div className="p-6 border-t border-border/50 bg-primary/5">
+                <h4 className="font-medium text-foreground/80 mb-2">Auto Quiz</h4>
+                <p className="text-xs text-foreground/60 mb-4">Answer all questions correctly to mark this lecture complete. Up to 5 attempts allowed.</p>
+                {/* Simple inline renderer; full behavior handled in ModernLectureViewer */}
+                <button
+                  onClick={() => navigate(`/courses/${id}/lecture/${lectureIndex}`)}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                >Start Auto Quiz</button>
               </div>
             )}
           </div>

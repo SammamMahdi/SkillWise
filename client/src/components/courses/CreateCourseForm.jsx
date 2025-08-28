@@ -9,6 +9,7 @@ import LecturesSection from './LecturesSection';
 import ContentManagementModal from './ContentManagementModal';
 import ExamAssignmentModal from './ExamAssignmentModal';
 import ExamCreationModal from './ExamCreationModal';
+import AutoQuizModal from './AutoQuizModal';
 import { useTheme } from '../../contexts/ThemeContext';
 import bg from '../auth/a.jpg';
 
@@ -42,6 +43,10 @@ export default function CreateCourseForm() {
     setShowExamModal,
     setShowExamCreationModal,
     setExamData,
+    showAutoQuizModal,
+    setShowAutoQuizModal,
+    updateAutoQuiz,
+    setAutoQuizEnabled,
     addTag,
     removeTag,
     addLecture,
@@ -163,6 +168,7 @@ export default function CreateCourseForm() {
               setShowExamModal={setShowExamModal}
               setShowExamCreationModal={setShowExamCreationModal}
               setExamData={setExamData}
+              setShowAutoQuizModal={setShowAutoQuizModal}
             />
             </div>
 
@@ -233,6 +239,18 @@ export default function CreateCourseForm() {
           removeOption={removeOption}
           updateOption={updateOption}
           createExamForLecture={createExamForLecture}
+        />
+
+        {/* Auto Quiz Modal */}
+        <AutoQuizModal
+          isOpen={showAutoQuizModal}
+          lecture={currentLecture}
+          onClose={() => setShowAutoQuizModal(false)}
+          onChange={(qs) => {
+            if (!currentLecture) return;
+            updateAutoQuiz(currentLecture._tmpId, qs);
+          }}
+          onSave={() => setShowAutoQuizModal(false)}
         />
     </section>
     </FormProvider>

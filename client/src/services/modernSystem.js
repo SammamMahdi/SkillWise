@@ -88,6 +88,15 @@ const modernSystem = {
         console.error('Error tracking completion:', error);
         return { success: false };
       }
+    },
+
+    async saveAutoQuizAttempt(courseId, lectureIndex, payload) {
+      try {
+        const response = await api.post(`/learning/courses/${courseId}/lectures/${lectureIndex}/auto-quiz`, payload);
+        return response.data;
+      } catch (error) {
+        throw error.response?.data || error;
+      }
     }
   },
 

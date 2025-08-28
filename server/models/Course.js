@@ -39,6 +39,8 @@ const lectureSchema = new mongoose.Schema({
     match: [/^\d{5}$/, 'Lecture code must be 5 digits'],
   },
   title: { type: String, required: true },
+  // NEW: Rich text description shown near video/content
+  description: { type: String, default: '' },
   content: [lectureContentSchema],
   quiz: [quizQuestionSchema],
   isLocked: { type: Boolean, default: true },
@@ -60,7 +62,16 @@ const lectureSchema = new mongoose.Schema({
     type: String, 
     enum: ['beginner', 'intermediate', 'advanced'], 
     default: 'beginner' 
-  }
+  },
+  // NEW: Auto-graded lecture quiz (separate from existing system)
+  autoQuizEnabled: { type: Boolean, default: true },
+  autoQuiz: [{
+    question: { type: String, required: true },
+    type: { type: String, enum: ['mcq', 'short'], default: 'mcq' },
+    options: [{ type: String }],
+    correctAnswer: { type: mongoose.Schema.Types.Mixed, required: true },
+    points: { type: Number, default: 1 }
+  }]
 }, { _id: true });
 
 // ---------- Helper ----------

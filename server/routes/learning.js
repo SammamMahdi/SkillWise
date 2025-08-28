@@ -76,6 +76,9 @@ router.put('/courses/:courseId/lectures/:lectureIndex/progress', [
 
 router.get('/courses/:courseId/lectures/:lectureIndex/progress', learningController.getLectureProgress);
 
+// Auto Quiz attempt save (stores in user.extradictionary2)
+router.post('/courses/:courseId/lectures/:lectureIndex/auto-quiz', learningController.saveAutoQuizAttempt);
+
 // NEW: Course progress overview
 router.get('/courses/:courseId/progress', learningController.getCourseProgress);
 

@@ -29,6 +29,13 @@ export async function updateCourse(id, course, token) {
   return data; // expect { ok, course }
 }
 
+export async function updateLectureAutoQuiz(id, lectureIndex, payload, token) {
+  const { data } = await axios.put(`${API}/courses/${id}/lectures/${lectureIndex}/auto-quiz`, payload, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return data; // expect { ok }
+}
+
 // ---------- learning/enrollment ----------
 export async function checkEnrollment(courseId, token) {
   const { status } = await axios.get(`${API}/learning/courses/${courseId}`, {

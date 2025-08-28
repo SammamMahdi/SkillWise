@@ -13,7 +13,8 @@ export default function LectureItem({
   setShowExamModal, 
   setShowExamCreationModal, 
   setExamData, 
-  lectures 
+  lectures,
+  setShowAutoQuizModal 
 }) {
   const handleManageContent = () => {
     const latestLecture = lectures.find(l => l._tmpId === lecture._tmpId);
@@ -44,6 +45,11 @@ export default function LectureItem({
     } else {
       setShowExamModal(true);
     }
+  };
+
+  const handleEditAutoQuiz = () => {
+    setCurrentLecture(lecture);
+    setShowAutoQuizModal(true);
   };
 
   return (
@@ -83,6 +89,17 @@ export default function LectureItem({
           />
           {!CODE5.test(lecture.lectureCode) && <div className="text-xs text-orange-500 mt-1">Must be 5 digits</div>}
         </div>
+      </div>
+
+      {/* Lecture Description */}
+      <div className="mt-4">
+        <label className="block text-sm mb-2">Lecture Description</label>
+        <textarea
+          value={lecture.description || ''}
+          onChange={(e) => patchLecture(lecture._tmpId, { description: e.target.value })}
+          className="w-full px-3 py-2 rounded-lg bg-card border border-border min-h-[88px]"
+          placeholder="Write a short description for this lecture..."
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -205,6 +222,34 @@ export default function LectureItem({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Auto Quiz (mandatory, min 5) */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-medium text-sm">Auto Quiz (min 5 questions)</h4>
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={lecture.autoQuizEnabled !== false}
+              onChange={(e) => patchLecture(lecture._tmpId, { autoQuizEnabled: e.target.checked })}
+            />
+            Enable
+          </label>
+        </div>
+
+        <div className="space-y-3">
+          {(lecture.autoQuiz?.length || 0) < 5 && (
+            <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded text-xs text-orange-300">
+              At least 5 questions required. Currently {(lecture.autoQuiz?.length || 0)}.
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center gap-3">
+          <button type="button" onClick={handleEditAutoQuiz} className="px-3 py-2 text-xs bg-primary text-primary-foreground rounded">Manage Auto Quiz</button>
+          <div className="text-xs text-foreground/60">Current: {(lecture.autoQuiz || []).length}</div>
         </div>
       </div>
     </div>

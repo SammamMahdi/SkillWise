@@ -11,7 +11,8 @@ export default function LecturesSection({
   setShowContentModal, 
   setShowExamModal, 
   setShowExamCreationModal, 
-  setExamData 
+  setExamData,
+  setShowAutoQuizModal 
 }) {
   return (
     <div className="bg-card/20 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
@@ -53,6 +54,7 @@ export default function LecturesSection({
                 setShowExamCreationModal={setShowExamCreationModal}
                 setExamData={setExamData}
                 lectures={lectures}
+                setShowAutoQuizModal={setShowAutoQuizModal}
               />
             ))}
           </div>

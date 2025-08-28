@@ -17,6 +17,7 @@ export function useCourseManagement() {
   const [currentLecture, setCurrentLecture] = useState(null);
   const [showExamModal, setShowExamModal] = useState(false);
   const [showExamCreationModal, setShowExamCreationModal] = useState(false);
+  const [showAutoQuizModal, setShowAutoQuizModal] = useState(false);
   const [examData, setExamData] = useState({
     title: '',
     description: '',
@@ -47,6 +48,7 @@ export function useCourseManagement() {
         _tmpId: crypto.randomUUID(),
         lectureCode: '',
         title: '',
+        description: '',
         content: [],
         quiz: [],
         isLocked: true,
@@ -57,7 +59,9 @@ export function useCourseManagement() {
         examRequired: false,
         passingScore: 60,
         estimatedDuration: '',
-        difficulty: 'beginner'
+        difficulty: 'beginner',
+        autoQuizEnabled: true,
+        autoQuiz: []
       },
     ]);
 
@@ -133,6 +137,33 @@ export function useCourseManagement() {
         setCurrentLecture(updatedLecture);
       }
       
+      return updatedLectures;
+    });
+  };
+
+  // Auto Quiz management
+  const updateAutoQuiz = (lectureId, newQuestions) => {
+    setLectures(prev => {
+      const updatedLectures = prev.map(l => (
+        l._tmpId === lectureId ? { ...l, autoQuiz: newQuestions } : l
+      ));
+      if (currentLecture && currentLecture._tmpId === lectureId) {
+        const updated = updatedLectures.find(l => l._tmpId === lectureId);
+        setCurrentLecture(updated);
+      }
+      return updatedLectures;
+    });
+  };
+
+  const setAutoQuizEnabled = (lectureId, enabled) => {
+    setLectures(prev => {
+      const updatedLectures = prev.map(l => (
+        l._tmpId === lectureId ? { ...l, autoQuizEnabled: enabled } : l
+      ));
+      if (currentLecture && currentLecture._tmpId === lectureId) {
+        const updated = updatedLectures.find(l => l._tmpId === lectureId);
+        setCurrentLecture(updated);
+      }
       return updatedLectures;
     });
   };
@@ -332,6 +363,35 @@ export function useCourseManagement() {
             }
           }
         }
+
+        // Auto quiz mandatory validation
+        if (lecture.autoQuizEnabled !== false) {
+          const qs = lecture.autoQuiz || [];
+          if (qs.length < 5) {
+            throw new Error(`Lecture "${lecture.title}" must include at least 5 auto quiz questions.`);
+          }
+          for (let i = 0; i < qs.length; i++) {
+            const q = qs[i];
+            if (!q.question?.trim()) {
+              throw new Error(`Lecture "${lecture.title}" – Auto Quiz question ${i + 1} is missing text.`);
+            }
+            if (q.type !== 'short') {
+              if (!Array.isArray(q.options) || q.options.length < 2) {
+                throw new Error(`Lecture "${lecture.title}" – Auto Quiz question ${i + 1} must have at least 2 options.`);
+              }
+              if (!q.correctAnswer?.toString().trim()) {
+                throw new Error(`Lecture "${lecture.title}" – Auto Quiz question ${i + 1} is missing a correct answer.`);
+              }
+              if (!q.options.map(o => o?.toString().trim()).includes(q.correctAnswer.toString().trim())) {
+                throw new Error(`Lecture "${lecture.title}" – Auto Quiz question ${i + 1} correct answer must match one of the options.`);
+              }
+            } else {
+              if (!q.correctAnswer?.toString().trim()) {
+                throw new Error(`Lecture "${lecture.title}" – Auto Quiz question ${i + 1} requires a correct word/number.`);
+              }
+            }
+          }
+        }
       }
 
       const payload = {
@@ -343,6 +403,7 @@ export function useCourseManagement() {
         lectures: lectures.map(l => ({
           lectureCode: l.lectureCode,
           title: l.title,
+          description: l.description || '',
           content: (l.content || []).map(c => ({
             type: c.type,
             title: c.title,
@@ -362,7 +423,15 @@ export function useCourseManagement() {
           examRequired: !!l.examRequired,
           passingScore: l.passingScore ? Number(l.passingScore) : 60,
           estimatedDuration: l.estimatedDuration ? Number(l.estimatedDuration) : undefined,
-          difficulty: l.difficulty || 'beginner'
+          difficulty: l.difficulty || 'beginner',
+          autoQuizEnabled: l.autoQuizEnabled !== false,
+          autoQuiz: (l.autoQuiz || []).map(q => ({
+            question: q.question,
+            type: q.type || 'mcq',
+            options: q.options || [],
+            correctAnswer: q.correctAnswer,
+            points: q.points ? Number(q.points) : 1
+          }))
         })),
         examData: lectures
           .filter(l => l.exam && typeof l.exam === 'object' && l.exam.questions)
@@ -417,6 +486,10 @@ export function useCourseManagement() {
     setShowExamModal,
     setShowExamCreationModal,
     setExamData,
+    setShowAutoQuizModal,
+    showAutoQuizModal,
+    updateAutoQuiz,
+    setAutoQuizEnabled,
 
     // Functions
     addTag,

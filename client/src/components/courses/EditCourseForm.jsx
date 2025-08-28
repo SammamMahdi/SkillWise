@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Save, ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getCourse, updateCourse } from '../../services/courseService';
+import { getCourse, updateCourse, updateLectureAutoQuiz } from '../../services/courseService';
 import examService from '../../services/examService';
 import { useCourseManagement } from '../../hooks/useCourseManagement';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import LecturesSection from './LecturesSection';
 import ContentManagementModal from './ContentManagementModal';
 import ExamAssignmentModal from './ExamAssignmentModal';
 import ExamCreationModal from './ExamCreationModal';
+import AutoQuizModal from './AutoQuizModal';
 
 export default function EditCourseForm() {
   const { id } = useParams();
@@ -186,6 +187,7 @@ export default function EditCourseForm() {
         _id: l._id,
         lectureCode: l.lectureCode,
         title: (l.title || '').trim() || `Lecture ${l.lectureCode || ''}`.trim(),
+        description: l.description || '',
         content: (l.content || []).map(c => {
           const type = c.type;
           const url = (c.url || '').trim();
@@ -225,7 +227,15 @@ export default function EditCourseForm() {
         examRequired: !!l.examRequired,
         passingScore: l.passingScore ? Number(l.passingScore) : 60,
         estimatedDuration: l.estimatedDuration ? Number(l.estimatedDuration) : undefined,
-        difficulty: l.difficulty || 'beginner'
+        difficulty: l.difficulty || 'beginner',
+        autoQuizEnabled: l.autoQuizEnabled !== false,
+        autoQuiz: (l.autoQuiz || []).map(q => ({
+          question: q.question,
+          type: q.type || 'mcq',
+          options: q.type === 'mcq' ? (q.options || []) : [],
+          correctAnswer: q.correctAnswer,
+          points: q.points ? Number(q.points) : 1
+        }))
       }));
 
       const payload = {
@@ -297,6 +307,7 @@ export default function EditCourseForm() {
               setShowExamModal={setShowExamModal}
               setShowExamCreationModal={setShowExamCreationModal}
               setExamData={setExamData}
+              setShowAutoQuizModal={courseManagement.setShowAutoQuizModal}
             />
 
             <div className="flex justify-end gap-3">
@@ -364,6 +375,42 @@ export default function EditCourseForm() {
         removeOption={removeOption}
         updateOption={updateOption}
         createExamForLecture={createExamForLecture}
+      />
+
+      {/* Auto Quiz Modal */}
+      <AutoQuizModal
+        isOpen={courseManagement.showAutoQuizModal}
+        lecture={currentLecture}
+        onClose={() => courseManagement.setShowAutoQuizModal(false)}
+        onChange={(qs) => {
+          if (!currentLecture) return;
+          courseManagement.updateAutoQuiz(currentLecture._tmpId, qs);
+        }}
+        onSave={async () => {
+          try {
+            if (!currentLecture) return;
+            const idx = lectures.findIndex(l => l._tmpId === currentLecture._tmpId);
+            if (idx === -1) return;
+            const payload = {
+              autoQuizEnabled: currentLecture.autoQuizEnabled !== false,
+              autoQuiz: (currentLecture.autoQuiz || []).map(q => ({
+                question: q.question,
+                type: q.type || 'mcq',
+                options: q.type === 'short' ? [] : (q.options || []),
+                correctAnswer: q.correctAnswer,
+                points: q.points || 1
+              }))
+            };
+            const authToken = token || localStorage.getItem('token');
+            const res = await updateLectureAutoQuiz(id, idx, payload, authToken);
+            toast.success('Auto quiz saved');
+          } catch (e) {
+            const msg = e?.response?.data?.error || e.message || 'Failed to save auto quiz';
+            toast.error(msg.includes('min_5') ? 'Add at least 5 questions before saving' : msg);
+          } finally {
+            courseManagement.setShowAutoQuizModal(false);
+          }
+        }}
       />
     </FormProvider>
   );

@@ -88,6 +88,10 @@ router.post('/', verifyToken, express.json(), async (req, res) => {
         return res.status(400).json({ error: 'duplicate_lectureCode', lectureCode: lc });
       }
       seen.add(lc);
+      // Enforce auto_quiz mandatory with at least 5 questions
+      if (!(lectures[i]?.autoQuizEnabled !== false) || !Array.isArray(lectures[i]?.autoQuiz) || lectures[i].autoQuiz.length < 5) {
+        return res.status(400).json({ error: 'auto_quiz_required', index: i, hint: 'Each lecture must include auto_quiz with at least 5 questions' });
+      }
     }
 
     // First, create the course without exam references
@@ -101,6 +105,7 @@ router.post('/', verifyToken, express.json(), async (req, res) => {
       lectures: lectures.map(lecture => ({
         lectureCode: lecture.lectureCode,
         title: lecture.title,
+        description: lecture.description || '',
         content: lecture.content || [],
         quiz: lecture.quiz || [],
         isLocked: lecture.isLocked !== false,
@@ -111,7 +116,15 @@ router.post('/', verifyToken, express.json(), async (req, res) => {
         examRequired: lecture.examRequired || false,
         passingScore: lecture.passingScore || 60,
         estimatedDuration: lecture.estimatedDuration,
-        difficulty: lecture.difficulty || 'beginner'
+        difficulty: lecture.difficulty || 'beginner',
+        autoQuizEnabled: lecture.autoQuizEnabled !== false,
+        autoQuiz: (lecture.autoQuiz || []).map(q => ({
+          question: q.question,
+          type: q.type || 'mcq',
+          options: q.type === 'short' ? [] : (q.options || []),
+          correctAnswer: q.correctAnswer,
+          points: q.points || 1
+        }))
       }))
     };
 
@@ -376,6 +389,10 @@ router.put('/:id', verifyToken, express.json(), async (req, res) => {
         return res.status(400).json({ error: 'duplicate_lectureCode', lectureCode: lc });
       }
       seen.add(lc);
+      // Enforce auto_quiz mandatory with at least 5 questions
+      if (!(lectures[i]?.autoQuizEnabled !== false) || !Array.isArray(lectures[i]?.autoQuiz) || lectures[i].autoQuiz.length < 5) {
+        return res.status(400).json({ error: 'auto_quiz_required', index: i, hint: 'Each lecture must include auto_quiz with at least 5 questions' });
+      }
     }
 
     // Update the course
@@ -389,6 +406,7 @@ router.put('/:id', verifyToken, express.json(), async (req, res) => {
         _id: lecture._id, // Keep existing ID for updates
         lectureCode: lecture.lectureCode,
         title: lecture.title,
+        description: lecture.description || '',
         content: lecture.content || [],
         quiz: lecture.quiz || [],
         isLocked: lecture.isLocked !== false,
@@ -399,7 +417,15 @@ router.put('/:id', verifyToken, express.json(), async (req, res) => {
         examRequired: lecture.examRequired || false,
         passingScore: lecture.passingScore || 60,
         estimatedDuration: lecture.estimatedDuration,
-        difficulty: lecture.difficulty || 'beginner'
+        difficulty: lecture.difficulty || 'beginner',
+        autoQuizEnabled: lecture.autoQuizEnabled !== false,
+        autoQuiz: (lecture.autoQuiz || []).map(q => ({
+          question: q.question,
+          type: q.type || 'mcq',
+          options: q.type === 'short' ? [] : (q.options || []),
+          correctAnswer: q.correctAnswer,
+          points: q.points || 1
+        }))
       }))
     };
 
@@ -518,6 +544,71 @@ router.put('/:id', verifyToken, express.json(), async (req, res) => {
         details: Object.values(e.errors).map(err => err.message)
       });
     }
+    return res.status(500).json({ error: 'server_error', message: e.message });
+  }
+});
+
+/**
+ * Update a lecture's auto quiz only (Teacher/Admin only - course owner)
+ */
+router.put('/:id/lectures/:lectureIndex/auto-quiz', verifyToken, express.json(), async (req, res) => {
+  try {
+    const me = await User.findById(req.userId).select('role');
+    if (!me) return res.status(401).json({ error: 'unauthorized' });
+    if (!['Teacher', 'Admin'].includes(me.role)) {
+      return res.status(403).json({ error: 'only_teachers_or_admins_can_update' });
+    }
+
+    const course = await Course.findById(req.params.id);
+    if (!course) return res.status(404).json({ error: 'course_not_found' });
+    if (course.teacher.toString() !== req.userId && me.role !== 'Admin') {
+      return res.status(403).json({ error: 'not_course_owner' });
+    }
+
+    const idx = parseInt(req.params.lectureIndex, 10);
+    if (Number.isNaN(idx) || idx < 0 || idx >= course.lectures.length) {
+      return res.status(400).json({ error: 'invalid_lecture_index' });
+    }
+
+    const { autoQuizEnabled = true, autoQuiz = [] } = req.body || {};
+
+    // Validate auto quiz for this lecture only
+    if (autoQuizEnabled) {
+      if (!Array.isArray(autoQuiz) || autoQuiz.length < 5) {
+        return res.status(400).json({ error: 'auto_quiz_min_5_required' });
+      }
+      for (let i = 0; i < autoQuiz.length; i++) {
+        const q = autoQuiz[i] || {};
+        if (!q.question || !String(q.question).trim()) {
+          return res.status(400).json({ error: 'invalid_question_text', index: i });
+        }
+        if ((q.type || 'mcq') !== 'short') {
+          if (!Array.isArray(q.options) || q.options.length < 2) {
+            return res.status(400).json({ error: 'mcq_needs_two_options', index: i });
+          }
+          if (!q.correctAnswer || !String(q.correctAnswer).trim()) {
+            return res.status(400).json({ error: 'mcq_missing_correct_answer', index: i });
+          }
+        } else if (!q.correctAnswer || !String(q.correctAnswer).trim()) {
+          return res.status(400).json({ error: 'short_missing_correct_answer', index: i });
+        }
+      }
+    }
+
+    course.lectures[idx].autoQuizEnabled = !!autoQuizEnabled;
+    course.lectures[idx].autoQuiz = autoQuiz.map(q => ({
+      question: q.question,
+      type: (q.type || 'mcq'),
+      options: q.type === 'short' ? [] : (q.options || []),
+      correctAnswer: q.correctAnswer,
+      points: q.points || 1
+    }));
+    course.updatedAt = new Date();
+    await course.save();
+
+    return res.json({ ok: true, message: 'Auto quiz updated' });
+  } catch (e) {
+    console.error('Update lecture auto-quiz error:', e);
     return res.status(500).json({ error: 'server_error', message: e.message });
   }
 });

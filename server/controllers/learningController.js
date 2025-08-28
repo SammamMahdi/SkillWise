@@ -635,6 +635,64 @@ const getLectureProgress = async (req, res) => {
   }
 };
 
+// @desc    Save Auto Quiz attempt to user.extradictionary2 and update progress
+// @route   POST /api/learning/courses/:courseId/lectures/:lectureIndex/auto-quiz
+// @access  Private
+const saveAutoQuizAttempt = async (req, res) => {
+  try {
+    const { courseId, lectureIndex } = req.params;
+    const lectureIdx = parseInt(lectureIndex);
+    const { details = [], correct = 0, totalPoints = 0, passed = false, warnings = 0 } = req.body || {};
+
+    if (isNaN(lectureIdx) || lectureIdx < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid lecture index' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Persist attempt in extradictionary2 keyed by course and lecture
+    const key = `auto_quiz:${courseId}:${lectureIdx}`;
+    const attempts = user.extradictionary2.get(key) || [];
+    attempts.push({
+      at: new Date(),
+      details,
+      correct,
+      totalPoints,
+      passed,
+      warnings
+    });
+    // Cap attempts to 5 stored
+    user.extradictionary2.set(key, attempts.slice(-5));
+
+    // If passed, mark lecture as completed
+    if (passed) {
+      const enrollment = user.dashboardData?.enrolledCourses?.find(e => e.course.toString() === courseId);
+      if (enrollment) {
+        // Ensure lectureProgress array exists
+        const lp = enrollment.lectureProgress || [];
+        const idx = lp.findIndex(p => p.lectureIndex === lectureIdx);
+        if (idx >= 0) {
+          lp[idx].completed = true;
+          lp[idx].completedAt = new Date();
+        } else {
+          lp.push({ lectureIndex: lectureIdx, completed: true, completedAt: new Date(), timeSpent: 0, lastAccessed: new Date() });
+        }
+        enrollment.lectureProgress = lp;
+      }
+    }
+
+    await user.save();
+
+    return res.json({ success: true, message: 'Auto quiz attempt saved', data: { attempts: user.extradictionary2.get(key) } });
+  } catch (error) {
+    console.error('Save auto quiz attempt error:', error);
+    res.status(500).json({ success: false, message: 'Server error while saving auto quiz attempt' });
+  }
+};
+
 // @desc    Get course progress overview
 // @route   GET /api/learning/courses/:courseId/progress
 // @access  Private
@@ -752,5 +810,6 @@ module.exports = {
   getUserSkillPosts,
   updateLectureProgress,
   getLectureProgress,
-  getCourseProgress
+  getCourseProgress,
+  saveAutoQuizAttempt
 };

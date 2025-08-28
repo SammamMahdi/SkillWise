@@ -25,6 +25,14 @@ const ModernLectureViewer = () => {
   const [hasStartedQuiz, setHasStartedQuiz] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+  const [autoQuizState, setAutoQuizState] = useState({
+    started: false,
+    answers: {},
+    warnings: 0,
+    attempts: 0,
+    locked: false,
+    result: null
+  });
 
   const lectureIdx = parseInt(lectureIndex);
 
@@ -129,6 +137,21 @@ const ModernLectureViewer = () => {
     }
   };
 
+  // Anti-cheat: detect window blur during auto quiz
+  useEffect(() => {
+    function handleBlur() {
+      if (autoQuizState.started && !autoQuizState.locked) {
+        setAutoQuizState(prev => {
+          const warnings = prev.warnings + 1;
+          const locked = warnings >= 2; // one warning, then cancel on second
+          return { ...prev, warnings, locked };
+        });
+      }
+    }
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [autoQuizState.started, autoQuizState.locked]);
+
   const handleVideoTimeUpdate = () => {
     if (videoRef.current) {
       const current = videoRef.current.currentTime;
@@ -225,6 +248,56 @@ const ModernLectureViewer = () => {
       console.error('Error submitting quiz:', error);
       setError('Failed to submit quiz');
     }
+  };
+
+  // Auto Quiz grading and persistence in extradictionary2
+  const startAutoQuiz = () => {
+    setAutoQuizState({ started: true, answers: {}, warnings: 0, attempts: autoQuizState.attempts, locked: false, result: null });
+  };
+
+  const setAutoAnswer = (qi, val) => {
+    setAutoQuizState(prev => ({ ...prev, answers: { ...prev.answers, [qi]: val } }));
+  };
+
+  const submitAutoQuiz = async () => {
+    if (!currentLecture?.autoQuiz || currentLecture.autoQuiz.length < 5) return;
+    if (autoQuizState.locked) return;
+
+    const questions = currentLecture.autoQuiz;
+    let correct = 0;
+    const details = questions.map((q, i) => {
+      const userAns = autoQuizState.answers[i];
+      const isCorrect = q.type === 'short'
+        ? String(userAns || '').trim().toLowerCase() === String(q.correctAnswer || '').trim().toLowerCase()
+        : String(userAns || '').trim() === String(q.correctAnswer || '').trim();
+      if (isCorrect) correct += (q.points || 1);
+      return { index: i, userAns, correctAns: q.correctAnswer, isCorrect, points: q.points || 1 };
+    });
+    const totalPoints = questions.reduce((s, q) => s + (q.points || 1), 0);
+    const passed = correct === totalPoints;
+
+    // Save attempt to backend extradictionary2 via user service endpoint
+    try {
+      await modernSystem.progress.saveAutoQuizAttempt(courseId, lectureIdx, {
+        details,
+        correct,
+        totalPoints,
+        passed,
+        warnings: autoQuizState.warnings,
+      });
+    } catch (e) {
+      // non-fatal
+    }
+
+    // Update progress if passed
+    if (passed) {
+      try {
+        const lp = await modernSystem.progress.getCourseProgress(courseId);
+        await modernSystem.progress.trackCompletion(courseId, lectureIdx, { contentViewed: true });
+      } catch {}
+    }
+
+    setAutoQuizState(prev => ({ ...prev, started: false, attempts: prev.attempts + 1, result: { passed, correct, totalPoints, details } }));
   };
 
   const navigateToLecture = (index) => {
@@ -502,6 +575,74 @@ const ModernLectureViewer = () => {
                     >
                       Start Quiz
                     </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Auto Quiz UI */}
+            {currentLecture?.autoQuizEnabled !== false && Array.isArray(currentLecture?.autoQuiz) && currentLecture.autoQuiz.length >= 5 && (
+              <div className="bg-white/20 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-foreground">Auto Quiz</h3>
+                  {!autoQuizState.started && (
+                    <button
+                      onClick={startAutoQuiz}
+                      className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600"
+                      disabled={autoQuizState.attempts >= 5}
+                    >
+                      {autoQuizState.attempts >= 5 ? 'Max Attempts Reached' : 'Start'}
+                    </button>
+                  )}
+                </div>
+
+                {autoQuizState.locked && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-600 mb-3">
+                    Quiz cancelled due to multiple window changes.
+                  </div>
+                )}
+
+                {autoQuizState.started && !autoQuizState.locked && (
+                  <div className="space-y-4">
+                    {currentLecture.autoQuiz.map((q, i) => (
+                      <div key={i} className="border border-white/20 dark:border-white/10 rounded-lg p-4 bg-white/10 dark:bg-black/10">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="font-medium text-foreground">{i + 1}. {q.question}</p>
+                          {autoQuizState.warnings > 0 && (
+                            <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-600">Warning {autoQuizState.warnings}/2</span>
+                          )}
+                        </div>
+                        {q.type === 'mcq' ? (
+                          <div className="mt-3 space-y-2">
+                            {(q.options || []).map((opt, oi) => (
+                              <label key={oi} className="flex items-center gap-2 text-sm">
+                                <input type="radio" name={`auto-${i}`} onChange={() => setAutoAnswer(i, opt)} />
+                                <span>{opt}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <input
+                            className="mt-3 w-full px-3 py-2 rounded bg-background border border-border"
+                            placeholder="Your answer"
+                            onChange={(e) => setAutoAnswer(i, e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={submitAutoQuiz}
+                        className="bg-green-600 dark:bg-green-500 text-white px-6 py-2 rounded hover:bg-green-700 dark:hover:bg-green-600"
+                      >Submit</button>
+                    </div>
+                  </div>
+                )}
+
+                {!autoQuizState.started && autoQuizState.result && (
+                  <div className={`p-3 rounded ${autoQuizState.result.passed ? 'bg-green-500/10 border border-green-500/20 text-green-600' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}>
+                    {autoQuizState.result.passed ? 'All answers correct! Lecture completed.' : 'Some answers are incorrect. Try again.'}
                   </div>
                 )}
               </div>
