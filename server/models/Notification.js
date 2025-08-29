@@ -18,6 +18,8 @@ const notificationSchema = new mongoose.Schema({
       'friend_rejected', 'exam_review_request', 'exam_approved', 'exam_rejected',
       'exam_published', 'exam_graded', 'exam_submission_review', 'exam_score_published',
       'exam_violation_submission', 'exam_reattempt_request', 'exam_reattempt_approved', 'exam_reattempt_rejected',
+      // NEW: consultation notifications
+      'consultation_approved', 'consultation_rejected',
       'post_shared', 'test' // For testing purposes
     ],
     required: true

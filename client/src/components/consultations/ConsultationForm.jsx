@@ -27,7 +27,11 @@ const ConsultationForm = ({ onClose }) => {
       const token = localStorage.getItem("token");
       const response = await getEnrolledCourses(token);
       if (response.success) {
-        setCourses(response.data?.enrolledCourses || []);
+        // Map dashboard enrollments to plain course objects for simpler rendering
+        const mappedCourses = (response.data?.enrolledCourses || [])
+          .map((enrollment) => enrollment?.course)
+          .filter(Boolean);
+        setCourses(mappedCourses);
       }
     } catch (error) {
       console.error("Error loading courses:", error);
@@ -44,7 +48,8 @@ const ConsultationForm = ({ onClose }) => {
       setFormData((prev) => ({
         ...prev,
         courseId: value,
-        teacherId: selectedCourse ? selectedCourse.teacher : "",
+        // teacher may be an ObjectId or populated object; server derives it anyway
+        teacherId: selectedCourse ? (selectedCourse.teacher?._id || selectedCourse.teacher || "") : "",
       }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));

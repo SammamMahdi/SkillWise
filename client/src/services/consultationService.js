@@ -29,7 +29,11 @@ class ConsultationService {
   // Create a new consultation request
   async createConsultationRequest(requestData) {
     try {
-      const response = await api.post('/consultations', requestData);
+      // If sending FormData (file attachments), use multipart headers
+      const isFormData = typeof FormData !== 'undefined' && requestData instanceof FormData;
+      const response = await api.post('/consultations', requestData, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to create consultation request' };
