@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle, Sparkles, TrendingUp } from 'lucide-react';
+import { Search, BookOpen, User, Tag, DollarSign, Clock, Copy, CheckCircle, Sparkles, TrendingUp, Star } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import bg from '../auth/a.jpg';
@@ -462,6 +462,15 @@ export default function CourseGrid() {
                               </div>
                             ) : (
                               <span className="font-medium">No tags</span>
+                            )}
+                          </div>
+                          <div className="flex items-center text-sm text-foreground/60 group-hover:text-foreground/80 transition-colors duration-200">
+                            <Star className="w-4 h-4 mr-2 text-yellow-400" />
+                            <span className="font-medium">
+                              {c.ratingStats?.averageRating ? `${c.ratingStats.averageRating.toFixed(1)}/5` : 'No ratings'}
+                            </span>
+                            {c.ratingStats?.totalRatings > 0 && (
+                              <span className="text-foreground/40 ml-1">({c.ratingStats.totalRatings})</span>
                             )}
                           </div>
                           <div className="flex items-center text-lg font-bold text-primary group-hover:text-primary/80 transition-colors duration-200">

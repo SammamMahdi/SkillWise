@@ -19,6 +19,7 @@ import UniversalTopBar from '../common/UniversalTopBar';
 import StudentCourseHeader from './StudentCourseHeader'
 import StudentCourseStats from './StudentCourseStats'
 import StudentLectureList from './StudentLectureList'
+import CourseRating from './CourseRating'
 import CourseThreeJSBackground from './CourseThreeJSBackground';
 import { useTheme } from '../../contexts/ThemeContext'
 import modernSystem from '../../services/modernSystem'
@@ -827,6 +828,21 @@ export default function StudentCourseView() {
               </div>
             </div>
           </div>
+
+          {/* Course Rating Section */}
+          <div className="lg:col-span-2">
+            <CourseRating 
+              courseId={id} 
+              onRatingUpdate={(ratingData) => {
+                // Update course rating stats when rating is submitted
+                setCourse(prev => ({
+                  ...prev,
+                  ratingStats: ratingData
+                }));
+              }}
+            />
+          </div>
+
           {/* Course Stats Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white/10 dark:bg-black/10 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-xl p-6">

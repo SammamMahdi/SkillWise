@@ -77,3 +77,27 @@ export async function getEnrolledCourses(token) {
   });
   return data;
 }
+
+// ---------- Rating functions ----------
+export async function rateCourse(courseId, rating, review = '', token) {
+  const { data } = await axios.post(
+    `${API}/courses/${courseId}/rate`,
+    { rating, review },
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+  );
+  return data;
+}
+
+export async function getCourseRatings(courseId, page = 1, limit = 10) {
+  const { data } = await axios.get(`${API}/courses/${courseId}/ratings`, {
+    params: { page, limit }
+  });
+  return data;
+}
+
+export async function getMyRating(courseId, token) {
+  const { data } = await axios.get(`${API}/courses/${courseId}/my-rating`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return data;
+}

@@ -137,6 +137,7 @@ const getAllCourses = async (req, res) => {
     // Execute query
     const courses = await Course.find(query)
       .populate('teacher', 'name email')
+      .select('title description teacher tags price lectures ratingStats createdAt updatedAt')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -177,7 +178,8 @@ const getCourseById = async (req, res) => {
     const course = await Course.findById(id)
       .populate('teacher', 'name email')
       .populate('prerequisites', 'title description')
-      .populate('lectures.exam', 'title description timeLimit questions');
+      .populate('lectures.exam', 'title description timeLimit questions')
+      .select('title description teacher tags price lectures ratingStats prerequisites createdAt updatedAt');
 
     if (!course) {
       return res.status(404).json({
@@ -523,7 +525,8 @@ const getCourseStats = async (req, res) => {
         completedStudents,
         completionRate: Math.round(completionRate * 100) / 100,
         totalLectures: course.lectures.length,
-        averageRating: 0, // TODO: Implement rating system
+        averageRating: course.ratingStats?.averageRating || 0,
+        totalRatings: course.ratingStats?.totalRatings || 0,
         totalRevenue: 0 // TODO: Implement payment system
       }
     });
@@ -537,6 +540,154 @@ const getCourseStats = async (req, res) => {
   }
 };
 
+// @desc    Rate a course
+// @route   POST /api/courses/:id/rate
+// @access  Private
+const rateCourse = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+    const { rating, review } = req.body;
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5'
+      });
+    }
+
+    // Find course
+    const course = await Course.findById(id);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Check if user has already rated this course
+    const existingRatingIndex = course.ratings.findIndex(r => r.user.toString() === userId);
+    
+    if (existingRatingIndex !== -1) {
+      // Update existing rating
+      course.ratings[existingRatingIndex].rating = rating;
+      course.ratings[existingRatingIndex].review = review || '';
+      course.ratings[existingRatingIndex].createdAt = new Date();
+    } else {
+      // Add new rating
+      course.ratings.push({
+        user: userId,
+        rating,
+        review: review || '',
+        createdAt: new Date()
+      });
+    }
+
+    // Update rating statistics
+    course.updateRatingStats();
+    await course.save();
+
+    res.json({
+      success: true,
+      message: existingRatingIndex !== -1 ? 'Rating updated successfully' : 'Rating added successfully',
+      data: {
+        rating,
+        review,
+        averageRating: course.ratingStats.averageRating,
+        totalRatings: course.ratingStats.totalRatings
+      }
+    });
+
+  } catch (error) {
+    console.error('Rate course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while rating course'
+    });
+  }
+};
+
+// @desc    Get course ratings
+// @route   GET /api/courses/:id/ratings
+// @access  Public
+const getCourseRatings = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    const course = await Course.findById(id)
+      .populate('ratings.user', 'name avatarUrl')
+      .select('ratings ratingStats');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Paginate ratings
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedRatings = course.ratings.slice(startIndex, endIndex);
+
+    res.json({
+      success: true,
+      data: {
+        ratings: paginatedRatings,
+        ratingStats: course.ratingStats,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(course.ratings.length / limit),
+          totalRatings: course.ratings.length,
+          hasNextPage: endIndex < course.ratings.length,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get course ratings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching course ratings'
+    });
+  }
+};
+
+// @desc    Get user's rating for a course
+// @route   GET /api/courses/:id/my-rating
+// @access  Private
+const getMyRating = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const course = await Course.findById(id).select('ratings');
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    const myRating = course.ratings.find(r => r.user.toString() === userId);
+
+    res.json({
+      success: true,
+      data: myRating || null
+    });
+
+  } catch (error) {
+    console.error('Get my rating error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching your rating'
+    });
+  }
+};
+
 module.exports = {
   createCourse,
   getAllCourses,
@@ -545,5 +696,8 @@ module.exports = {
   deleteCourse,
   searchCourses,
   getCoursesByTeacher,
-  getCourseStats
+  getCourseStats,
+  rateCourse,
+  getCourseRatings,
+  getMyRating
 };

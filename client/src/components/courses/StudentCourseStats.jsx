@@ -1,4 +1,5 @@
 import React from 'react'
+import { Star } from 'lucide-react'
 
 const StudentCourseStats = ({ course, enrollment, progress, serverProgress }) => {
   return (
@@ -17,6 +18,18 @@ const StudentCourseStats = ({ course, enrollment, progress, serverProgress }) =>
           <div className="flex items-center justify-between">
             <span className="text-foreground/60">Duration</span>
             <span className="font-medium">{course.lectures?.reduce((total, l) => total + (l.estimatedDuration || 0), 0)} min</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-foreground/60">Rating</span>
+            <div className="flex items-center gap-1">
+              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+              <span className="font-medium">
+                {course.ratingStats?.averageRating ? `${course.ratingStats.averageRating.toFixed(1)}/5` : 'No ratings'}
+              </span>
+              {course.ratingStats?.totalRatings > 0 && (
+                <span className="text-foreground/40 text-sm">({course.ratingStats.totalRatings})</span>
+              )}
+            </div>
           </div>
           {enrollment && (
             <div className="flex items-center justify-between">

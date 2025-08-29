@@ -132,6 +132,27 @@ const courseSchema = new mongoose.Schema({
     finalGrade: Number
   }],
 
+  // Course Ratings
+  ratings: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    review: { type: String, maxlength: 500 },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  
+  // Aggregated rating statistics
+  ratingStats: {
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    totalRatings: { type: Number, default: 0 },
+    ratingDistribution: {
+      1: { type: Number, default: 0 },
+      2: { type: Number, default: 0 },
+      3: { type: Number, default: 0 },
+      4: { type: Number, default: 0 },
+      5: { type: Number, default: 0 }
+    }
+  },
+
   // Sustainability
   greenScore: Number,
 
@@ -148,31 +169,43 @@ courseSchema.pre('validate', function(next) {
 
 // Process lecture content before saving
 courseSchema.pre('save', function(next) {
-  if (this.lectures && this.lectures.length > 0) {
-    this.lectures.forEach(lecture => {
-      if (lecture.content && lecture.content.length > 0) {
-        lecture.content.forEach(content => {
-          // Auto-detect YouTube videos and extract video ID
-          if (content.type === 'video' && content.url) {
-            const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-            const match = content.url.match(youtubeRegex);
-            if (match) {
-              content.videoType = 'youtube';
-              content.videoId = match[1];
-            } else {
-              content.videoType = 'other';
-            }
-          }
-          
-          // Auto-detect PDF files
-          if (content.type === 'pdf' && content.url) {
-            if (content.url.toLowerCase().endsWith('.pdf')) {
-              // Could add PDF metadata extraction here if needed
-            }
-          }
-        });
-      }
-    });
+  this.updatedAt = new Date();
+  next();
+});
+
+// Method to update rating statistics
+courseSchema.methods.updateRatingStats = function() {
+  const ratings = this.ratings || [];
+  
+  if (ratings.length === 0) {
+    this.ratingStats = {
+      averageRating: 0,
+      totalRatings: 0,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    };
+    return;
+  }
+
+  // Calculate total and distribution
+  let totalRating = 0;
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  
+  ratings.forEach(rating => {
+    totalRating += rating.rating;
+    distribution[rating.rating]++;
+  });
+
+  this.ratingStats = {
+    averageRating: Math.round((totalRating / ratings.length) * 10) / 10, // Round to 1 decimal
+    totalRatings: ratings.length,
+    ratingDistribution: distribution
+  };
+};
+
+// Update rating stats before saving
+courseSchema.pre('save', function(next) {
+  if (this.isModified('ratings')) {
+    this.updateRatingStats();
   }
   next();
 });

@@ -4,7 +4,7 @@ const Course = require('../models/Course');
 const Exam = require('../models/Exam');
 const User = require('../models/User');
 const { verifyToken } = require('../config/auth'); // sets req.userId
-const { getAllCourses, getCourseById } = require('../controllers/courseController');
+const { getAllCourses, getCourseById, rateCourse, getCourseRatings, getMyRating } = require('../controllers/courseController');
 
 const CODE5 = /^\d{5}$/;
 const ROLE_SEES_INTERNAL = new Set(['Admin', 'Teacher']);
@@ -714,5 +714,20 @@ router.delete('/:courseId/lectures/:lectureIndex/exam', verifyToken, async (req,
     return res.status(500).json({ error: 'server_error', message: e.message });
   }
 });
+
+/**
+ * Rate a course
+ */
+router.post('/:id/rate', verifyToken, express.json(), rateCourse);
+
+/**
+ * Get course ratings
+ */
+router.get('/:id/ratings', getCourseRatings);
+
+/**
+ * Get user's rating for a course
+ */
+router.get('/:id/my-rating', verifyToken, getMyRating);
 
 module.exports = router;
