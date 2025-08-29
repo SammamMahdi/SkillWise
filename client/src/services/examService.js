@@ -154,6 +154,16 @@ class ExamService {
     }
   }
 
+  // Get all student exam results (for learning dashboard)
+  async getStudentExamResults() {
+    try {
+      const response = await api.get('/exams/my-results');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to fetch student exam results' };
+    }
+  }
+
   // Get attempt details (for exam interface)
   async getAttemptDetails(attemptId) {
     try {

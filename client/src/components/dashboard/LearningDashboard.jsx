@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../common/ThemeToggle';
 import DashboardButton from '../common/DashboardButton';
+import StudentGrades from '../grades/StudentGrades';
 
 const LearningDashboard = () => {
   const { user } = useAuth();
@@ -322,6 +323,11 @@ const LearningDashboard = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Grades Section */}
+        <div className="mb-8 sm:mb-12 animate-fade-in">
+          <StudentGrades />
         </div>
 
         {/* Current Skills Section */}

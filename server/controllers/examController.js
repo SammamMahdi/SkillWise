@@ -2120,6 +2120,75 @@ const debugAttemptData = async (req, res) => {
   }
 };
 
+// @desc    Get all student exam results (for learning dashboard)
+// @route   GET /api/exams/my-results
+// @access  Private (Student)
+const getStudentExamResults = async (req, res) => {
+  try {
+    const studentId = req.userId;
+
+    // Get all exam attempts for the student where scores are published
+    const examAttempts = await ExamAttempt.find({
+      student: studentId,
+      status: 'submitted',
+      scorePublished: true
+    })
+    .populate({
+      path: 'exam',
+      populate: {
+        path: 'course',
+        select: 'title'
+      }
+    })
+    .sort({ publishedAt: -1 }); // Sort by latest published first
+
+    const examResults = examAttempts.map(attempt => {
+      // Use final published scores if available, otherwise use original scores
+      const displayScore = attempt.finalScore !== undefined ? attempt.finalScore : attempt.totalScore;
+      const displayPercentage = attempt.finalPercentage !== undefined ? attempt.finalPercentage : attempt.percentage;
+      const displayPassed = attempt.finalPassed !== undefined ? attempt.finalPassed : attempt.passed;
+
+      return {
+        attemptId: attempt._id,
+        examId: attempt.exam._id,
+        examTitle: attempt.exam.title,
+        courseTitle: attempt.exam.course ? attempt.exam.course.title : 'Unknown Course',
+        courseId: attempt.exam.course ? attempt.exam.course._id : null,
+        totalScore: displayScore,
+        totalPoints: attempt.exam.totalPoints,
+        percentage: displayPercentage,
+        passed: displayPassed,
+        passingScore: attempt.exam.passingScore || 60,
+        submittedAt: attempt.submittedAt,
+        publishedAt: attempt.publishedAt,
+        instructorFeedback: attempt.instructorFeedback,
+        timeSpent: attempt.timeSpent,
+        gradingStatus: attempt.gradingStatus,
+        violationCount: attempt.violations ? attempt.violations.length : 0
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        results: examResults,
+        totalExams: examResults.length,
+        passedExams: examResults.filter(result => result.passed).length,
+        averageScore: examResults.length > 0 ? 
+          Math.round((examResults.reduce((sum, result) => sum + result.percentage, 0) / examResults.length) * 100) / 100 : 0
+      },
+      message: 'Exam results retrieved successfully'
+    });
+
+  } catch (error) {
+    console.error('Get student exam results error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching exam results'
+    });
+  }
+};
+
 module.exports = {
   createExam,
   getTeacherExams,
@@ -2138,5 +2207,6 @@ module.exports = {
   debugAdminSubmissions,
   debugAllExams,
   getAttemptDetails,
-  debugAttemptData
+  debugAttemptData,
+  getStudentExamResults
 };

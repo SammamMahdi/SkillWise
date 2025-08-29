@@ -49,6 +49,7 @@ router.put('/:id/publish', examController.publishExam);
 
 // Student routes
 router.get('/available', examController.getAvailableExams);
+router.get('/my-results', examController.getStudentExamResults);
 router.get('/course/:courseId', [
   param('courseId').isMongoId().withMessage('Valid course ID is required')
 ], examController.getCourseExams);
