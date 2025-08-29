@@ -9,6 +9,7 @@ import AuthPage from './components/auth/AuthPage'
 import ProfileSettings from './components/profile/ProfileSettings'
 import ProfileVisuals from './components/profile/ProfileVisuals'
 import AdminDashboard from './components/admin/AdminDashboard'
+import ReportedPosts from './components/admin/ReportedPosts'
 import PaymentCodeManager from './components/admin/PaymentCodeManager'
 import LearningDashboard from './components/dashboard/LearningDashboard'
 import CourseGrid from './components/courses/CourseGrid'
@@ -147,6 +148,11 @@ function AppRoutes() {
       <Route path="/admin" element={
         <AgeVerificationWrapper>
           <AdminDashboard />
+        </AgeVerificationWrapper>
+      } />
+      <Route path="/admin/reports" element={
+        <AgeVerificationWrapper>
+          <ReportedPosts />
         </AgeVerificationWrapper>
       } />
       <Route path="/admin/payment-codes" element={

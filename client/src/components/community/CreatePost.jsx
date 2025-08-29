@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Send, Image as ImageIcon, BarChart3, MessageSquare, BookOpen, X, Plus, Globe, Users, Lock } from 'lucide-react'
 import { communityService } from '../../services/communityService'
+import ChildLockModal from '../common/ChildLockModal'
+import { useAuth } from '../../contexts/AuthContext'
 
 const PRIVACY = [
   { value: 'public', label: 'Public', icon: Globe, description: 'Visible to everyone' },
@@ -17,6 +19,7 @@ const TYPE_TABS = [
 ]
 
 const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
+  const { user } = useAuth()
   const [type, setType] = useState(initialType)
   const [privacy, setPrivacy] = useState('public')
   const [title, setTitle] = useState('')
@@ -29,6 +32,8 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
   const [enrollments, setEnrollments] = useState([])
   const [selectedCourseId, setSelectedCourseId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [childLockPassword, setChildLockPassword] = useState('')
+  const [showChildLockModal, setShowChildLockModal] = useState(false)
 
   // Update type when initialType changes
   useEffect(() => {
@@ -67,12 +72,12 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
     return false
   }, [type, title, text, images, pollQuestion, pollOptions, debateTopic, selectedCourseId])
 
-  const submit = async () => {
+  const doSubmit = async (pwd) => {
     if (!canSubmit) return
     
     setIsSubmitting(true)
     try {
-    const payload = { type, privacy }
+    const payload = { type, privacy, childLockPassword: pwd || childLockPassword || undefined }
     if (type === 'blog') Object.assign(payload, { title, text })
     if (type === 'image') Object.assign(payload, { images, text })
     if (type === 'poll') Object.assign(payload, { poll: { question: pollQuestion, options: pollOptions } })
@@ -87,7 +92,12 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
       }})
     }
       
-    const res = await communityService.createPost(payload)
+    let res = await communityService.createPost(payload)
+    // If server indicates child lock missing (edge), open modal
+    if (!res.success && res.requiresChildLock) {
+      setShowChildLockModal(true)
+      return
+    }
     if (res.success) {
       onCreated?.(res.data)
         // Reset form
@@ -100,10 +110,20 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
         setSelectedCourseId('')
         setType(initialType)
         setPrivacy('public')
+        setChildLockPassword('')
       }
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const submit = async () => {
+    // If child account, ask for child lock via modal before submission
+    if (user?.role === 'Child' && !(childLockPassword && childLockPassword.trim())) {
+      setShowChildLockModal(true)
+      return
+    }
+    await doSubmit()
   }
 
   const resetForm = () => {
@@ -466,6 +486,17 @@ const CreatePost = ({ onCreated, onCancel, initialType = 'blog' }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </button>
       </div>
+
+      {/* Child Lock Modal for child accounts */}
+      <ChildLockModal
+        isOpen={showChildLockModal}
+        feature="community_post"
+        onClose={() => setShowChildLockModal(false)}
+        onVerify={async (pwd) => {
+          setChildLockPassword(pwd)
+          await doSubmit(pwd)
+        }}
+      />
     </div>
   )
 }

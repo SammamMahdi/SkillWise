@@ -2,6 +2,7 @@ const CommunityPost = require('../models/CommunityPost');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const Notification = require('../models/Notification');
+const PostReport = require('../models/PostReport');
 
 function canViewPost(post, viewerId, author) {
   if (post.privacy === 'public') return true;
@@ -381,18 +382,44 @@ exports.deletePost = async (req, res) => {
   try {
     const userId = req.userId;
     const { postId } = req.params;
+    const { reason } = req.body || {};
+    const requester = await User.findById(userId).select('name role isSuperUser');
     
     const post = await CommunityPost.findById(postId);
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
     
-    // Check if user is the author of the post
-    if (post.author.toString() !== userId.toString()) {
+    const isAuthor = post.author.toString() === userId.toString();
+    const isAdmin = requester?.role === 'Admin' || requester?.isSuperUser === true;
+
+    if (!isAuthor && !isAdmin) {
       return res.status(403).json({ success: false, message: 'You can only delete your own posts' });
     }
-    
+
     await CommunityPost.findByIdAndDelete(postId);
+
+    // If admin deleted someone else's post, notify the author with the reason
+    if (isAdmin && !isAuthor) {
+      try {
+        const notification = new Notification({
+          recipient: post.author,
+          type: 'post_deleted',
+          title: 'Your post was removed by admin',
+          message: reason ? String(reason).slice(0, 400) : 'An administrator removed your post for violating our community guidelines.',
+          data: {
+            postId: post._id,
+            deletedBy: userId,
+            deletedByUser: requester?.name || 'Admin'
+          },
+          read: false
+        });
+        await notification.save();
+      } catch (notifError) {
+        console.error('Failed to create deletion notification:', notifError);
+      }
+    }
+
     res.json({ success: true, message: 'Post deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -514,6 +541,132 @@ exports.getCommunityStats = async (req, res) => {
   } catch (err) {
     console.error('Error fetching community stats:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch community stats' });
+  }
+};
+
+// Report a post
+exports.reportPost = async (req, res) => {
+  try {
+    const reporter = req.userId;
+    const { postId } = req.params;
+    const { reason } = req.body || {};
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ success: false, message: 'Reason is required' });
+    }
+
+    const post = await CommunityPost.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    try {
+      const report = new PostReport({ post: postId, reporter, reason: String(reason).slice(0, 500) });
+      await report.save();
+      return res.json({ success: true, data: report });
+    } catch (e) {
+      if (e.code === 11000) {
+        return res.status(409).json({ success: false, message: 'You have already reported this post' });
+      }
+      throw e;
+    }
+  } catch (err) {
+    console.error('Report post error:', err);
+    res.status(500).json({ success: false, message: 'Failed to report post' });
+  }
+};
+
+// Admin: list reports
+exports.listReports = async (req, res) => {
+  try {
+    const requester = await User.findById(req.userId).select('role isSuperUser');
+    if (!(requester?.role === 'Admin' || requester?.isSuperUser)) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+    const reports = await PostReport.find()
+      .sort({ createdAt: -1 })
+      .populate({ path: 'post', populate: [
+        { path: 'author', select: 'name handle' },
+        { path: 'sharedFrom', populate: { path: 'author', select: 'name handle' } }
+      ]})
+      .populate('reporter', 'name handle');
+    res.json({ success: true, data: reports });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch reports' });
+  }
+};
+
+// Admin: resolve report (optionally delete post and notify creator)
+exports.resolveReport = async (req, res) => {
+  try {
+    const adminId = req.userId;
+    const { reportId } = req.params;
+    const { action = 'none', resolutionNote } = req.body || {};
+
+    const requester = await User.findById(adminId).select('name role isSuperUser');
+    if (!(requester?.role === 'Admin' || requester?.isSuperUser)) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const report = await PostReport.findById(reportId).populate({ path: 'post', populate: [
+      { path: 'author', select: 'name handle' },
+      { path: 'sharedFrom', populate: { path: 'author', select: 'name handle' } }
+    ]});
+    if (!report) return res.status(404).json({ success: false, message: 'Report not found' });
+
+    // If delete action
+    if (action === 'deleted_post' && report.post) {
+      // If the reported post is a shared post, delete the original post instead
+      const targetPostId = report.post.sharedFrom ? report.post.sharedFrom._id || report.post.sharedFrom : report.post._id;
+      const targetPost = await CommunityPost.findById(targetPostId).populate('author', 'name');
+      if (targetPost) {
+        await CommunityPost.findByIdAndDelete(targetPostId);
+        try {
+          const notification = new Notification({
+            recipient: targetPost.author,
+            type: 'post_deleted',
+            title: 'Your post was removed by admin',
+            message: resolutionNote ? String(resolutionNote).slice(0, 400) : 'Admin removed your post after review',
+            data: { postId: targetPost._id, deletedBy: adminId, deletedByUser: requester?.name || 'Admin' },
+            read: false
+          });
+          await notification.save();
+        } catch (e) {
+          console.error('Notify on resolve error:', e);
+        }
+      }
+    }
+
+    report.status = 'resolved';
+    report.resolutionNote = resolutionNote;
+    report.resolvedBy = adminId;
+    report.actionTaken = action;
+    await report.save();
+
+    // Notify the reporter about the resolution
+    try {
+      const reporterNotification = new Notification({
+        recipient: report.reporter,
+        type: 'report_resolved',
+        title: 'Your report was reviewed',
+        message: resolutionNote ? String(resolutionNote).slice(0, 400) : `Your report was ${action === 'deleted_post' ? 'resolved by removing the post' : 'reviewed and resolved'}`,
+        data: {
+          reportId: report._id,
+          postId: report.post._id,
+          action: action,
+          resolvedBy: adminId,
+          resolvedByUser: requester?.name || 'Admin'
+        },
+        read: false
+      });
+      await reporterNotification.save();
+    } catch (e) {
+      console.error('Failed to create reporter notification:', e);
+    }
+
+    res.json({ success: true, data: report });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to resolve report' });
   }
 };
 

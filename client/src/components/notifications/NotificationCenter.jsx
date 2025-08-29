@@ -51,7 +51,7 @@ const NotificationCenter = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setUnreadCount(data.data.count);
+        setUnreadCount(data.data.count || 0);
       }
     } catch (error) {
       console.error('Error fetching notification count:', error);
@@ -144,6 +144,10 @@ const NotificationCenter = () => {
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'post_shared':
         return <span className="text-2xl">📤</span>;
+      case 'post_deleted':
+        return <Trash2 className="w-5 h-5 text-red-600" />;
+      case 'report_resolved':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
       default:
         return <Bell className="w-5 h-5 text-foreground/60" />;
     }
@@ -174,6 +178,10 @@ const NotificationCenter = () => {
         return 'border-l-blue-500';
       case 'post_shared':
         return 'border-l-blue-400';
+      case 'post_deleted':
+        return 'border-l-red-500';
+      case 'report_resolved':
+        return 'border-l-green-500';
       default:
         return 'border-l-gray-500';
     }
@@ -234,6 +242,8 @@ const NotificationCenter = () => {
                   <option value="child_approval">Child Approvals</option>
                   <option value="account_blocked">Account Blocked</option>
                   <option value="account_unblocked">Account Unblocked</option>
+                  <option value="post_deleted">Post Deleted</option>
+                  <option value="report_resolved">Report Resolved</option>
                 </select>
                 {unreadCount > 0 && (
                   <button
@@ -263,7 +273,7 @@ const NotificationCenter = () => {
                   <div
                     key={notification._id}
                     className={`p-4 hover:bg-background/50 transition-colors border-l-4 ${getNotificationColor(notification.type)} ${
-                      !notification.isRead ? 'bg-blue-50/10' : ''
+                      !notification.read ? 'bg-blue-50/10' : ''
                     }`}
                   >
                     <div className="flex items-start space-x-3">
@@ -284,7 +294,7 @@ const NotificationCenter = () => {
                             </p>
                           </div>
                           <div className="flex items-center space-x-1 ml-2">
-                            {!notification.isRead && (
+                            {!notification.read && (
                               <button
                                 onClick={() => markAsRead(notification._id)}
                                 className="text-blue-600 hover:text-blue-800"

@@ -20,7 +20,7 @@ const notificationSchema = new mongoose.Schema({
       'exam_violation_submission', 'exam_reattempt_request', 'exam_reattempt_approved', 'exam_reattempt_rejected',
       // NEW: consultation notifications
       'consultation_approved', 'consultation_rejected',
-      'post_shared', 'test' // For testing purposes
+      'post_shared', 'post_deleted', 'report_resolved', 'test' // For testing purposes
     ],
     required: true
   },
@@ -58,9 +58,15 @@ const notificationSchema = new mongoose.Schema({
     sharedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     sharedByUser: String,
     postType: String,
-    postTitle: String
+    postTitle: String,
+    // For post deletion and report resolution notifications
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    deletedByUser: String,
+    reportId: { type: mongoose.Schema.Types.ObjectId, ref: 'PostReport' },
+    resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    resolvedByUser: String
   },
-  isRead: { 
+  read: { 
     type: Boolean, 
     default: false 
   },
@@ -77,7 +83,7 @@ const notificationSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
+notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, type: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

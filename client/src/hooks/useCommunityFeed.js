@@ -36,6 +36,31 @@ export const useCommunityFeed = (postId) => {
     load(nextPage)
   }
 
+  // Load all posts across pages to allow global sorting (comments/likes)
+  const loadAllForSorting = async (perPage = 20, maxPages = 100) => {
+    let aggregated = []
+    let currentPage = 1
+    let keepFetching = true
+    setLoading(true)
+    try {
+      while (keepFetching && currentPage <= maxPages) {
+        const res = await communityService.fetchFeed({ page: currentPage, limit: perPage })
+        if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
+          break
+        }
+        aggregated = aggregated.concat(res.data)
+        if (res.data.length < perPage) {
+          keepFetching = false
+        } else {
+          currentPage += 1
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+    return aggregated
+  }
+
   const onLike = async (postId) => {
     const res = await communityService.like(postId)
     if (res.success) {
@@ -167,16 +192,30 @@ export const useCommunityFeed = (postId) => {
   }
 
   const onDelete = async (postId) => {
-    if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-      const res = await communityService.deletePost(postId)
-      if (res.success) {
-        setFeed(prev => prev.filter(p => p._id !== postId))
-      }
+    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) return
+
+    // Determine if current user is the author; if not, allow entering a reason (for admins)
+    const post = feed.find(p => p._id === postId)
+    let reason
+    if (post && post.author && post.author._id && post.author._id.toString() !== currentUserId?.toString()) {
+      reason = window.prompt('Reason for deletion (sent to the author):', 'Violation of community guidelines')
+      if (reason === null) return // cancelled
+    }
+
+    const res = await communityService.deletePost(postId, reason)
+    if (res.success) {
+      setFeed(prev => prev.filter(p => p._id !== postId))
+    } else if (res.message) {
+      alert(res.message)
     }
   }
 
   const addNewPost = (post) => {
     setFeed(prev => [post, ...prev])
+  }
+
+  const replaceFeed = (posts) => {
+    setFeed(Array.isArray(posts) ? posts : [])
   }
 
   return {
@@ -193,5 +232,8 @@ export const useCommunityFeed = (postId) => {
     onPrivacyChange,
     onDelete,
     addNewPost
+    ,
+    loadAllForSorting,
+    replaceFeed
   }
 }

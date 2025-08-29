@@ -12,7 +12,7 @@ const getNotifications = async (req, res) => {
 
     const query = { recipient: userId };
     if (unreadOnly === 'true') {
-      query.isRead = false;
+      query.read = false;
     }
 
     const notifications = await Notification.find(query)
@@ -66,7 +66,7 @@ const markAsRead = async (req, res) => {
       });
     }
 
-    notification.isRead = true;
+    notification.read = true;
     await notification.save();
 
     res.json({
@@ -91,8 +91,8 @@ const markAllAsRead = async (req, res) => {
     const userId = req.userId;
 
     await Notification.updateMany(
-      { recipient: userId, isRead: false },
-      { isRead: true }
+      { recipient: userId, read: false },
+      { read: true }
     );
 
     res.json({
@@ -153,7 +153,7 @@ const getNotificationCount = async (req, res) => {
 
     const query = { recipient: userId };
     if (unreadOnly === 'true') {
-      query.isRead = false;
+      query.read = false;
     }
 
     const count = await Notification.countDocuments(query);

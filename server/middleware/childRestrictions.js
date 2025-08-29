@@ -24,7 +24,8 @@ const checkChildRestrictions = (restrictedFeature) => {
       const childLockRequiredFeatures = [
         'course_enrollment', 
         'friend_requests',
-        'skill_posts'
+        'skill_posts',
+        'community_post'
       ];
 
       const completelyBlockedFeatures = [

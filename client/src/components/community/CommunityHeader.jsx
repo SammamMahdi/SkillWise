@@ -48,9 +48,10 @@ const CommunityHeader = ({ onFilterChange, activeFilter, onSearchChange = () => 
 
   const filters = [
     { id: 'all', label: 'All Posts', icon: '🌍' },
-    { id: 'trending', label: 'Trending', icon: '🔥' },
+    { id: 'trending', label: 'Most Liked', icon: '🔥' },
     { id: 'recent', label: 'Recent', icon: '⚡' },
-    { id: 'popular', label: 'Popular', icon: '⭐' }
+    { id: 'popular', label: 'Popular', icon: '⭐' },
+    
   ]
 
   return (

@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, Share2, MessageCircle, MoreVertical, Edit3, Trash2, Eye, Clock, User } from 'lucide-react'
+import { Heart, Share2, MessageCircle, MoreVertical, Edit3, Trash2, Eye, Clock, User, Flag } from 'lucide-react'
+import { communityService } from '../../services/communityService'
+import { toast } from 'react-hot-toast'
 import PrivacyBadge from './PrivacyBadge'
 import Poll from './Poll'
 import ImageGrid from './ImageGrid'
@@ -12,6 +14,7 @@ const FeedCard = ({ post, onLike, onComment, onVote, onShare, onDelete, onPostUp
   const [showEditModal, setShowEditModal] = useState(false)
   const [showActions, setShowActions] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
+  const [reporting, setReporting] = useState(false)
 
   const handleEditClick = () => {
     setShowEditModal(true)
@@ -108,22 +111,48 @@ const FeedCard = ({ post, onLike, onComment, onVote, onShare, onDelete, onPostUp
               <MoreVertical className="w-5 h-5 text-gray-500" />
             </button>
 
-            {showActions && currentUserId && post.author?._id === currentUserId && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-10">
-                <button
-                  onClick={handleEditClick}
-                  className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit Post
-                </button>
-                <button
-                  onClick={() => onDelete(post._id)}
-                  className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 transition-colors duration-200"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete Post
-                </button>
+            {showActions && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-10">
+                {currentUserId && post.author?._id === currentUserId ? (
+                  <>
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Edit Post
+                    </button>
+                    <button
+                      onClick={() => onDelete(post._id)}
+                      className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-600 transition-colors duration-200"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Post
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      const reason = window.prompt('Report this post. Please specify a reason:')
+                      if (!reason) return
+                      try {
+                        setReporting(true)
+                        const res = await communityService.reportPost(post._id, reason)
+                        if (res.success) toast.success('Reported to admins')
+                        else toast.error(res.message || 'Failed to report')
+                      } catch (e) {
+                        toast.error('Failed to report')
+                      } finally {
+                        setReporting(false)
+                        setShowActions(false)
+                      }
+                    }}
+                    className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-amber-600 transition-colors duration-200"
+                  >
+                    <Flag className="w-4 h-4" />
+                    {reporting ? 'Reporting...' : 'Report Post'}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -146,12 +175,21 @@ const FeedCard = ({ post, onLike, onComment, onVote, onShare, onDelete, onPostUp
           {/* Shared content preview */}
           {post.sharedFrom && (
             <div 
-              className="border-l-4 border-primary/50 pl-6 py-4 bg-gradient-to-r from-primary/5 to-transparent rounded-r-2xl cursor-pointer transition-colors duration-300"
-              onClick={() => navigate(`/community/posts/${post.sharedFrom._id}`)}
+              className="border-l-4 border-primary/50 pl-6 py-4 bg-gradient-to-r from-primary/5 to-transparent rounded-r-2xl cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary/5 hover:shadow-lg hover:scale-[1.02]"
+              onClick={() => {
+                console.log('Navigating to shared post:', {
+                  sharedPostId: post._id,
+                  originalPostId: post.sharedFrom._id,
+                  originalAuthor: post.sharedFrom.author?.name,
+                  url: `/community/posts/${post.sharedFrom._id}`
+                })
+                navigate(`/community/posts/${post.sharedFrom._id}`)
+              }}
             >
               <div className="flex items-center gap-2 mb-3">
                 <Share2 className="w-5 h-5 text-primary" />
                 <span className="text-sm font-medium text-primary">Shared from {post.sharedFrom.author?.name || 'User'}</span>
+                <span className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">Click to view original</span>
               </div>
               
               {post.sharedFrom.title && (

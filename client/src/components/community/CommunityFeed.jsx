@@ -14,6 +14,7 @@ const CommunityFeed = () => {
   const { postId } = useParams()
   const navigate = useNavigate()
   const [activeFilter, setActiveFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('latest')
   const [showCreatePost, setShowCreatePost] = useState(false)
   const [createPostType, setCreatePostType] = useState('blog')
   
@@ -23,6 +24,8 @@ const CommunityFeed = () => {
     currentUserId,
     load,
     loadMore,
+    loadAllForSorting,
+    replaceFeed,
     onLike,
     onShare,
     onVote,
@@ -39,10 +42,42 @@ const CommunityFeed = () => {
 
   const handleFilterChange = (filter) => {
     setActiveFilter(filter)
-    // Here you could implement actual filtering logic
-    // For now, we'll just reload the feed
+    // Map filters to sort modes and data loading as needed
+    if (filter === 'trending') {
+      setSortBy('top')
+      // sortBy effect will aggregate all pages for global sorting
+      return
+    }
+    if (filter === 'popular') {
+      setSortBy('active')
+      // sortBy effect will aggregate all pages for global sorting
+      return
+    }
+    if (filter === 'recent' || filter === 'all') {
+      setSortBy('latest')
+    }
+    // For other filters, reload the first page
     load(1)
   }
+
+  const handleSortChange = (sort) => {
+    setSortBy(sort)
+  }
+
+  // When switching to global sort modes, fetch all pages to sort comprehensively
+  useEffect(() => {
+    const ensureAllDataForSort = async () => {
+      if (sortBy === 'top' || sortBy === 'active') {
+        // Fetch all pages silently to allow proper sorting across entire dataset
+        const all = await loadAllForSorting(20, 100)
+        if (Array.isArray(all) && all.length > 0) {
+          // Replace feed with the aggregated dataset; UI sort handles ordering
+          replaceFeed(all)
+        }
+      }
+    }
+    ensureAllDataForSort()
+  }, [sortBy])
 
   const handleOpenCreatePost = () => {
     console.log('Opening create post (blog)')
@@ -124,6 +159,7 @@ const CommunityFeed = () => {
           <CommunityHeader 
             onFilterChange={handleFilterChange} 
             activeFilter={activeFilter} 
+            onSortChange={handleSortChange}
           />
 
           {/* Create Post Section */}
@@ -172,7 +208,34 @@ const CommunityFeed = () => {
 
             {/* Posts Grid */}
             <div className="space-y-8">
-              {feed.map((post, index) => (
+              {[...feed]
+                .sort((a, b) => {
+                  if (sortBy === 'top') {
+                    const aLikes = Array.isArray(a.likes) ? a.likes.length : (typeof a.likes === 'number' ? a.likes : 0)
+                    const bLikes = Array.isArray(b.likes) ? b.likes.length : (typeof b.likes === 'number' ? b.likes : 0)
+                    if (bLikes !== aLikes) return bLikes - aLikes
+                    // Tie-breaker: newer first if likes equal
+                    const aTime = new Date(a.createdAt || 0).getTime()
+                    const bTime = new Date(b.createdAt || 0).getTime()
+                    return bTime - aTime
+                  }
+                  if (sortBy === 'active') {
+                    const aComments = Array.isArray(a.comments) ? a.comments.length : 0
+                    const bComments = Array.isArray(b.comments) ? b.comments.length : 0
+                    if (bComments !== aComments) return bComments - aComments
+                    const aLikes = Array.isArray(a.likes) ? a.likes.length : (typeof a.likes === 'number' ? a.likes : 0)
+                    const bLikes = Array.isArray(b.likes) ? b.likes.length : (typeof b.likes === 'number' ? b.likes : 0)
+                    if (bLikes !== aLikes) return bLikes - aLikes
+                    const aTime = new Date(a.createdAt || 0).getTime()
+                    const bTime = new Date(b.createdAt || 0).getTime()
+                    return bTime - aTime
+                  }
+                  // default latest
+                  const aTime = new Date(a.createdAt || 0).getTime()
+                  const bTime = new Date(b.createdAt || 0).getTime()
+                  return bTime - aTime
+                })
+                .map((post, index) => (
                 <PostHighlighter key={post._id} postId={postId} post={post}>
                   <div 
                     className="animate-fade-in"

@@ -337,6 +337,13 @@ const AdminDashboard = () => {
         <div className="mb-8">
           <div className="flex flex-wrap gap-4">
             <a
+              href="/admin/reports"
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span>Reported Posts</span>
+            </a>
+            <a
               href="/exams"
               className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center space-x-2"
             >

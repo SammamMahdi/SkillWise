@@ -110,13 +110,29 @@ export const communityService = {
     return res.data
   },
 
+  async reportPost(postId, reason) {
+    const res = await api.post(`/community/posts/${postId}/report`, { reason })
+    return res.data
+  },
+
+  async listReports() {
+    const res = await api.get('/community/reports')
+    return res.data
+  },
+
+  async resolveReport(reportId, action, resolutionNote) {
+    const res = await api.post(`/community/reports/${reportId}/resolve`, { action, resolutionNote })
+    return res.data
+  },
+
   async getUserSharedContent({ page = 1, limit = 10 } = {}) {
     const res = await api.get(`/community/user/shared-content?page=${page}&limit=${limit}`)
     return res.data
   },
 
-  async deletePost(postId) {
-    const res = await api.delete(`/community/posts/${postId}`)
+  async deletePost(postId, reason) {
+    // Some servers don't accept body in DELETE; use POST override if needed. Here we try DELETE with data.
+    const res = await api.delete(`/community/posts/${postId}`, { data: reason ? { reason } : {} })
     return res.data
   },
 
