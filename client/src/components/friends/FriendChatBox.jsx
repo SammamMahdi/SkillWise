@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { friendChatService } from '../../services/friendChatService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { toast } from 'react-hot-toast';
 import bg from '../auth/evening-b2g.jpg';
 
@@ -44,6 +45,7 @@ const FriendChatBox = ({
   const [imageBlobUrls, setImageBlobUrls] = useState({});
   
   const { user } = useAuth();
+  const { theme } = useTheme();
   const currentUserId = user?.id || user?._id;
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -431,32 +433,56 @@ const FriendChatBox = ({
       {/* Mobile Glass Background - only for mobile mode */}
       {mobileMode && (
         <div 
-          className="absolute inset-0 bg-black/30 backdrop-blur-xl"
-          style={{
+          className={`absolute inset-0 backdrop-blur-xl ${
+            theme === 'dark' 
+              ? 'bg-black/30' 
+              : 'bg-white/20'
+          }`}
+          style={theme === 'dark' ? {
             backgroundImage: `url(${bg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
-          }}
+          } : {}}
         />
       )}
       
       {/* Chat Window */}
       <div className={
         fullScreen 
-          ? "relative w-full h-full bg-black/20 backdrop-blur-2xl border-l border-white/10 overflow-hidden"
+          ? `relative w-full h-full backdrop-blur-2xl border-l overflow-hidden ${
+              theme === 'dark' 
+                ? 'bg-black/20 border-white/10' 
+                : 'bg-white/20 border-gray-200/50'
+            }`
           : mobileMode
-          ? "relative w-full h-full bg-black/20 backdrop-blur-xl max-h-[70vh] overflow-hidden"
-          : "relative w-[90vw] md:w-3/4 lg:w-1/2 h-[80vh] bg-background/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+          ? `relative w-full h-full backdrop-blur-xl max-h-[70vh] overflow-hidden ${
+              theme === 'dark' 
+                ? 'bg-black/20' 
+                : 'bg-white/40'
+            }`
+          : `relative w-[90vw] md:w-3/4 lg:w-1/2 h-[80vh] backdrop-blur-2xl border rounded-3xl shadow-2xl overflow-hidden ${
+              theme === 'dark' 
+                ? 'bg-background/60 border-white/10' 
+                : 'bg-white/80 border-gray-200/50'
+            }`
       }>
         {/* Header */}
         <div 
           ref={headerRef}
           className={
             fullScreen 
-              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+              ? `absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b backdrop-blur-sm ${
+                  theme === 'dark' 
+                    ? 'border-white/10 bg-black/20' 
+                    : 'border-gray-200/50 bg-white/20'
+                }`
               : mobileMode
-              ? "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/20 backdrop-blur-sm"
+              ? `absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b backdrop-blur-sm ${
+                  theme === 'dark' 
+                    ? 'border-white/10 bg-black/20' 
+                    : 'border-gray-200/50 bg-white/20'
+                }`
               : "absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur-sm rounded-t-lg"
           }>
           <div className="flex items-center space-x-3">
@@ -464,13 +490,17 @@ const FriendChatBox = ({
               onClick={onClose}
               className={
                 fullScreen || mobileMode
-                  ? "p-1 hover:bg-white/10 rounded-lg transition-colors text-white"
+                  ? `p-1 rounded-lg transition-colors ${
+                      theme === 'dark' 
+                        ? 'hover:bg-white/10 text-white' 
+                        : 'hover:bg-black/10 text-gray-800'
+                    }`
                   : "p-1 hover:bg-accent rounded-lg transition-colors md:hidden"
               }
             >
               <ArrowLeft className={
                 fullScreen || mobileMode 
-                  ? "w-5 h-5 text-white" 
+                  ? `w-5 h-5 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}` 
                   : "w-5 h-5 text-foreground/60"
               } />
             </button>
@@ -490,7 +520,9 @@ const FriendChatBox = ({
             <div className="min-w-0 flex-1">
               <h3 className={
                 fullScreen || mobileMode
-                  ? "font-semibold text-white truncate"
+                  ? `font-semibold truncate ${
+                      theme === 'dark' ? 'text-white' : 'text-gray-800'
+                    }`
                   : "font-semibold text-foreground truncate"
               }>
                 {friend?.name}
@@ -500,8 +532,16 @@ const FriendChatBox = ({
                   <Shield className="w-3 h-3 text-green-500" />
                   <span className="text-xs text-green-500">End-to-end encrypted</span>
                 </div>
-                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 text-foreground/40 opacity-60`}>
-                  <div className={`w-2 h-2 rounded-full transition-all duration-300 bg-foreground/30`}></div>
+                <div className={`flex items-center space-x-1 text-xs transition-all duration-300 ${
+                  fullScreen || mobileMode
+                    ? theme === 'dark' ? 'text-white/40' : 'text-gray-600/60'
+                    : 'text-foreground/40'
+                } opacity-60`}>
+                  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    fullScreen || mobileMode
+                      ? theme === 'dark' ? 'bg-white/30' : 'bg-gray-600/30'
+                      : 'bg-foreground/30'
+                  }`}></div>
                   <span className="transition-all duration-300">Live</span>
                 </div>
               </div>
@@ -510,9 +550,21 @@ const FriendChatBox = ({
           
           <button
             onClick={onClose}
-            className="p-1 hover:bg-accent rounded-lg transition-colors hidden md:block"
+            className={
+              fullScreen || mobileMode
+                ? `p-1 rounded-lg transition-colors ${
+                    theme === 'dark' 
+                      ? 'hover:bg-white/10 text-white' 
+                      : 'hover:bg-black/10 text-gray-800'
+                  }`
+                : "p-1 hover:bg-accent rounded-lg transition-colors hidden md:block"
+            }
           >
-            <X className="w-5 h-5 text-foreground/60" />
+            <X className={
+              fullScreen || mobileMode
+                ? `w-5 h-5 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`
+                : "w-5 h-5 text-foreground/60"
+            } />
           </button>
         </div>
 
@@ -615,10 +667,18 @@ const FriendChatBox = ({
                       >
                         <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
                           <div
-                            className={`p-3 rounded-2xl ${
+                            className={`p-3 rounded-2xl transition-all duration-300 ${
                               isOwn 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'bg-accent text-foreground'
+                                ? fullScreen || mobileMode
+                                  ? theme === 'dark'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-blue-500 text-white'
+                                  : 'bg-primary text-primary-foreground'
+                                : fullScreen || mobileMode
+                                  ? theme === 'dark'
+                                    ? 'bg-gray-800 text-gray-100'
+                                    : 'bg-gray-200 text-gray-800'
+                                  : 'bg-accent text-foreground'
                             }`}
                           >
                             {message.messageType === 'text' ? (
@@ -710,7 +770,11 @@ const FriendChatBox = ({
         {/* Input Area */}
         <div className={
           fullScreen || mobileMode
-            ? "absolute bottom-0 left-0 right-0 z-10 border-t border-white/10 p-4 bg-black/20 backdrop-blur-sm"
+            ? `absolute bottom-0 left-0 right-0 z-10 border-t p-4 backdrop-blur-sm ${
+                theme === 'dark'
+                  ? 'border-gray-700 bg-black/30'
+                  : 'border-gray-300 bg-white/80'
+              }`
             : "absolute bottom-0 left-0 right-0 z-10 border-t border-border p-4 bg-background/95 backdrop-blur-sm rounded-b-lg"
         }>
           <form onSubmit={handleSendMessage} className="flex items-end space-x-2">
@@ -724,12 +788,26 @@ const FriendChatBox = ({
                 onBlur={() => setIsTyping(false)}
                 placeholder={selectedFile ? "Add a caption..." : "Type your encrypted message..."}
                 disabled={sending}
-                className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground resize-none placeholder:text-foreground/40 transition-all duration-200 max-h-32"
+                className={
+                  fullScreen || mobileMode
+                    ? `w-full px-3 py-2 pr-10 border rounded-lg resize-none transition-all duration-200 max-h-32 ${
+                        theme === 'dark'
+                          ? 'border-gray-600 bg-gray-800 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                          : 'border-gray-300 bg-white text-gray-800 placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                      }`
+                    : "w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground resize-none placeholder:text-foreground/40 transition-all duration-200 max-h-32"
+                }
                 rows="1"
                 maxLength={1000}
               />
               
-              <div className="absolute bottom-2 right-2 text-xs text-foreground/40">
+              <div className={
+                fullScreen || mobileMode
+                  ? `absolute bottom-2 right-2 text-xs ${
+                      theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                    }`
+                  : "absolute bottom-2 right-2 text-xs text-foreground/40"
+              }>
                 {newMessage.length}/1000
               </div>
             </div>
@@ -738,7 +816,15 @@ const FriendChatBox = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-all duration-200"
+              className={
+                fullScreen || mobileMode
+                  ? `p-2 rounded-lg transition-all duration-200 ${
+                      theme === 'dark'
+                        ? 'text-gray-400 hover:text-white hover:bg-gray-700'
+                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                    }`
+                  : "p-2 text-foreground/60 hover:text-foreground hover:bg-accent rounded-lg transition-all duration-200"
+              }
               disabled={sending}
             >
               <Paperclip className="w-5 h-5" />
@@ -748,7 +834,15 @@ const FriendChatBox = ({
             <button
               type="submit"
               disabled={(!newMessage.trim() && !selectedFile) || sending}
-              className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[40px]"
+              className={
+                fullScreen || mobileMode
+                  ? `p-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[40px] ${
+                      theme === 'dark'
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                    }`
+                  : "p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[40px]"
+              }
             >
               {sending ? (
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
