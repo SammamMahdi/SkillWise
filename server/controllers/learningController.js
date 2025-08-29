@@ -65,11 +65,19 @@ const getLearningDashboard = async (req, res) => {
       const course = enrollment.course;
       const totalLectures = course?.lectures?.length || 0;
       const completedLectures = enrollment.completedLectures?.length || 0;
-      const progress = totalLectures > 0 ? (completedLectures / totalLectures) * 100 : 0;
+      
+      // Calculate progress based on completed lectures
+      const lectureProgress = totalLectures > 0 ? (completedLectures / totalLectures) * 100 : 0;
+      
+      // Use existing overallProgress if available, otherwise calculate from lecture progress
+      const overallProgress = typeof enrollment.overallProgress === 'number' 
+        ? enrollment.overallProgress 
+        : Math.round(lectureProgress * 100) / 100;
 
       return {
         ...enrollment.toObject(),
-        progress: Math.round(progress * 100) / 100,
+        progress: Math.round(lectureProgress * 100) / 100, // Legacy progress for backward compatibility
+        overallProgress: overallProgress, // New overall progress field
         totalLectures,
         completedLectures
       };
@@ -400,6 +408,30 @@ const updateCourseProgress = async (req, res) => {
       const totalLectures = course.lectures.length;
       const completedCount = enrollment.lectureProgress?.filter(p => p.completed).length || 0;
       enrollment.overallProgress = totalLectures > 0 ? Math.round((completedCount / totalLectures) * 100) : 0;
+      
+      // Check if course is completed (100% progress)
+      if (enrollment.overallProgress >= 100) {
+        // Check if certificate already exists
+        const existingCertificate = user.dashboardData.certificates.find(
+          cert => cert.course.toString() === courseId
+        );
+        
+        if (!existingCertificate) {
+          // Create new certificate
+          const certificate = {
+            course: courseId,
+            issueDate: new Date(),
+            credentialId: `CERT-${courseId}-${user._id}-${Date.now()}`,
+            finalScore: enrollment.overallProgress,
+            completionDate: new Date()
+          };
+          
+          user.dashboardData.certificates.push(certificate);
+          
+          // Update enrollment status
+          enrollment.completedAt = new Date();
+        }
+      }
     }
 
     enrollment.lastAccessed = new Date();
@@ -883,18 +915,47 @@ const updateUserCourseProgress = async (userId, courseId) => {
     const overallProgress = totalLectures > 0 ? Math.round((completedLectures / totalLectures) * 100) : 0;
 
     // Update user's course progress
+    const updateData = {
+      'dashboardData.enrolledCourses.$.overallProgress': overallProgress,
+      'dashboardData.enrolledCourses.$.lastAccessed': new Date()
+    };
+
+    // If course is completed (100% progress), mark it as completed
+    if (overallProgress >= 100) {
+      updateData['dashboardData.enrolledCourses.$.completedAt'] = new Date();
+    }
+
     await User.updateOne(
       { 
         _id: userId,
         'dashboardData.enrolledCourses.course': courseId
       },
-      {
-        $set: {
-          'dashboardData.enrolledCourses.$.overallProgress': overallProgress,
-          'dashboardData.enrolledCourses.$.lastAccessed': new Date()
-        }
-      }
+      { $set: updateData }
     );
+
+    // If course is completed, check if we need to create a certificate
+    if (overallProgress >= 100) {
+      const user = await User.findById(userId).select('dashboardData.certificates');
+      const existingCertificate = user.dashboardData.certificates.find(
+        cert => cert.course.toString() === courseId
+      );
+      
+      if (!existingCertificate) {
+        // Create new certificate
+        const certificate = {
+          course: courseId,
+          issueDate: new Date(),
+          credentialId: `CERT-${courseId}-${userId}-${Date.now()}`,
+          finalScore: overallProgress,
+          completionDate: new Date()
+        };
+        
+        await User.updateOne(
+          { _id: userId },
+          { $push: { 'dashboardData.certificates': certificate } }
+        );
+      }
+    }
   } catch (error) {
     console.error('Error updating user course progress:', error);
   }

@@ -116,6 +116,7 @@ const userSchema = new mongoose.Schema({
       overallProgress: { type: Number, default: 0, min: 0, max: 100 }, // percentage
       totalTimeSpent: Number, // in seconds
       lastAccessed: Date,
+      completedAt: Date, // When the course was completed (100% progress)
       // NEW: Exam scores tracking
       examScores: [{
         examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam' },

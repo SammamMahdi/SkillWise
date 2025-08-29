@@ -113,7 +113,8 @@ const Dashboard = () => {
           ? enrollment.overallProgress 
           : (typeof enrollment.progress === 'number' ? enrollment.progress : 0),
         lastLessonTitle: course.lectures?.[enrollment.currentLectureIndex || 0]?.title || '—',
-        startedAt: new Date().toISOString(), // Use current date as fallback since enrolledAt doesn't exist
+        startedAt: enrollment.enrolledAt || new Date().toISOString(), // Use enrolledAt if available
+        completedAt: enrollment.completedAt, // Include completedAt field
         percentileInCourse: 0.5, // This would need to be calculated based on other students' progress
         courseId: course._id,
         teacher: course.teacher?.name || 'Instructor'
@@ -168,11 +169,39 @@ const Dashboard = () => {
     return () => { isCancelled = true }
   }, [currentCourses, dashboardData])
 
+  // Separate current and completed courses based on progress
+  const { activeCourses, newlyCompletedCourses } = useMemo(() => {
+    const active = []
+    const completed = []
+    
+    const coursesToCheck = resolvedCourses.length ? resolvedCourses : currentCourses
+    
+    coursesToCheck.forEach(course => {
+      // Check if course is completed (100% progress or has completedAt field)
+      if (course.progressPct >= 100 || course.completedAt) {
+        // Course is completed - add to newly completed courses
+        completed.push({
+          id: course.id,
+          title: course.title,
+          startedAt: course.startedAt,
+          finishedAt: course.completedAt || new Date().toISOString(), // Use completedAt if available
+          courseId: course.courseId,
+          teacher: course.teacher
+        })
+      } else {
+        // Course is still in progress
+        active.push(course)
+      }
+    })
+    
+    return { activeCourses: active, newlyCompletedCourses: completed }
+  }, [resolvedCourses, currentCourses])
+
   const completedCourses = useMemo(() => {
     console.log('Transforming completed courses from:', dashboardData?.certificates) // Debug log
-    if (!dashboardData?.certificates) return []
     
-    return dashboardData.certificates.map(certificate => {
+    // Start with existing certificates
+    const existingCertificates = dashboardData?.certificates?.map(certificate => {
       const course = certificate.course
       if (!course) return null // Skip if course data is missing
       
@@ -186,8 +215,18 @@ const Dashboard = () => {
       }
       console.log('Transformed certificate:', transformed) // Debug log
       return transformed
-    }).filter(Boolean) // Remove null entries
-  }, [dashboardData])
+    }).filter(Boolean) || []
+    
+    // Add newly completed courses (those with 100% progress but no certificate yet)
+    const allCompleted = [...existingCertificates, ...newlyCompletedCourses]
+    
+    // Remove duplicates based on courseId
+    const uniqueCompleted = allCompleted.filter((course, index, self) => 
+      index === self.findIndex(c => c.courseId === course.courseId)
+    )
+    
+    return uniqueCompleted
+  }, [dashboardData, newlyCompletedCourses])
 
   const firstName = useMemo(() => (user?.name || '').split(' ')[0] || 'You', [user])
   const isCourseCreator = canManageCourses(user)
@@ -350,7 +389,7 @@ const Dashboard = () => {
         <DashboardContent 
           firstName={firstName}
           profile={profile}
-          currentCourses={resolvedCourses.length ? resolvedCourses : currentCourses}
+          currentCourses={activeCourses}
           completedCourses={completedCourses}
           fmtDate={fmtDate}
         />
