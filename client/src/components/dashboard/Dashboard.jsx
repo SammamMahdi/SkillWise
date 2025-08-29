@@ -16,7 +16,7 @@ import { skillsService } from '../../services/skillsService'
 import bg from '../auth/a.jpg'
 
 const Dashboard = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
   const navigate = useNavigate()
   const { theme } = useTheme()
   const [openUser, setOpenUser] = useState(false)
@@ -344,6 +344,7 @@ const Dashboard = () => {
           profile={profile}
           displayHandle={displayHandle}
           fmtDate={fmtDate}
+          refreshUser={refreshUser}
         />
         
         <DashboardContent 

@@ -68,14 +68,7 @@ const CurrentCoursesSection = ({ currentCourses, fmtDate }) => {
                     <span className="font-medium text-foreground">{c.teacher}</span>
                   </div>
                 )}
-                {typeof c.percentileInCourse === 'number' && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-primary/80">Ranking:</span>
-                    <span className="font-medium text-foreground">
-                      Top {(c.percentileInCourse * 100).toFixed(1)}% of participants
-                    </span>
-                  </div>
-                )}
+                  {/* Ranking removed as requested */}
               </div>
               
               {/* Click hint */}

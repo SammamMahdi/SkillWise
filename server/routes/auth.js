@@ -1,10 +1,37 @@
 const express = require('express');
-const { body } = require('express-validator');
+const { body, validationResult } = require('express-validator');
+const { protect } = require('../middleware/auth');
+const User = require('../models/User');
+const { generateToken } = require('../config/auth');
 const authController = require('../controllers/authController');
 const { authLimiter } = require('../middleware/rateLimiter');
-const { protect } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Update user status (variableextra1)
+router.patch('/user/status', protect, async (req, res) => {
+  try {
+    console.log('Status update request received');
+    console.log('User ID:', req.user._id);
+    console.log('Request body:', req.body);
+
+    const userId = req.user._id;
+    const { status } = req.body;
+    if (typeof status !== 'string' || status.length > 32) {
+      console.log('Invalid status:', status);
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    console.log('Updating user status in database...');
+    await User.findByIdAndUpdate(userId, { variableextra1: status });
+    console.log('User status updated successfully');
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Status update error:', err);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
 
 // Registration route with validation
 router.post('/register', [
