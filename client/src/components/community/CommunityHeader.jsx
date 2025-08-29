@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, Users, Sparkles, Filter } from 'lucide-react'
+import { TrendingUp, Users, Sparkles, Filter, Search } from 'lucide-react'
 import { communityService } from '../../services/communityService'
 
-const CommunityHeader = ({ onFilterChange, activeFilter }) => {
+const CommunityHeader = ({ onFilterChange, activeFilter, onSearchChange = () => {}, onSortChange = () => {} }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [stats, setStats] = useState({
     posts: 0,
@@ -10,6 +10,8 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
     trending: 0
   })
   const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [sortBy, setSortBy] = useState('latest')
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -55,6 +57,8 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
     <div className="relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent" />
+      {/* Subtle radial glow */}
+      <div className="pointer-events-none absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
       
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -66,12 +70,15 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
       <div className="relative px-6 py-8">
         {/* Main header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-purple-500 to-blue-500 bg-clip-text text-transparent mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-red-500 to-blue-500 bg-clip-text text-transparent mb-4">
             Community Hub
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             Connect, share, and grow with your learning community. Discover insights, share experiences, and build meaningful connections.
           </p>
+          <div className="mt-4 flex justify-center">
+            <span className="h-1 w-24 rounded-full bg-gradient-to-r from-primary to-blue-500" />
+          </div>
         </div>
 
         {/* Stats cards */}
@@ -124,6 +131,41 @@ const CommunityHeader = ({ onFilterChange, activeFilter }) => {
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Action bar */}
+        <div className="mb-6 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                onSearchChange(e.target.value)
+              }}
+              placeholder="Search posts, people, or tags..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center text-gray-600 dark:text-gray-300">
+              <Filter className="w-5 h-5 mr-2" />
+              <span className="text-sm font-medium">Filter</span>
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value)
+                onSortChange(e.target.value)
+              }}
+              className="px-4 py-3 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-white/20 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40"
+            >
+              <option value="latest">Newest first</option>
+              <option value="top">Top rated</option>
+              <option value="active">Most active</option>
+            </select>
           </div>
         </div>
 
